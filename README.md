@@ -120,3 +120,5 @@ See the phase table above for the current build order. Each phase ships somethin
 Built by [Benson Musonda](https://github.com/Bensonmusonda) as part of the Bennieslab ecosystem.
 
 ## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. In short: you're free to use, modify, and distribute this code, including commercially, as long as the original copyright notice is kept.
