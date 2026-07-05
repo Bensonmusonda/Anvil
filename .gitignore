@@ -1,0 +1,6 @@
+# Rust build artifacts
+src-tauri/target/
+
+# Node/Frontend dependencies
+node_modules/
+dist/
