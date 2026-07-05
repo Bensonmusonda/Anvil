@@ -5,6 +5,7 @@
   --text: #e6e6e6;
   --dim: #8a8f98;
   --accent: #d0483c;
+  --ok: #6fbf73;
 }
 
 * { box-sizing: border-box; }
@@ -50,6 +51,15 @@ h1 {
   color: var(--dim);
   font-family: "Consolas", monospace;
 }
+
+.status-msg {
+  font-size: 12px;
+  color: var(--ok);
+  min-width: 120px;
+  text-align: right;
+}
+
+.status-msg.error { color: #ff8a80; }
 
 .body {
   flex: 1;
@@ -137,11 +147,76 @@ h1 {
 
 .tree-children { padding-left: 14px; }
 
-#editor {
+.main-column {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+.toolbar button {
+  background: #2c2f33;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.toolbar button:hover { background: #383b40; }
+#save-btn:hover { border-color: var(--ok); }
+#revert-btn:hover, #commit-btn:hover { border-color: var(--accent); }
+
+#editor {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
 .cm-editor { height: 100%; font-size: 14px; }
 .cm-editor.cm-focused { outline: none; }
+
+.ai-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+.ai-bar input {
+  flex: 1;
+  min-width: 0;
+  background: #16181a;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.ai-bar button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ai-bar button:hover { filter: brightness(1.1); }
+.ai-bar button:disabled { opacity: 0.5; cursor: default; }

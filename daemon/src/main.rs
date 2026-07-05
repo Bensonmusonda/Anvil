@@ -17,6 +17,7 @@ use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
     let args: Vec<String> = env::args().collect();
 
     let mut config_path = PathBuf::from("anvil.config.json");

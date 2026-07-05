@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Anvil Editor — Phase 2</title>
+  <title>Anvil Editor — Phase 3</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -10,6 +10,7 @@
     <span class="dot"></span>
     <h1>Anvil</h1>
     <span id="current-file" class="current-file">no file open</span>
+    <span id="status-msg" class="status-msg"></span>
   </header>
 
   <div class="body">
@@ -21,7 +22,20 @@
       <div id="tree" class="tree"></div>
     </aside>
 
-    <main id="editor"></main>
+    <div class="main-column">
+      <div class="toolbar">
+        <button id="save-btn" title="Write buffer to disk (snapshots previous content first)">Save</button>
+        <button id="revert-btn" title="Restore from last snapshot">Revert</button>
+        <button id="commit-btn" title="Clear snapshot — accept current disk state as final">Commit</button>
+      </div>
+
+      <main id="editor"></main>
+
+      <div class="ai-bar">
+        <input id="ai-prompt" type="text" placeholder="Ask AI — response inserts at cursor..." />
+        <button id="ai-btn">Ask AI →</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="main.js"></script>
