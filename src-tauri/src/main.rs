@@ -97,10 +97,6 @@ fn read_text_file(path: String) -> Result<String, String> {
 
 // --- Phase 3: filesystem watcher ---
 
-/// Starts watching `path` recursively. Sets the workspace root in app
-/// state (used by write/revert/commit to resolve snapshot paths) and emits
-/// a "file-changed" event to the frontend on every modify/create/remove —
-/// this is the View Invalidation step from spec §5.
 #[tauri::command]
 fn start_watching(path: String, state: State<AppState>, app: AppHandle) -> Result<(), String> {
     let root = PathBuf::from(&path);
@@ -113,10 +109,7 @@ fn start_watching(path: String, state: State<AppState>, app: AppHandle) -> Resul
     let app_handle = app.clone();
     let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
         if let Ok(event) = res {
-            if matches!(
-                event.kind,
-                notify::EventKind::Modify(_) | notify::EventKind::Create(_) | notify::EventKind::Remove(_)
-            ) {
+            if !matches!(event.kind, notify::EventKind::Access(_)) {
                 for changed_path in event.paths {
                     let _ = app_handle.emit("file-changed", changed_path.to_string_lossy().to_string());
                 }

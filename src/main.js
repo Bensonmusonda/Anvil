@@ -207,7 +207,12 @@ document.getElementById("commit-btn").addEventListener("click", async () => {
 
 window.__TAURI__.event.listen("file-changed", async (event) => {
   const changedPath = event.payload;
-  if (changedPath !== currentFilePath) return;
+  console.log("[watcher] file-changed:", changedPath, "| currently open:", currentFilePath);
+
+  const sameFile =
+    changedPath === currentFilePath ||
+    (currentFilePath && changedPath.split("/").pop() === currentFilePath.split("/").pop());
+  if (!sameFile) return;
 
   if (suppressNextReload) {
     suppressNextReload = false;

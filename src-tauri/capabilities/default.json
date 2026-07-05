@@ -1,0 +1,10 @@
+{
+  "identifier": "default",
+  "description": "Default capabilities for the main window — custom commands (list_dir, read_text_file, etc.) aren't gated by this system, but Tauri's own core:event API is, hence granting listen explicitly here.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:event:allow-listen"
+  ]
+}
