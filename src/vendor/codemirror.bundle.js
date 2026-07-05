@@ -815,10 +815,10 @@ var ChangeDesc = class _ChangeDesc {
   Create a change desc from its JSON representation (as produced
   by [`toJSON`](https://codemirror.net/6/docs/ref/#state.ChangeDesc.toJSON).
   */
-  static fromJSON(json) {
-    if (!Array.isArray(json) || json.length % 2 || json.some((a) => typeof a != "number"))
+  static fromJSON(json2) {
+    if (!Array.isArray(json2) || json2.length % 2 || json2.some((a) => typeof a != "number"))
       throw new RangeError("Invalid JSON representation of ChangeDesc");
-    return new _ChangeDesc(json);
+    return new _ChangeDesc(json2);
   }
   /**
   @internal
@@ -1021,12 +1021,12 @@ var ChangeSet = class _ChangeSet extends ChangeDesc {
   Create a changeset from its JSON representation (as produced by
   [`toJSON`](https://codemirror.net/6/docs/ref/#state.ChangeSet.toJSON).
   */
-  static fromJSON(json) {
-    if (!Array.isArray(json))
+  static fromJSON(json2) {
+    if (!Array.isArray(json2))
       throw new RangeError("Invalid JSON representation of ChangeSet");
     let sections = [], inserted = [];
-    for (let i = 0; i < json.length; i++) {
-      let part = json[i];
+    for (let i = 0; i < json2.length; i++) {
+      let part = json2[i];
       if (typeof part == "number") {
         sections.push(part, -1);
       } else if (!Array.isArray(part) || typeof part[0] != "number" || part.some((e, i2) => i2 && typeof e != "string")) {
@@ -1063,16 +1063,16 @@ function addSection(sections, len, ins, forceJoin = false) {
   } else
     sections.push(len, ins);
 }
-function addInsert(values, sections, value) {
+function addInsert(values2, sections, value) {
   if (value.length == 0)
     return;
   let index = sections.length - 2 >> 1;
-  if (index < values.length) {
-    values[values.length - 1] = values[values.length - 1].append(value);
+  if (index < values2.length) {
+    values2[values2.length - 1] = values2[values2.length - 1].append(value);
   } else {
-    while (values.length < index)
-      values.push(Text.empty);
-    values.push(value);
+    while (values2.length < index)
+      values2.push(Text.empty);
+    values2.push(value);
   }
 }
 function iterChanges(desc, f, individual) {
@@ -1335,10 +1335,10 @@ var SelectionRange = class _SelectionRange {
   Convert a JSON representation of a range to a `SelectionRange`
   instance.
   */
-  static fromJSON(json) {
-    if (!json || typeof json.anchor != "number" || typeof json.head != "number")
+  static fromJSON(json2) {
+    if (!json2 || typeof json2.anchor != "number" || typeof json2.head != "number")
       throw new RangeError("Invalid JSON representation for SelectionRange");
-    return EditorSelection.range(json.anchor, json.head);
+    return EditorSelection.range(json2.anchor, json2.head);
   }
   /**
   @internal
@@ -1415,10 +1415,10 @@ var EditorSelection = class _EditorSelection {
   /**
   Create a selection from a JSON representation.
   */
-  static fromJSON(json) {
-    if (!json || !Array.isArray(json.ranges) || typeof json.main != "number" || json.main >= json.ranges.length)
+  static fromJSON(json2) {
+    if (!json2 || !Array.isArray(json2.ranges) || typeof json2.main != "number" || json2.main >= json2.ranges.length)
       throw new RangeError("Invalid JSON representation for EditorSelection");
-    return new _EditorSelection(json.ranges.map((r) => SelectionRange.fromJSON(r)), json.main);
+    return new _EditorSelection(json2.ranges.map((r) => SelectionRange.fromJSON(r)), json2.main);
   }
   /**
   Create a selection holding a single range.
@@ -1629,16 +1629,16 @@ function dynamicFacetSlot(addresses, facet, providers) {
   let dynamic = providerAddrs.filter((p) => !(p & 1));
   let idx = addresses[facet.id] >> 1;
   function get(state) {
-    let values = [];
+    let values2 = [];
     for (let i = 0; i < providerAddrs.length; i++) {
       let value = getAddr(state, providerAddrs[i]);
       if (providerTypes[i] == 2)
         for (let val of value)
-          values.push(val);
+          values2.push(val);
       else
-        values.push(value);
+        values2.push(value);
     }
-    return facet.combine(values);
+    return facet.combine(values2);
   }
   return {
     create(state) {
@@ -1942,18 +1942,18 @@ function getAddr(state, addr) {
 }
 var languageData = /* @__PURE__ */ Facet.define();
 var allowMultipleSelections = /* @__PURE__ */ Facet.define({
-  combine: (values) => values.some((v) => v),
+  combine: (values2) => values2.some((v) => v),
   static: true
 });
 var lineSeparator = /* @__PURE__ */ Facet.define({
-  combine: (values) => values.length ? values[0] : void 0,
+  combine: (values2) => values2.length ? values2[0] : void 0,
   static: true
 });
 var changeFilter = /* @__PURE__ */ Facet.define();
 var transactionFilter = /* @__PURE__ */ Facet.define();
 var transactionExtender = /* @__PURE__ */ Facet.define();
 var readOnly = /* @__PURE__ */ Facet.define({
-  combine: (values) => values.length ? values[0] : false
+  combine: (values2) => values2.length ? values2[0] : false
 });
 var Annotation = class {
   /**
@@ -2282,11 +2282,11 @@ function makeCategorizer(wordChars) {
   };
 }
 var EditorState = class _EditorState {
-  constructor(config2, doc2, selection2, values, computeSlot, tr) {
+  constructor(config2, doc2, selection2, values2, computeSlot, tr) {
     this.config = config2;
     this.doc = doc2;
     this.selection = selection2;
-    this.values = values;
+    this.values = values2;
     this.status = config2.statusTemplate.slice();
     this.computeSlot = computeSlot;
     if (tr)
@@ -2458,20 +2458,20 @@ var EditorState = class _EditorState {
   to [`toJSON`](https://codemirror.net/6/docs/ref/#state.EditorState.toJSON) when serializing as
   third argument.
   */
-  static fromJSON(json, config2 = {}, fields) {
-    if (!json || typeof json.doc != "string")
+  static fromJSON(json2, config2 = {}, fields) {
+    if (!json2 || typeof json2.doc != "string")
       throw new RangeError("Invalid JSON representation for EditorState");
     let fieldInit = [];
     if (fields)
       for (let prop in fields) {
-        if (Object.prototype.hasOwnProperty.call(json, prop)) {
-          let field = fields[prop], value = json[prop];
+        if (Object.prototype.hasOwnProperty.call(json2, prop)) {
+          let field = fields[prop], value = json2[prop];
           fieldInit.push(field.init((state) => field.spec.fromJSON(value, state)));
         }
       }
     return _EditorState.create({
-      doc: json.doc,
-      selection: EditorSelection.fromJSON(json.selection),
+      doc: json2.doc,
+      selection: EditorSelection.fromJSON(json2.selection),
       extensions: config2.extensions ? fieldInit.concat([config2.extensions]) : fieldInit
     });
   }
@@ -2552,14 +2552,14 @@ var EditorState = class _EditorState {
     bracket closing behavior.
   */
   languageDataAt(name2, pos, side = -1) {
-    let values = [];
+    let values2 = [];
     for (let provider of this.facet(languageData)) {
       for (let result of provider(this, pos, side)) {
         if (Object.prototype.hasOwnProperty.call(result, name2))
-          values.push(result[name2]);
+          values2.push(result[name2]);
       }
     }
-    return values;
+    return values2;
   }
   /**
   Return a function that can categorize strings (expected to
@@ -2603,7 +2603,7 @@ var EditorState = class _EditorState {
 };
 EditorState.allowMultipleSelections = allowMultipleSelections;
 EditorState.tabSize = /* @__PURE__ */ Facet.define({
-  combine: (values) => values.length ? values[0] : 4
+  combine: (values2) => values2.length ? values2[0] : 4
 });
 EditorState.lineSeparator = lineSeparator;
 EditorState.readOnly = readOnly;
@@ -3674,28 +3674,28 @@ function keyName(event) {
 
 // node_modules/crelt/index.js
 function crelt() {
-  var elt = arguments[0];
-  if (typeof elt == "string") elt = document.createElement(elt);
+  var elt2 = arguments[0];
+  if (typeof elt2 == "string") elt2 = document.createElement(elt2);
   var i = 1, next = arguments[1];
   if (next && typeof next == "object" && next.nodeType == null && !Array.isArray(next)) {
     for (var name2 in next) if (Object.prototype.hasOwnProperty.call(next, name2)) {
       var value = next[name2];
-      if (typeof value == "string") elt.setAttribute(name2, value);
-      else if (value != null) elt[name2] = value;
+      if (typeof value == "string") elt2.setAttribute(name2, value);
+      else if (value != null) elt2[name2] = value;
     }
     i++;
   }
-  for (; i < arguments.length; i++) add(elt, arguments[i]);
-  return elt;
+  for (; i < arguments.length; i++) add(elt2, arguments[i]);
+  return elt2;
 }
-function add(elt, child) {
+function add(elt2, child) {
   if (typeof child == "string") {
-    elt.appendChild(document.createTextNode(child));
+    elt2.appendChild(document.createTextNode(child));
   } else if (child == null) {
   } else if (child.nodeType != null) {
-    elt.appendChild(child);
+    elt2.appendChild(child);
   } else if (Array.isArray(child)) {
-    for (var i = 0; i < child.length; i++) add(elt, child[i]);
+    for (var i = 0; i < child.length; i++) add(elt2, child[i]);
   } else {
     throw new RangeError("Unsupported child node: " + child);
   }
@@ -4161,12 +4161,12 @@ function windowRect(win) {
     bottom: win.innerHeight
   };
 }
-function getScale(elt, rect) {
-  let scaleX = rect.width / elt.offsetWidth;
-  let scaleY = rect.height / elt.offsetHeight;
-  if (scaleX > 0.995 && scaleX < 1.005 || !isFinite(scaleX) || Math.abs(rect.width - elt.offsetWidth) < 1)
+function getScale(elt2, rect) {
+  let scaleX = rect.width / elt2.offsetWidth;
+  let scaleY = rect.height / elt2.offsetHeight;
+  if (scaleX > 0.995 && scaleX < 1.005 || !isFinite(scaleX) || Math.abs(rect.width - elt2.offsetWidth) < 1)
     scaleX = 1;
-  if (scaleY > 0.995 && scaleY < 1.005 || !isFinite(scaleY) || Math.abs(rect.height - elt.offsetHeight) < 1)
+  if (scaleY > 0.995 && scaleY < 1.005 || !isFinite(scaleY) || Math.abs(rect.height - elt2.offsetHeight) < 1)
     scaleY = 1;
   return { scaleX, scaleY };
 }
@@ -4331,11 +4331,11 @@ function focusPreventScroll(dom) {
   if (!preventScrollSupported) {
     preventScrollSupported = false;
     for (let i = 0; i < stack.length; ) {
-      let elt = stack[i++], top2 = stack[i++], left = stack[i++];
-      if (elt.scrollTop != top2)
-        elt.scrollTop = top2;
-      if (elt.scrollLeft != left)
-        elt.scrollLeft = left;
+      let elt2 = stack[i++], top2 = stack[i++], left = stack[i++];
+      if (elt2.scrollTop != top2)
+        elt2.scrollTop = top2;
+      if (elt2.scrollLeft != left)
+        elt2.scrollLeft = left;
     }
   }
 }
@@ -4346,16 +4346,16 @@ function textRange(node, from, to = from) {
   range.setStart(node, from);
   return range;
 }
-function dispatchKey(elt, name2, code, mods) {
+function dispatchKey(elt2, name2, code, mods) {
   let options = { key: name2, code: name2, keyCode: code, which: code, cancelable: true };
   if (mods)
     ({ altKey: options.altKey, ctrlKey: options.ctrlKey, shiftKey: options.shiftKey, metaKey: options.metaKey } = mods);
   let down = new KeyboardEvent("keydown", options);
   down.synthetic = true;
-  elt.dispatchEvent(down);
+  elt2.dispatchEvent(down);
   let up = new KeyboardEvent("keyup", options);
   up.synthetic = true;
-  elt.dispatchEvent(up);
+  elt2.dispatchEvent(up);
   return down.defaultPrevented || up.defaultPrevented;
 }
 function getRoot(node) {
@@ -4390,10 +4390,10 @@ function atElementStart(doc2, selection2) {
     }
   }
 }
-function isScrolledToBottom(elt) {
-  if (elt instanceof Window)
-    return elt.pageYOffset > Math.max(0, elt.document.documentElement.scrollHeight - elt.innerHeight - 4);
-  return elt.scrollTop > Math.max(1, elt.scrollHeight - elt.clientHeight - 4);
+function isScrolledToBottom(elt2) {
+  if (elt2 instanceof Window)
+    return elt2.pageYOffset > Math.max(0, elt2.document.documentElement.scrollHeight - elt2.innerHeight - 4);
+  return elt2.scrollTop > Math.max(1, elt2.scrollHeight - elt2.clientHeight - 4);
 }
 function textNodeBefore(startNode, startOffset) {
   for (let node = startNode, offset = startOffset; ; ) {
@@ -4648,12 +4648,12 @@ function emitSpans(line, from, to, level, baseLevel, isolates, order) {
   let ourType = level % 2 ? 2 : 1;
   if (level % 2 == baseLevel % 2) {
     for (let iCh = from, iI = 0; iCh < to; ) {
-      let sameDir = true, isNum = false;
+      let sameDir = true, isNum2 = false;
       if (iI == isolates.length || iCh < isolates[iI].from) {
         let next = types[iCh];
         if (next != ourType) {
           sameDir = false;
-          isNum = next == 16;
+          isNum2 = next == 16;
         }
       }
       let recurse = !sameDir && ourType == 1 ? [] : null;
@@ -4661,7 +4661,7 @@ function emitSpans(line, from, to, level, baseLevel, isolates, order) {
       let iScan = iCh;
       run: for (; ; ) {
         if (iI < isolates.length && iScan == isolates[iI].from) {
-          if (isNum)
+          if (isNum2)
             break run;
           let iso = isolates[iI];
           if (!sameDir)
@@ -4700,12 +4700,12 @@ function emitSpans(line, from, to, level, baseLevel, isolates, order) {
     }
   } else {
     for (let iCh = to, iI = isolates.length; iCh > from; ) {
-      let sameDir = true, isNum = false;
+      let sameDir = true, isNum2 = false;
       if (!iI || iCh > isolates[iI - 1].to) {
         let next = types[iCh - 1];
         if (next != ourType) {
           sameDir = false;
-          isNum = next == 16;
+          isNum2 = next == 16;
         }
       }
       let recurse = !sameDir && ourType == 1 ? [] : null;
@@ -4713,7 +4713,7 @@ function emitSpans(line, from, to, level, baseLevel, isolates, order) {
       let iScan = iCh;
       run: for (; ; ) {
         if (iI && iScan == isolates[iI - 1].to) {
-          if (isNum)
+          if (isNum2)
             break run;
           let iso = isolates[--iI];
           if (!sameDir)
@@ -4816,10 +4816,10 @@ var focusChangeEffect = /* @__PURE__ */ Facet.define();
 var clipboardInputFilter = /* @__PURE__ */ Facet.define();
 var clipboardOutputFilter = /* @__PURE__ */ Facet.define();
 var perLineTextDirection = /* @__PURE__ */ Facet.define({
-  combine: (values) => values.some((x) => x)
+  combine: (values2) => values2.some((x) => x)
 });
 var nativeSelectionHidden = /* @__PURE__ */ Facet.define({
-  combine: (values) => values.some((x) => x)
+  combine: (values2) => values2.some((x) => x)
 });
 var scrollHandler = /* @__PURE__ */ Facet.define();
 var ScrollTarget = class _ScrollTarget {
@@ -4850,7 +4850,7 @@ function logException(state, exception, context) {
   else
     console.error(exception);
 }
-var editable = /* @__PURE__ */ Facet.define({ combine: (values) => values.length ? values[0] : true });
+var editable = /* @__PURE__ */ Facet.define({ combine: (values2) => values2.length ? values2[0] : true });
 var nextPluginID = 0;
 var viewPlugin = /* @__PURE__ */ Facet.define({
   combine(plugins) {
@@ -5711,8 +5711,8 @@ var OpenWrapper = class {
   }
 };
 var TileBuilder = class {
-  constructor(cache2, root, blockWrappers2) {
-    this.cache = cache2;
+  constructor(cache3, root, blockWrappers2) {
+    this.cache = cache3;
     this.root = root;
     this.blockWrappers = blockWrappers2;
     this.curLine = null;
@@ -6334,8 +6334,8 @@ var NullWidget = class extends WidgetType {
   toDOM() {
     return document.createElement(this.tag);
   }
-  updateDOM(elt) {
-    return elt.nodeName.toLowerCase() == this.tag;
+  updateDOM(elt2) {
+    return elt2.nodeName.toLowerCase() == this.tag;
   }
   get isHidden() {
     return true;
@@ -6992,16 +6992,16 @@ var BlockGapWidget = class extends WidgetType {
     this.height = height;
   }
   toDOM() {
-    let elt = document.createElement("div");
-    elt.className = "cm-gap";
-    this.updateDOM(elt);
-    return elt;
+    let elt2 = document.createElement("div");
+    elt2.className = "cm-gap";
+    this.updateDOM(elt2);
+    return elt2;
   }
   eq(other) {
     return other.height == this.height;
   }
-  updateDOM(elt) {
-    elt.style.height = this.height + "px";
+  updateDOM(elt2) {
+    elt2.style.height = this.height + "px";
     return true;
   }
   get editable() {
@@ -8377,9 +8377,9 @@ handlers.paste = (view, event) => {
   if (view.state.readOnly)
     return true;
   view.observer.flush();
-  let data = brokenClipboardAPI ? null : event.clipboardData;
-  if (data) {
-    doPaste(view, data.getData("text/plain") || data.getData("text/uri-list"));
+  let data2 = brokenClipboardAPI ? null : event.clipboardData;
+  if (data2) {
+    doPaste(view, data2.getData("text/plain") || data2.getData("text/uri-list"));
     return true;
   } else {
     capturePaste(view);
@@ -8436,10 +8436,10 @@ handlers.copy = handlers.cut = (view, event) => {
       scrollIntoView: true,
       userEvent: "delete.cut"
     });
-  let data = brokenClipboardAPI ? null : event.clipboardData;
-  if (data) {
-    data.clearData();
-    data.setData("text/plain", text);
+  let data2 = brokenClipboardAPI ? null : event.clipboardData;
+  if (data2) {
+    data2.clearData();
+    data2.setData("text/plain", text);
     return true;
   } else {
     captureCopy(view, text);
@@ -8512,7 +8512,7 @@ observers.contextmenu = (view) => {
   view.inputState.lastContextMenu = Date.now();
 };
 handlers.beforeinput = (view, event) => {
-  var _a2, _b;
+  var _a2, _b2;
   if (event.inputType == "insertText" || event.inputType == "insertCompositionText") {
     view.inputState.insertingText = event.data;
     view.inputState.insertingTextAt = Date.now();
@@ -8530,7 +8530,7 @@ handlers.beforeinput = (view, event) => {
   if (browser.chrome && browser.android && (pending = PendingKeys.find((key) => key.inputType == event.inputType))) {
     view.observer.delayAndroidKey(pending.key, pending.keyCode);
     if (pending.key == "Backspace" || pending.key == "Delete") {
-      let startViewHeight = ((_b = window.visualViewport) === null || _b === void 0 ? void 0 : _b.height) || 0;
+      let startViewHeight = ((_b2 = window.visualViewport) === null || _b2 === void 0 ? void 0 : _b2.height) || 0;
       setTimeout(() => {
         var _a3;
         if ((((_a3 = window.visualViewport) === null || _a3 === void 0 ? void 0 : _a3.height) || 0) > startViewHeight + 10 && view.hasFocus) {
@@ -9281,16 +9281,16 @@ function visiblePixelRange(dom, paddingTop) {
   let top2 = Math.max(0, rect.top), bottom = Math.min(win.innerHeight, rect.bottom);
   for (let parent = dom.parentNode; parent && parent != doc2.body; ) {
     if (parent.nodeType == 1) {
-      let elt = parent;
-      let style = window.getComputedStyle(elt);
-      if ((elt.scrollHeight > elt.clientHeight || elt.scrollWidth > elt.clientWidth) && style.overflow != "visible") {
-        let parentRect = elt.getBoundingClientRect();
+      let elt2 = parent;
+      let style = window.getComputedStyle(elt2);
+      if ((elt2.scrollHeight > elt2.clientHeight || elt2.scrollWidth > elt2.clientWidth) && style.overflow != "visible") {
+        let parentRect = elt2.getBoundingClientRect();
         left = Math.max(left, parentRect.left);
         right = Math.min(right, parentRect.right);
         top2 = Math.max(top2, parentRect.top);
         bottom = Math.min(parent == dom.parentNode ? win.innerHeight : bottom, parentRect.bottom);
       }
-      parent = style.position == "absolute" || style.position == "fixed" ? elt.offsetParent : elt.parentNode;
+      parent = style.position == "absolute" || style.position == "fixed" ? elt2.offsetParent : elt2.parentNode;
     } else if (parent.nodeType == 11) {
       parent = parent.host;
     } else {
@@ -9304,8 +9304,8 @@ function visiblePixelRange(dom, paddingTop) {
     bottom: Math.max(top2, bottom) - (rect.top + paddingTop)
   };
 }
-function inWindow(elt) {
-  let rect = elt.getBoundingClientRect(), win = elt.ownerDocument.defaultView || window;
+function inWindow(elt2) {
+  let rect = elt2.getBoundingClientRect(), win = elt2.ownerDocument.defaultView || window;
   return rect.left < win.innerWidth && rect.right > 0 && rect.top < win.innerHeight && rect.bottom > 0;
 }
 function fullPixelRange(dom, paddingTop) {
@@ -9350,15 +9350,15 @@ var LineGapWidget = class extends WidgetType {
     return other.size == this.size && other.vertical == this.vertical;
   }
   toDOM() {
-    let elt = document.createElement("div");
+    let elt2 = document.createElement("div");
     if (this.vertical) {
-      elt.style.height = this.size + "px";
+      elt2.style.height = this.size + "px";
     } else {
-      elt.style.width = this.size + "px";
-      elt.style.height = "2px";
-      elt.style.display = "inline-block";
+      elt2.style.width = this.size + "px";
+      elt2.style.height = "2px";
+      elt2.style.display = "inline-block";
     }
-    return elt;
+    return elt2;
   }
   get estimatedHeight() {
     return this.vertical ? this.size : -1;
@@ -9912,7 +9912,7 @@ function scaleBlock(block, scaler) {
   return new BlockInfo(block.from, block.length, bTop, bBottom - bTop, Array.isArray(block._content) ? block._content.map((b) => scaleBlock(b, scaler)) : block._content);
 }
 var theme = /* @__PURE__ */ Facet.define({ combine: (strs) => strs.join(" ") });
-var darkTheme = /* @__PURE__ */ Facet.define({ combine: (values) => values.indexOf(true) > -1 });
+var darkTheme = /* @__PURE__ */ Facet.define({ combine: (values2) => values2.indexOf(true) > -1 });
 var baseThemeID = /* @__PURE__ */ StyleModule.newName();
 var baseLightID = /* @__PURE__ */ StyleModule.newName();
 var baseDarkID = /* @__PURE__ */ StyleModule.newName();
@@ -10613,10 +10613,10 @@ var DOMObserver = class {
     }
   }
   destroy() {
-    var _a2, _b, _c;
+    var _a2, _b2, _c;
     this.stop();
     (_a2 = this.intersection) === null || _a2 === void 0 ? void 0 : _a2.disconnect();
-    (_b = this.gapIntersection) === null || _b === void 0 ? void 0 : _b.disconnect();
+    (_b2 = this.gapIntersection) === null || _b2 === void 0 ? void 0 : _b2.disconnect();
     (_c = this.resizeScroll) === null || _c === void 0 ? void 0 : _c.disconnect();
     for (let dom of this.scrollTargets)
       dom.removeEventListener("scroll", this.onScroll);
@@ -11676,8 +11676,8 @@ var EditorView = class _EditorView {
   cause it to scroll the given position or range into view.
   */
   static scrollIntoView(pos, options = {}) {
-    var _a2, _b, _c, _d;
-    return scrollIntoView.of(new ScrollTarget(typeof pos == "number" ? EditorSelection.cursor(pos) : pos, (_a2 = options.y) !== null && _a2 !== void 0 ? _a2 : "nearest", (_b = options.x) !== null && _b !== void 0 ? _b : "nearest", (_c = options.yMargin) !== null && _c !== void 0 ? _c : 5, (_d = options.xMargin) !== null && _d !== void 0 ? _d : 5));
+    var _a2, _b2, _c, _d;
+    return scrollIntoView.of(new ScrollTarget(typeof pos == "number" ? EditorSelection.cursor(pos) : pos, (_a2 = options.y) !== null && _a2 !== void 0 ? _a2 : "nearest", (_b2 = options.x) !== null && _b2 !== void 0 ? _b2 : "nearest", (_c = options.yMargin) !== null && _c !== void 0 ? _c : 5, (_d = options.xMargin) !== null && _d !== void 0 ? _d : 5));
   }
   /**
   Return an effect that resets the editor to its current (at the
@@ -11819,7 +11819,7 @@ EditorView.cursorScrollMargin = /* @__PURE__ */ Facet.define({
 });
 EditorView.scrollMargins = scrollMargins;
 EditorView.darkTheme = darkTheme;
-EditorView.cspNonce = /* @__PURE__ */ Facet.define({ combine: (values) => values.length ? values[0] : "" });
+EditorView.cspNonce = /* @__PURE__ */ Facet.define({ combine: (values2) => values2.length ? values2[0] : "" });
 EditorView.contentAttributes = contentAttributes;
 EditorView.editorAttributes = editorAttributes;
 EditorView.lineWrapping = /* @__PURE__ */ EditorView.contentAttributes.of({ "class": "cm-lineWrapping" });
@@ -11835,12 +11835,12 @@ var CachedOrder = class _CachedOrder {
     this.fresh = fresh;
     this.order = order;
   }
-  static update(cache2, changes) {
-    if (changes.empty && !cache2.some((c) => c.fresh))
-      return cache2;
-    let result = [], lastDir = cache2.length ? cache2[cache2.length - 1].dir : Direction.LTR;
-    for (let i = Math.max(0, cache2.length - 10); i < cache2.length; i++) {
-      let entry = cache2[i];
+  static update(cache3, changes) {
+    if (changes.empty && !cache3.some((c) => c.fresh))
+      return cache3;
+    let result = [], lastDir = cache3.length ? cache3[cache3.length - 1].dir : Direction.LTR;
+    for (let i = Math.max(0, cache3.length - 10); i < cache3.length; i++) {
+      let entry = cache3[i];
       if (entry.dir == lastDir && !changes.touchesRange(entry.from, entry.to))
         result.push(new _CachedOrder(changes.mapPos(entry.from, 1), changes.mapPos(entry.to, -1), entry.dir, entry.isolates, false, entry.order));
     }
@@ -11931,7 +11931,7 @@ function buildKeymap(bindings, platform = currentPlatform) {
       throw new Error("Key binding " + name2 + " is used both as a regular binding and as a multi-stroke prefix");
   };
   let add2 = (scope, key, command2, preventDefault, stopPropagation) => {
-    var _a2, _b;
+    var _a2, _b2;
     let scopeObj = bound[scope] || (bound[scope] = /* @__PURE__ */ Object.create(null));
     let parts = key.split(/ (?!$)/).map((k) => normalizeKeyName(k, platform));
     for (let i = 1; i < parts.length; i++) {
@@ -11956,7 +11956,7 @@ function buildKeymap(bindings, platform = currentPlatform) {
     let binding = scopeObj[full] || (scopeObj[full] = {
       preventDefault: false,
       stopPropagation: false,
-      run: ((_b = (_a2 = scopeObj._any) === null || _a2 === void 0 ? void 0 : _a2.run) === null || _b === void 0 ? void 0 : _b.slice()) || []
+      run: ((_b2 = (_a2 = scopeObj._any) === null || _a2 === void 0 ? void 0 : _a2.run) === null || _b2 === void 0 ? void 0 : _b2.slice()) || []
     });
     if (command2)
       binding.run.push(command2);
@@ -12058,23 +12058,23 @@ var RectangleMarker = class _RectangleMarker {
     this.height = height;
   }
   draw() {
-    let elt = document.createElement("div");
-    elt.className = this.className;
-    this.adjust(elt);
-    return elt;
+    let elt2 = document.createElement("div");
+    elt2.className = this.className;
+    this.adjust(elt2);
+    return elt2;
   }
-  update(elt, prev) {
+  update(elt2, prev) {
     if (prev.className != this.className)
       return false;
-    this.adjust(elt);
+    this.adjust(elt2);
     return true;
   }
-  adjust(elt) {
-    elt.style.left = this.left + "px";
-    elt.style.top = this.top + "px";
+  adjust(elt2) {
+    elt2.style.left = this.left + "px";
+    elt2.style.top = this.top + "px";
     if (this.width != null)
-      elt.style.width = this.width + "px";
-    elt.style.height = this.height + "px";
+      elt2.style.width = this.width + "px";
+    elt2.style.height = this.height + "px";
   }
   eq(p) {
     return this.left == p.left && this.top == p.top && this.width == p.width && this.height == p.height && this.className == p.className;
@@ -12530,7 +12530,7 @@ var MatchDecorator = class {
   updateDeco(update, deco) {
     let changeFrom = 1e9, changeTo = -1;
     if (update.docChanged)
-      update.changes.iterChanges((_f, _t, from, to) => {
+      update.changes.iterChanges((_f2, _t, from, to) => {
         if (to >= update.view.viewport.from && from <= update.view.viewport.to) {
           changeFrom = Math.min(from, changeFrom);
           changeTo = Math.max(to, changeTo);
@@ -12918,12 +12918,12 @@ function windowSpace(view) {
   return { top: 0, left: 0, bottom: docElt.clientHeight, right: docElt.clientWidth };
 }
 var tooltipConfig = /* @__PURE__ */ Facet.define({
-  combine: (values) => {
-    var _a2, _b, _c;
+  combine: (values2) => {
+    var _a2, _b2, _c;
     return {
-      position: browser.ios ? "absolute" : ((_a2 = values.find((conf) => conf.position)) === null || _a2 === void 0 ? void 0 : _a2.position) || "fixed",
-      parent: ((_b = values.find((conf) => conf.parent)) === null || _b === void 0 ? void 0 : _b.parent) || null,
-      tooltipSpace: ((_c = values.find((conf) => conf.tooltipSpace)) === null || _c === void 0 ? void 0 : _c.tooltipSpace) || windowSpace
+      position: browser.ios ? "absolute" : ((_a2 = values2.find((conf) => conf.position)) === null || _a2 === void 0 ? void 0 : _a2.position) || "fixed",
+      parent: ((_b2 = values2.find((conf) => conf.parent)) === null || _b2 === void 0 ? void 0 : _b2.parent) || null,
+      tooltipSpace: ((_c = values2.find((conf) => conf.tooltipSpace)) === null || _c === void 0 ? void 0 : _c.tooltipSpace) || windowSpace
     };
   }
 });
@@ -13029,7 +13029,7 @@ var tooltipPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
     return tooltipView;
   }
   destroy() {
-    var _a2, _b, _c;
+    var _a2, _b2, _c;
     this.view.win.removeEventListener("resize", this.measureSoon);
     for (let tooltipView of this.manager.tooltipViews) {
       tooltipView.dom.remove();
@@ -13037,7 +13037,7 @@ var tooltipPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
     }
     if (this.parent)
       this.container.remove();
-    (_b = this.resizeObserver) === null || _b === void 0 ? void 0 : _b.disconnect();
+    (_b2 = this.resizeObserver) === null || _b2 === void 0 ? void 0 : _b2.disconnect();
     (_c = this.intersectionObserver) === null || _c === void 0 ? void 0 : _c.disconnect();
     clearTimeout(this.measureTimeout);
   }
@@ -13091,12 +13091,12 @@ var tooltipPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
       for (let t2 of this.manager.tooltipViews)
         t2.dom.style.position = "absolute";
     }
-    let { visible, space: space2, scaleX, scaleY } = measured;
+    let { visible, space: space5, scaleX, scaleY } = measured;
     let others = [];
     for (let i = 0; i < this.manager.tooltips.length; i++) {
       let tooltip = this.manager.tooltips[i], tView = this.manager.tooltipViews[i], { dom } = tView;
       let pos = measured.pos[i], size = measured.size[i];
-      if (!pos || tooltip.clip !== false && (pos.bottom <= Math.max(visible.top, space2.top) || pos.top >= Math.min(visible.bottom, space2.bottom) || pos.right < Math.max(visible.left, space2.left) - 0.1 || pos.left > Math.min(visible.right, space2.right) + 0.1)) {
+      if (!pos || tooltip.clip !== false && (pos.bottom <= Math.max(visible.top, space5.top) || pos.top >= Math.min(visible.bottom, space5.bottom) || pos.right < Math.max(visible.left, space5.left) - 0.1 || pos.left > Math.min(visible.right, space5.right) + 0.1)) {
         dom.style.top = Outside;
         continue;
       }
@@ -13104,11 +13104,11 @@ var tooltipPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
       let arrowHeight = arrow ? 7 : 0;
       let width = size.right - size.left, height = (_a2 = knownHeight.get(tView)) !== null && _a2 !== void 0 ? _a2 : size.bottom - size.top;
       let offset = tView.offset || noOffset, ltr = this.view.textDirection == Direction.LTR;
-      let left = size.width > space2.right - space2.left ? ltr ? space2.left : space2.right - size.width : ltr ? Math.max(space2.left, Math.min(pos.left - (arrow ? 14 : 0) + offset.x, space2.right - width)) : Math.min(Math.max(space2.left, pos.left - width + (arrow ? 14 : 0) - offset.x), space2.right - width);
+      let left = size.width > space5.right - space5.left ? ltr ? space5.left : space5.right - size.width : ltr ? Math.max(space5.left, Math.min(pos.left - (arrow ? 14 : 0) + offset.x, space5.right - width)) : Math.min(Math.max(space5.left, pos.left - width + (arrow ? 14 : 0) - offset.x), space5.right - width);
       let above = this.above[i];
-      if (!tooltip.strictSide && (above ? pos.top - height - arrowHeight - offset.y < space2.top : pos.bottom + height + arrowHeight + offset.y > space2.bottom) && above == space2.bottom - pos.bottom > pos.top - space2.top)
+      if (!tooltip.strictSide && (above ? pos.top - height - arrowHeight - offset.y < space5.top : pos.bottom + height + arrowHeight + offset.y > space5.bottom) && above == space5.bottom - pos.bottom > pos.top - space5.top)
         above = this.above[i] = !above;
-      let spaceVert = (above ? pos.top - space2.top : space2.bottom - pos.bottom) - arrowHeight;
+      let spaceVert = (above ? pos.top - space5.top : space5.bottom - pos.bottom) - arrowHeight;
       if (spaceVert < height && tView.resize !== false) {
         if (spaceVert < this.view.defaultLineHeight) {
           dom.style.top = Outside;
@@ -13164,10 +13164,10 @@ var tooltipPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
     }
   }
 });
-function setLeftStyle(elt, value) {
-  let current = parseInt(elt.style.left, 10);
+function setLeftStyle(elt2, value) {
+  let current = parseInt(elt2.style.left, 10);
   if (isNaN(current) || Math.abs(value - current) > 1)
-    elt.style.left = value + "px";
+    elt2.style.left = value + "px";
 }
 var baseTheme = /* @__PURE__ */ EditorView.baseTheme({
   ".cm-tooltip": {
@@ -13265,10 +13265,10 @@ var HoverTooltipHost = class _HoverTooltipHost {
     }
     this.mounted = true;
   }
-  positioned(space2) {
+  positioned(space5) {
     for (let hostedView of this.manager.tooltipViews) {
       if (hostedView.positioned)
-        hostedView.positioned(space2);
+        hostedView.positioned(space5);
     }
   }
   update(update) {
@@ -13407,13 +13407,13 @@ var HoverPlugin = class {
     return index > -1 ? plugin.manager.tooltipViews[index] : null;
   }
   mousemove(event) {
-    var _a2, _b;
+    var _a2, _b2;
     this.lastMove = { x: event.clientX, y: event.clientY, target: event.target, time: Date.now() };
     if (this.hoverTimeout < 0)
       this.hoverTimeout = setTimeout(this.checkHover, this.hoverTime);
     let { active, tooltip } = this;
     if (active.length && !this.locked.has(active) && tooltip && !isInTooltip(tooltip.dom, event) || this.pending) {
-      let { pos } = active[0] || this.pending, end = (_b = (_a2 = active[0]) === null || _a2 === void 0 ? void 0 : _a2.end) !== null && _b !== void 0 ? _b : pos;
+      let { pos } = active[0] || this.pending, end = (_b2 = (_a2 = active[0]) === null || _a2 === void 0 ? void 0 : _a2.end) !== null && _b2 !== void 0 ? _b2 : pos;
       if (pos == end ? this.view.posAtCoords(this.lastMove) != pos : !isOverRange(this.view, pos, end, event.clientX, event.clientY)) {
         this.view.dispatch({ effects: this.setHover.of([]) });
         this.pending = null;
@@ -13849,7 +13849,7 @@ function gutter(config2) {
   return [gutters(), activeGutters.of({ ...defaults, ...config2 })];
 }
 var unfixGutters = /* @__PURE__ */ Facet.define({
-  combine: (values) => values.some((x) => x)
+  combine: (values2) => values2.some((x) => x)
 });
 function gutters(config2) {
   let result = [
@@ -14110,8 +14110,8 @@ var SingleGutterView = class {
     return !RangeSet.eq(this.markers, prevMarkers, vp.from, vp.to) || (this.config.lineMarkerChange ? this.config.lineMarkerChange(update) : false);
   }
   destroy() {
-    for (let elt of this.elements)
-      elt.destroy();
+    for (let elt2 of this.elements)
+      elt2.destroy();
   }
 };
 var GutterElement = class {
@@ -14188,8 +14188,8 @@ function sameMarkers(a, b) {
 var lineNumberMarkers = /* @__PURE__ */ Facet.define();
 var lineNumberWidgetMarker = /* @__PURE__ */ Facet.define();
 var lineNumberConfig = /* @__PURE__ */ Facet.define({
-  combine(values) {
-    return combineConfig(values, { formatNumber: String, domEventHandlers: {} }, {
+  combine(values2) {
+    return combineConfig(values2, { formatNumber: String, domEventHandlers: {} }, {
       domEventHandlers(a, b) {
         let result = Object.assign({}, a);
         for (let event in b) {
@@ -14333,11 +14333,11 @@ NodeProp.contextHash = new NodeProp({ perNode: true });
 NodeProp.lookAhead = new NodeProp({ perNode: true });
 NodeProp.mounted = new NodeProp({ perNode: true });
 var MountedTree = class {
-  constructor(tree, overlay, parser2, bracketed = false) {
+  constructor(tree, overlay, parser8, bracketed2 = false) {
     this.tree = tree;
     this.overlay = overlay;
-    this.parser = parser2;
-    this.bracketed = bracketed;
+    this.parser = parser8;
+    this.bracketed = bracketed2;
   }
   /**
   @internal
@@ -14654,8 +14654,8 @@ var Tree = class _Tree {
   Build a tree from a postfix-ordered buffer of node information,
   or a cursor over such a buffer.
   */
-  static build(data) {
-    return buildTree(data);
+  static build(data2) {
+    return buildTree(data2);
   }
 };
 Tree.empty = new Tree(NodeType.none, [], [], 0);
@@ -15440,10 +15440,10 @@ var TreeCursor = class {
   get node() {
     if (!this.buffer)
       return this._tree;
-    let cache2 = this.bufferNode, result = null, depth = 0;
-    if (cache2 && cache2.context == this.buffer) {
+    let cache3 = this.bufferNode, result = null, depth = 0;
+    if (cache3 && cache3.context == this.buffer) {
       scan: for (let index = this.index, d = this.stack.length; d >= 0; ) {
-        for (let c = cache2; c; c = c._parent)
+        for (let c = cache3; c; c = c._parent)
           if (c.index == index) {
             if (index == this.index)
               return c;
@@ -15522,9 +15522,9 @@ var TreeCursor = class {
 function hasChild(tree) {
   return tree.children.some((ch) => ch instanceof TreeBuffer || !ch.type.isAnonymous || hasChild(ch));
 }
-function buildTree(data) {
+function buildTree(data2) {
   var _a2;
-  let { buffer, nodeSet, maxBufferLength = DefaultBufferLength, reused = [], minRepeatType = nodeSet.types.length } = data;
+  let { buffer, nodeSet, maxBufferLength = DefaultBufferLength, reused = [], minRepeatType = nodeSet.types.length } = data2;
   let cursor2 = Array.isArray(buffer) ? new FlatBufferCursor(buffer, buffer.length) : buffer;
   let types2 = nodeSet.types;
   let contextHash = 0, lookAhead = 0;
@@ -15551,11 +15551,11 @@ function buildTree(data) {
     let type = types2[id2], node, buffer2;
     let startPos = start - parentStart;
     if (end - start <= maxBufferLength && (buffer2 = findBufferSize(cursor2.pos - minPos, inRepeat))) {
-      let data2 = new Uint16Array(buffer2.size - buffer2.skip);
-      let endPos = cursor2.pos - buffer2.size, index = data2.length;
+      let data3 = new Uint16Array(buffer2.size - buffer2.skip);
+      let endPos = cursor2.pos - buffer2.size, index = data3.length;
       while (cursor2.pos > endPos)
-        index = copyToBuffer(buffer2.start, data2, index);
-      node = new TreeBuffer(data2, end - buffer2.start, nodeSet);
+        index = copyToBuffer(buffer2.start, data3, index);
+      node = new TreeBuffer(data3, end - buffer2.start, nodeSet);
       startPos = buffer2.start - parentStart;
     } else {
       let endPos = cursor2.pos - size;
@@ -15719,9 +15719,9 @@ function buildTree(data) {
   }
   let children = [], positions = [];
   while (cursor2.pos > 0)
-    takeNode(data.start || 0, data.bufferStart || 0, children, positions, -1, 0);
-  let length = (_a2 = data.length) !== null && _a2 !== void 0 ? _a2 : children.length ? positions[0] + children[0].length : 0;
-  return new Tree(types2[data.topID], children.reverse(), positions.reverse(), length);
+    takeNode(data2.start || 0, data2.bufferStart || 0, children, positions, -1, 0);
+  let length = (_a2 = data2.length) !== null && _a2 !== void 0 ? _a2 : children.length ? positions[0] + children[0].length : 0;
+  return new Tree(types2[data2.topID], children.reverse(), positions.reverse(), length);
 }
 var nodeSizeCache = /* @__PURE__ */ new WeakMap();
 function nodeSize(balanceType, node) {
@@ -15948,7 +15948,388 @@ var StringInput = class {
     return this.string.slice(from, to);
   }
 };
+function parseMixed(nest) {
+  return (parse, input, fragments, ranges) => new MixedParse(parse, nest, input, fragments, ranges);
+}
+var InnerParse = class {
+  constructor(parser8, parse, overlay, bracketed2, target, from) {
+    this.parser = parser8;
+    this.parse = parse;
+    this.overlay = overlay;
+    this.bracketed = bracketed2;
+    this.target = target;
+    this.from = from;
+  }
+};
+function checkRanges(ranges) {
+  if (!ranges.length || ranges.some((r) => r.from >= r.to))
+    throw new RangeError("Invalid inner parse ranges given: " + JSON.stringify(ranges));
+}
+var ActiveOverlay = class {
+  constructor(parser8, predicate, mounts, index, start, bracketed2, target, prev) {
+    this.parser = parser8;
+    this.predicate = predicate;
+    this.mounts = mounts;
+    this.index = index;
+    this.start = start;
+    this.bracketed = bracketed2;
+    this.target = target;
+    this.prev = prev;
+    this.depth = 0;
+    this.ranges = [];
+  }
+};
 var stoppedInner = new NodeProp({ perNode: true });
+var MixedParse = class {
+  constructor(base2, nest, input, fragments, ranges) {
+    this.nest = nest;
+    this.input = input;
+    this.fragments = fragments;
+    this.ranges = ranges;
+    this.inner = [];
+    this.innerDone = 0;
+    this.baseTree = null;
+    this.stoppedAt = null;
+    this.baseParse = base2;
+  }
+  advance() {
+    if (this.baseParse) {
+      let done2 = this.baseParse.advance();
+      if (!done2)
+        return null;
+      this.baseParse = null;
+      this.baseTree = done2;
+      this.startInner();
+      if (this.stoppedAt != null)
+        for (let inner2 of this.inner)
+          inner2.parse.stopAt(this.stoppedAt);
+    }
+    if (this.innerDone == this.inner.length) {
+      let result = this.baseTree;
+      if (this.stoppedAt != null)
+        result = new Tree(result.type, result.children, result.positions, result.length, result.propValues.concat([[stoppedInner, this.stoppedAt]]));
+      return result;
+    }
+    let inner = this.inner[this.innerDone], done = inner.parse.advance();
+    if (done) {
+      this.innerDone++;
+      let props = Object.assign(/* @__PURE__ */ Object.create(null), inner.target.props);
+      props[NodeProp.mounted.id] = new MountedTree(done, inner.overlay, inner.parser, inner.bracketed);
+      inner.target.props = props;
+    }
+    return null;
+  }
+  get parsedPos() {
+    if (this.baseParse)
+      return 0;
+    let pos = this.input.length;
+    for (let i = this.innerDone; i < this.inner.length; i++) {
+      if (this.inner[i].from < pos)
+        pos = Math.min(pos, this.inner[i].parse.parsedPos);
+    }
+    return pos;
+  }
+  stopAt(pos) {
+    this.stoppedAt = pos;
+    if (this.baseParse)
+      this.baseParse.stopAt(pos);
+    else
+      for (let i = this.innerDone; i < this.inner.length; i++)
+        this.inner[i].parse.stopAt(pos);
+  }
+  startInner() {
+    let fragmentCursor = new FragmentCursor(this.fragments);
+    let overlay = null;
+    let covered = null;
+    let cursor2 = new TreeCursor(new TreeNode(this.baseTree, this.ranges[0].from, 0, null), IterMode.IncludeAnonymous | IterMode.IgnoreMounts);
+    scan: for (let nest, isCovered; ; ) {
+      let enter = true, range;
+      if (this.stoppedAt != null && cursor2.from >= this.stoppedAt) {
+        enter = false;
+      } else if (fragmentCursor.hasNode(cursor2)) {
+        if (overlay) {
+          let match = overlay.mounts.find((m) => m.frag.from <= cursor2.from && m.frag.to >= cursor2.to && m.mount.overlay);
+          if (match)
+            for (let r of match.mount.overlay) {
+              let from = r.from + match.pos, to = r.to + match.pos;
+              if (from >= cursor2.from && to <= cursor2.to && !overlay.ranges.some((r2) => r2.from < to && r2.to > from))
+                overlay.ranges.push({ from, to });
+            }
+        }
+        enter = false;
+      } else if (covered && (isCovered = checkCover(covered.ranges, cursor2.from, cursor2.to))) {
+        enter = isCovered != 2;
+      } else if (!cursor2.type.isAnonymous && (nest = this.nest(cursor2, this.input)) && (cursor2.from < cursor2.to || !nest.overlay)) {
+        if (!cursor2.tree) {
+          materialize(cursor2);
+          if (overlay)
+            overlay.depth++;
+          if (covered)
+            covered.depth++;
+        }
+        let oldMounts = fragmentCursor.findMounts(cursor2.from, nest.parser);
+        if (typeof nest.overlay == "function") {
+          overlay = new ActiveOverlay(nest.parser, nest.overlay, oldMounts, this.inner.length, cursor2.from, !!nest.bracketed, cursor2.tree, overlay);
+        } else {
+          let ranges = punchRanges(this.ranges, nest.overlay || (cursor2.from < cursor2.to ? [new Range2(cursor2.from, cursor2.to)] : []));
+          if (ranges.length)
+            checkRanges(ranges);
+          if (ranges.length || !nest.overlay)
+            this.inner.push(new InnerParse(nest.parser, ranges.length ? nest.parser.startParse(this.input, enterFragments(oldMounts, ranges), ranges) : nest.parser.startParse(""), nest.overlay ? nest.overlay.map((r) => new Range2(r.from - cursor2.from, r.to - cursor2.from)) : null, !!nest.bracketed, cursor2.tree, ranges.length ? ranges[0].from : cursor2.from));
+          if (!nest.overlay)
+            enter = false;
+          else if (ranges.length)
+            covered = { ranges, depth: 0, prev: covered };
+        }
+      } else if (overlay && (range = overlay.predicate(cursor2))) {
+        if (range === true)
+          range = new Range2(cursor2.from, cursor2.to);
+        if (range.from < range.to) {
+          let last = overlay.ranges.length - 1;
+          if (last >= 0 && overlay.ranges[last].to == range.from)
+            overlay.ranges[last] = { from: overlay.ranges[last].from, to: range.to };
+          else
+            overlay.ranges.push(range);
+        }
+      }
+      if (enter && cursor2.firstChild()) {
+        if (overlay)
+          overlay.depth++;
+        if (covered)
+          covered.depth++;
+      } else {
+        for (; ; ) {
+          if (cursor2.nextSibling())
+            break;
+          if (!cursor2.parent())
+            break scan;
+          if (overlay && !--overlay.depth) {
+            let ranges = punchRanges(this.ranges, overlay.ranges);
+            if (ranges.length) {
+              checkRanges(ranges);
+              this.inner.splice(overlay.index, 0, new InnerParse(overlay.parser, overlay.parser.startParse(this.input, enterFragments(overlay.mounts, ranges), ranges), overlay.ranges.map((r) => new Range2(r.from - overlay.start, r.to - overlay.start)), overlay.bracketed, overlay.target, ranges[0].from));
+            }
+            overlay = overlay.prev;
+          }
+          if (covered && !--covered.depth)
+            covered = covered.prev;
+        }
+      }
+    }
+  }
+};
+function checkCover(covered, from, to) {
+  for (let range of covered) {
+    if (range.from >= to)
+      break;
+    if (range.to > from)
+      return range.from <= from && range.to >= to ? 2 : 1;
+  }
+  return 0;
+}
+function sliceBuf(buf, startI, endI, nodes, positions, off) {
+  if (startI < endI) {
+    let from = buf.buffer[startI + 1];
+    nodes.push(buf.slice(startI, endI, from));
+    positions.push(from - off);
+  }
+}
+function materialize(cursor2) {
+  let { node } = cursor2, stack = [];
+  let buffer = node.context.buffer;
+  do {
+    stack.push(cursor2.index);
+    cursor2.parent();
+  } while (!cursor2.tree);
+  let base2 = cursor2.tree, i = base2.children.indexOf(buffer);
+  let buf = base2.children[i], b = buf.buffer, newStack = [i];
+  function split(startI, endI, type, innerOffset, length, stackPos) {
+    let targetI = stack[stackPos];
+    let children = [], positions = [];
+    sliceBuf(buf, startI, targetI, children, positions, innerOffset);
+    let from = b[targetI + 1], to = b[targetI + 2];
+    newStack.push(children.length);
+    let child = stackPos ? split(targetI + 4, b[targetI + 3], buf.set.types[b[targetI]], from, to - from, stackPos - 1) : node.toTree();
+    children.push(child);
+    positions.push(from - innerOffset);
+    sliceBuf(buf, b[targetI + 3], endI, children, positions, innerOffset);
+    return new Tree(type, children, positions, length);
+  }
+  base2.children[i] = split(0, b.length, NodeType.none, 0, buf.length, stack.length - 1);
+  for (let index of newStack) {
+    let tree = cursor2.tree.children[index], pos = cursor2.tree.positions[index];
+    cursor2.yield(new TreeNode(tree, pos + cursor2.from, index, cursor2._tree));
+  }
+}
+var StructureCursor = class {
+  constructor(root, offset) {
+    this.offset = offset;
+    this.done = false;
+    this.cursor = root.cursor(IterMode.IncludeAnonymous | IterMode.IgnoreMounts);
+  }
+  // Move to the first node (in pre-order) that starts at or after `pos`.
+  moveTo(pos) {
+    let { cursor: cursor2 } = this, p = pos - this.offset;
+    while (!this.done && cursor2.from < p) {
+      if (cursor2.to >= pos && cursor2.enter(p, 1, IterMode.IgnoreOverlays | IterMode.ExcludeBuffers)) ;
+      else if (cursor2.to <= pos) {
+        if (!cursor2.next(false))
+          this.done = true;
+      } else {
+        break;
+      }
+    }
+  }
+  hasNode(cursor2) {
+    this.moveTo(cursor2.from);
+    if (!this.done && this.cursor.from + this.offset == cursor2.from && this.cursor.tree) {
+      for (let tree = this.cursor.tree; ; ) {
+        if (tree == cursor2.tree)
+          return true;
+        if (tree.children.length && tree.positions[0] == 0 && tree.children[0] instanceof Tree)
+          tree = tree.children[0];
+        else
+          break;
+      }
+    }
+    return false;
+  }
+};
+var FragmentCursor = class {
+  constructor(fragments) {
+    var _a2;
+    this.fragments = fragments;
+    this.curTo = 0;
+    this.fragI = 0;
+    if (fragments.length) {
+      let first = this.curFrag = fragments[0];
+      this.curTo = (_a2 = first.tree.prop(stoppedInner)) !== null && _a2 !== void 0 ? _a2 : first.to;
+      this.inner = new StructureCursor(first.tree, -first.offset);
+    } else {
+      this.curFrag = this.inner = null;
+    }
+  }
+  hasNode(node) {
+    while (this.curFrag && node.from >= this.curTo)
+      this.nextFrag();
+    return this.curFrag && this.curFrag.from <= node.from && this.curTo >= node.to && this.inner.hasNode(node);
+  }
+  nextFrag() {
+    var _a2;
+    this.fragI++;
+    if (this.fragI == this.fragments.length) {
+      this.curFrag = this.inner = null;
+    } else {
+      let frag = this.curFrag = this.fragments[this.fragI];
+      this.curTo = (_a2 = frag.tree.prop(stoppedInner)) !== null && _a2 !== void 0 ? _a2 : frag.to;
+      this.inner = new StructureCursor(frag.tree, -frag.offset);
+    }
+  }
+  findMounts(pos, parser8) {
+    var _a2;
+    let result = [];
+    if (this.inner) {
+      this.inner.cursor.moveTo(pos, 1);
+      for (let pos2 = this.inner.cursor.node; pos2; pos2 = pos2.parent) {
+        let mount = (_a2 = pos2.tree) === null || _a2 === void 0 ? void 0 : _a2.prop(NodeProp.mounted);
+        if (mount && mount.parser == parser8) {
+          for (let i = this.fragI; i < this.fragments.length; i++) {
+            let frag = this.fragments[i];
+            if (frag.from >= pos2.to)
+              break;
+            if (frag.tree == this.curFrag.tree)
+              result.push({
+                frag,
+                pos: pos2.from - frag.offset,
+                mount
+              });
+          }
+        }
+      }
+    }
+    return result;
+  }
+};
+function punchRanges(outer, ranges) {
+  let copy = null, current = ranges;
+  for (let i = 1, j = 0; i < outer.length; i++) {
+    let gapFrom = outer[i - 1].to, gapTo = outer[i].from;
+    for (; j < current.length; j++) {
+      let r = current[j];
+      if (r.from >= gapTo)
+        break;
+      if (r.to <= gapFrom)
+        continue;
+      if (!copy)
+        current = copy = ranges.slice();
+      if (r.from < gapFrom) {
+        copy[j] = new Range2(r.from, gapFrom);
+        if (r.to > gapTo)
+          copy.splice(j + 1, 0, new Range2(gapTo, r.to));
+      } else if (r.to > gapTo) {
+        copy[j--] = new Range2(gapTo, r.to);
+      } else {
+        copy.splice(j--, 1);
+      }
+    }
+  }
+  return current;
+}
+function findCoverChanges(a, b, from, to) {
+  let iA = 0, iB = 0, inA = false, inB = false, pos = -1e9;
+  let result = [];
+  for (; ; ) {
+    let nextA = iA == a.length ? 1e9 : inA ? a[iA].to : a[iA].from;
+    let nextB = iB == b.length ? 1e9 : inB ? b[iB].to : b[iB].from;
+    if (inA != inB) {
+      let start = Math.max(pos, from), end = Math.min(nextA, nextB, to);
+      if (start < end)
+        result.push(new Range2(start, end));
+    }
+    pos = Math.min(nextA, nextB);
+    if (pos == 1e9)
+      break;
+    if (nextA == pos) {
+      if (!inA)
+        inA = true;
+      else {
+        inA = false;
+        iA++;
+      }
+    }
+    if (nextB == pos) {
+      if (!inB)
+        inB = true;
+      else {
+        inB = false;
+        iB++;
+      }
+    }
+  }
+  return result;
+}
+function enterFragments(mounts, ranges) {
+  let result = [];
+  for (let { pos, mount, frag } of mounts) {
+    let startPos = pos + (mount.overlay ? mount.overlay[0].from : 0), endPos = startPos + mount.tree.length;
+    let from = Math.max(frag.from, startPos), to = Math.min(frag.to, endPos);
+    if (mount.overlay) {
+      let overlay = mount.overlay.map((r) => new Range2(r.from + pos, r.to + pos));
+      let changes = findCoverChanges(ranges, overlay, from, to);
+      for (let i = 0, pos2 = from; ; i++) {
+        let last = i == changes.length, end = last ? to : changes[i].from;
+        if (end > pos2)
+          result.push(new TreeFragment(pos2, end, mount.tree, -startPos, frag.from >= pos2 || frag.openStart, frag.to <= end || frag.openEnd));
+        if (last)
+          break;
+        pos2 = changes[i].to;
+      }
+    } else {
+      result.push(new TreeFragment(from, to, mount.tree, -startPos, frag.from >= startPos || frag.openStart, frag.to <= endPos || frag.openEnd));
+    }
+  }
+  return result;
+}
 
 // node_modules/@lezer/highlight/dist/index.js
 var nextTagID = 0;
@@ -16043,9 +16424,9 @@ function powerSet(array) {
 function styleTags(spec) {
   let byName = /* @__PURE__ */ Object.create(null);
   for (let prop in spec) {
-    let tags2 = spec[prop];
-    if (!Array.isArray(tags2))
-      tags2 = [tags2];
+    let tags3 = spec[prop];
+    if (!Array.isArray(tags3))
+      tags3 = [tags3];
     for (let part of prop.split(" "))
       if (part) {
         let pieces = [], mode = 2, rest = part;
@@ -16073,7 +16454,7 @@ function styleTags(spec) {
         let last = pieces.length - 1, inner = pieces[last];
         if (!inner)
           throw new RangeError("Invalid path: " + part);
-        let rule = new Rule(tags2, mode, last > 0 ? pieces.slice(0, last) : null);
+        let rule = new Rule(tags3, mode, last > 0 ? pieces.slice(0, last) : null);
         byName[inner] = rule.sort(byName[inner]);
       }
   }
@@ -16103,8 +16484,8 @@ var ruleNodeProp = new NodeProp({
   }
 });
 var Rule = class {
-  constructor(tags2, mode, context, next) {
-    this.tags = tags2;
+  constructor(tags3, mode, context, next) {
+    this.tags = tags3;
     this.mode = mode;
     this.context = context;
     this.next = next;
@@ -16128,9 +16509,9 @@ var Rule = class {
   }
 };
 Rule.empty = new Rule([], 2, null);
-function tagHighlighter(tags2, options) {
+function tagHighlighter(tags3, options) {
   let map = /* @__PURE__ */ Object.create(null);
-  for (let style of tags2) {
+  for (let style of tags3) {
     if (!Array.isArray(style.tag))
       map[style.tag.id] = style.class;
     else
@@ -16139,9 +16520,9 @@ function tagHighlighter(tags2, options) {
   }
   let { scope, all = null } = options || {};
   return {
-    style: (tags3) => {
+    style: (tags4) => {
       let cls = all;
-      for (let tag of tags3) {
+      for (let tag of tags4) {
         for (let sub of tag.set) {
           let tagClass = map[sub.id];
           if (tagClass) {
@@ -16155,10 +16536,10 @@ function tagHighlighter(tags2, options) {
     scope
   };
 }
-function highlightTags(highlighters, tags2) {
+function highlightTags(highlighters, tags3) {
   let result = null;
   for (let highlighter of highlighters) {
-    let value = highlighter.style(tags2);
+    let value = highlighter.style(tags3);
     if (value)
       result = result ? result + " " + value : value;
   }
@@ -16679,7 +17060,7 @@ var _a;
 var languageDataProp = /* @__PURE__ */ new NodeProp();
 function defineLanguageFacet(baseData) {
   return Facet.define({
-    combine: baseData ? (values) => values.concat(baseData) : void 0
+    combine: baseData ? (values2) => values2.concat(baseData) : void 0
   });
 }
 var sublanguageProp = /* @__PURE__ */ new NodeProp();
@@ -16691,27 +17072,27 @@ var Language = class {
   configure your parser to [attach](https://codemirror.net/6/docs/ref/#language.languageDataProp) it
   to the language's outer syntax node.
   */
-  constructor(data, parser2, extraExtensions = [], name2 = "") {
-    this.data = data;
+  constructor(data2, parser8, extraExtensions = [], name2 = "") {
+    this.data = data2;
     this.name = name2;
     if (!EditorState.prototype.hasOwnProperty("tree"))
       Object.defineProperty(EditorState.prototype, "tree", { get() {
         return syntaxTree(this);
       } });
-    this.parser = parser2;
+    this.parser = parser8;
     this.extension = [
       language.of(this),
       EditorState.languageData.of((state, pos, side) => {
-        let top2 = topNodeAt(state, pos, side), data2 = top2.type.prop(languageDataProp);
-        if (!data2)
+        let top2 = topNodeAt(state, pos, side), data3 = top2.type.prop(languageDataProp);
+        if (!data3)
           return [];
-        let base2 = state.facet(data2), sub = top2.type.prop(sublanguageProp);
+        let base2 = state.facet(data3), sub = top2.type.prop(sublanguageProp);
         if (sub) {
           let innerNode = top2.resolve(pos - top2.from, side);
           for (let sublang of sub)
             if (sublang.test(innerNode, state)) {
-              let data3 = state.facet(sublang.facet);
-              return sublang.type == "replace" ? data3 : data3.concat(base2);
+              let data4 = state.facet(sublang.facet);
+              return sublang.type == "replace" ? data4 : data4.concat(base2);
             }
         }
         return base2;
@@ -16785,17 +17166,17 @@ function topNodeAt(state, pos, side) {
   return tree;
 }
 var LRLanguage = class _LRLanguage extends Language {
-  constructor(data, parser2, name2) {
-    super(data, parser2, [], name2);
-    this.parser = parser2;
+  constructor(data2, parser8, name2) {
+    super(data2, parser8, [], name2);
+    this.parser = parser8;
   }
   /**
   Define a language from a parser.
   */
   static define(spec) {
-    let data = defineLanguageFacet(spec.languageData);
-    return new _LRLanguage(data, spec.parser.configure({
-      props: [languageDataProp.add((type) => type.isTop ? data : void 0)]
+    let data2 = defineLanguageFacet(spec.languageData);
+    return new _LRLanguage(data2, spec.parser.configure({
+      props: [languageDataProp.add((type) => type.isTop ? data2 : void 0)]
     }), spec.name);
   }
   /**
@@ -16839,17 +17220,17 @@ var DocInput = class {
     return true;
   }
   read(from, to) {
-    let stringStart = this.cursorPos - this.string.length;
-    if (from < stringStart || to >= this.cursorPos)
+    let stringStart2 = this.cursorPos - this.string.length;
+    if (from < stringStart2 || to >= this.cursorPos)
       return this.doc.sliceString(from, to);
     else
-      return this.string.slice(from - stringStart, to - stringStart);
+      return this.string.slice(from - stringStart2, to - stringStart2);
   }
 };
 var currentContext = null;
 var ParseContext = class _ParseContext {
-  constructor(parser2, state, fragments = [], tree, treeLen, viewport, skipped, scheduleOn) {
-    this.parser = parser2;
+  constructor(parser8, state, fragments = [], tree, treeLen, viewport, skipped, scheduleOn) {
+    this.parser = parser8;
     this.state = state;
     this.fragments = fragments;
     this.tree = tree;
@@ -16863,8 +17244,8 @@ var ParseContext = class _ParseContext {
   /**
   @internal
   */
-  static create(parser2, state, viewport) {
-    return new _ParseContext(parser2, state, [], Tree.empty, 0, viewport, [], null);
+  static create(parser8, state, viewport) {
+    return new _ParseContext(parser8, state, [], Tree.empty, 0, viewport, [], null);
   }
   startParse() {
     return this.parser.startParse(new DocInput(this.state.doc), this.fragments);
@@ -17012,7 +17393,7 @@ var ParseContext = class _ParseContext {
     return new class extends Parser {
       createParse(input, fragments, ranges) {
         let from = ranges[0].from, to = ranges[ranges.length - 1].to;
-        let parser2 = {
+        let parser8 = {
           parsedPos: from,
           advance() {
             let cx = currentContext;
@@ -17029,7 +17410,7 @@ var ParseContext = class _ParseContext {
           stopAt() {
           }
         };
-        return parser2;
+        return parser8;
       }
     }();
   }
@@ -17207,14 +17588,88 @@ var LanguageSupport = class {
     this.extension = [language2, support];
   }
 };
+var LanguageDescription = class _LanguageDescription {
+  constructor(name2, alias, extensions, filename, loadFunc, support = void 0) {
+    this.name = name2;
+    this.alias = alias;
+    this.extensions = extensions;
+    this.filename = filename;
+    this.loadFunc = loadFunc;
+    this.support = support;
+    this.loading = null;
+  }
+  /**
+  Start loading the the language. Will return a promise that
+  resolves to a [`LanguageSupport`](https://codemirror.net/6/docs/ref/#language.LanguageSupport)
+  object when the language successfully loads.
+  */
+  load() {
+    return this.loading || (this.loading = this.loadFunc().then((support) => this.support = support, (err) => {
+      this.loading = null;
+      throw err;
+    }));
+  }
+  /**
+  Create a language description.
+  */
+  static of(spec) {
+    let { load, support } = spec;
+    if (!load) {
+      if (!support)
+        throw new RangeError("Must pass either 'load' or 'support' to LanguageDescription.of");
+      load = () => Promise.resolve(support);
+    }
+    return new _LanguageDescription(spec.name, (spec.alias || []).concat(spec.name).map((s) => s.toLowerCase()), spec.extensions || [], spec.filename, load, support);
+  }
+  /**
+  Look for a language in the given array of descriptions that
+  matches the filename. Will first match
+  [`filename`](https://codemirror.net/6/docs/ref/#language.LanguageDescription.filename) patterns,
+  and then [extensions](https://codemirror.net/6/docs/ref/#language.LanguageDescription.extensions),
+  and return the first language that matches.
+  */
+  static matchFilename(descs, filename) {
+    for (let d of descs)
+      if (d.filename && d.filename.test(filename))
+        return d;
+    let ext = /\.([^.]+)$/.exec(filename);
+    if (ext) {
+      for (let d of descs)
+        if (d.extensions.indexOf(ext[1]) > -1)
+          return d;
+    }
+    return null;
+  }
+  /**
+  Look for a language whose name or alias matches the the given
+  name (case-insensitively). If `fuzzy` is true, and no direct
+  matchs is found, this'll also search for a language whose name
+  or alias occurs in the string (for names shorter than three
+  characters, only when surrounded by non-word characters).
+  */
+  static matchLanguageName(descs, name2, fuzzy = true) {
+    name2 = name2.toLowerCase();
+    for (let d of descs)
+      if (d.alias.some((a) => a == name2))
+        return d;
+    if (fuzzy)
+      for (let d of descs)
+        for (let a of d.alias) {
+          let found = name2.indexOf(a);
+          if (found > -1 && (a.length > 2 || !/\w/.test(name2[found - 1]) && !/\w/.test(name2[found + a.length])))
+            return d;
+        }
+    return null;
+  }
+};
 var indentService = /* @__PURE__ */ Facet.define();
 var indentUnit = /* @__PURE__ */ Facet.define({
-  combine: (values) => {
-    if (!values.length)
+  combine: (values2) => {
+    if (!values2.length)
       return "  ";
-    let unit = values[0];
+    let unit = values2[0];
     if (!unit || /\S/.test(unit) || Array.from(unit).some((e) => e != unit[0]))
-      throw new Error("Invalid indent unit: " + JSON.stringify(values[0]));
+      throw new Error("Invalid indent unit: " + JSON.stringify(values2[0]));
     return unit;
   }
 });
@@ -17438,16 +17893,16 @@ function bracketedAligned(context) {
     return null;
   let sim = context.options.simulateBreak;
   let openLine = context.state.doc.lineAt(openToken.from);
-  let lineEnd = sim == null || sim <= openLine.from ? openLine.to : Math.min(openLine.to, sim);
+  let lineEnd2 = sim == null || sim <= openLine.from ? openLine.to : Math.min(openLine.to, sim);
   for (let pos = openToken.to; ; ) {
     let next = tree.childAfter(pos);
     if (!next || next == last)
       return null;
     if (!next.type.isSkipped) {
-      if (next.from >= lineEnd)
+      if (next.from >= lineEnd2)
         return null;
-      let space2 = /^ */.exec(openLine.text.slice(openToken.to - openLine.from))[0].length;
-      return { from: openToken.from, to: openToken.to + space2 };
+      let space5 = /^ */.exec(openLine.text.slice(openToken.to - openLine.from))[0].length;
+      return { from: openToken.from, to: openToken.to + space5 };
     }
     pos = next.to;
   }
@@ -17456,8 +17911,8 @@ function delimitedIndent({ closing: closing2, align = true, units = 1 }) {
   return (context) => delimitedStrategy(context, align, units, closing2);
 }
 function delimitedStrategy(context, align, units, closing2, closedAt) {
-  let after = context.textAfter, space2 = after.match(/^\s*/)[0].length;
-  let closed = closing2 && after.slice(space2, space2 + closing2.length) == closing2 || closedAt == context.pos + space2;
+  let after = context.textAfter, space5 = after.match(/^\s*/)[0].length;
+  let closed = closing2 && after.slice(space5, space5 + closing2.length) == closing2 || closedAt == context.pos + space5;
   let aligned = align ? bracketedAligned(context) : null;
   if (aligned)
     return closed ? context.column(aligned.from) : context.column(aligned.to);
@@ -17490,11 +17945,11 @@ function indentOnInput() {
       if (line2.from == last)
         continue;
       last = line2.from;
-      let indent = getIndentation(state, line2.from);
-      if (indent == null)
+      let indent2 = getIndentation(state, line2.from);
+      if (indent2 == null)
         continue;
       let cur2 = /^\s*/.exec(line2.text)[0];
-      let norm = indentString(state, indent);
+      let norm = indentString(state, indent2);
       if (cur2 != norm)
         changes.push({ from: line2.from, to: line2.from + cur2.length, insert: norm });
     }
@@ -17532,13 +17987,13 @@ function isUnfinished(node) {
   let ch = node.lastChild;
   return ch && ch.to == node.to && ch.type.isError;
 }
-function foldable(state, lineStart, lineEnd) {
+function foldable(state, lineStart, lineEnd2) {
   for (let service of state.facet(foldService)) {
-    let result = service(state, lineStart, lineEnd);
+    let result = service(state, lineStart, lineEnd2);
     if (result)
       return result;
   }
-  return syntaxFolding(state, lineStart, lineEnd);
+  return syntaxFolding(state, lineStart, lineEnd2);
 }
 function mapRange(range, mapping) {
   let from = mapping.mapPos(range.from, 1), to = mapping.mapPos(range.to, -1);
@@ -17702,8 +18157,8 @@ var defaultConfig = {
   placeholderText: "\u2026"
 };
 var foldConfig = /* @__PURE__ */ Facet.define({
-  combine(values) {
-    return combineConfig(values, defaultConfig);
+  combine(values2) {
+    return combineConfig(values2, defaultConfig);
   }
 });
 function codeFolding(config2) {
@@ -17886,8 +18341,8 @@ var HighlightStyle = class _HighlightStyle {
 };
 var highlighterFacet = /* @__PURE__ */ Facet.define();
 var fallbackHighlighter = /* @__PURE__ */ Facet.define({
-  combine(values) {
-    return values.length ? [values[0]] : null;
+  combine(values2) {
+    return values2.length ? [values2[0]] : null;
   }
 });
 function getHighlighters(state) {
@@ -18276,8 +18731,8 @@ var toggleBlockCommentByLine = /* @__PURE__ */ command(
   /* CommentOption.Toggle */
 );
 function getConfig(state, pos) {
-  let data = state.languageDataAt("commentTokens", pos, 1);
-  return data.length ? data[0] : {};
+  let data2 = state.languageDataAt("commentTokens", pos, 1);
+  return data2.length ? data2[0] : {};
 }
 var SearchMargin = 50;
 function findBlockComment(state, { open, close }, from, to) {
@@ -18365,12 +18820,12 @@ function changeLineComment(option, state, ranges = state.selection.ranges) {
       }
       if (line.from > prevLine && (from == to || to > line.from)) {
         prevLine = line.from;
-        let indent = /^\s*/.exec(line.text)[0].length;
-        let empty2 = indent == line.length;
-        let comment2 = line.text.slice(indent, indent + token.length) == token ? indent : -1;
-        if (indent < line.text.length && indent < minIndent)
-          minIndent = indent;
-        lines.push({ line, comment: comment2, token, indent, empty: empty2, single: false });
+        let indent2 = /^\s*/.exec(line.text)[0].length;
+        let empty2 = indent2 == line.length;
+        let comment2 = line.text.slice(indent2, indent2 + token.length) == token ? indent2 : -1;
+        if (indent2 < line.text.length && indent2 < minIndent)
+          minIndent = indent2;
+        lines.push({ line, comment: comment2, token, indent: indent2, empty: empty2, single: false });
       }
       pos = line.to + 1;
     }
@@ -18384,9 +18839,9 @@ function changeLineComment(option, state, ranges = state.selection.ranges) {
   }
   if (option != 2 && lines.some((l) => l.comment < 0 && (!l.empty || l.single))) {
     let changes = [];
-    for (let { line, token, indent, empty: empty2, single } of lines)
+    for (let { line, token, indent: indent2, empty: empty2, single } of lines)
       if (single || !empty2)
-        changes.push({ from: line.from + indent, insert: token + " " });
+        changes.push({ from: line.from + indent2, insert: token + " " });
     let changeSet = state.changes(changes);
     return { changes: changeSet, selection: state.selection.map(changeSet, 1) };
   } else if (option != 1 && lines.some((l) => l.comment >= 0)) {
@@ -18452,8 +18907,8 @@ var historyField_ = /* @__PURE__ */ StateField.define({
   toJSON(value) {
     return { done: value.done.map((e) => e.toJSON()), undone: value.undone.map((e) => e.toJSON()) };
   },
-  fromJSON(json) {
-    return new HistoryState(json.done.map(HistEvent.fromJSON), json.undone.map(HistEvent.fromJSON));
+  fromJSON(json2) {
+    return new HistoryState(json2.done.map(HistEvent.fromJSON), json2.undone.map(HistEvent.fromJSON));
   }
 });
 function history(config2 = {}) {
@@ -18501,16 +18956,16 @@ var HistEvent = class _HistEvent {
     return new _HistEvent(this.changes, this.effects, this.mapped, this.startSelection, after);
   }
   toJSON() {
-    var _a2, _b, _c;
+    var _a2, _b2, _c;
     return {
       changes: (_a2 = this.changes) === null || _a2 === void 0 ? void 0 : _a2.toJSON(),
-      mapped: (_b = this.mapped) === null || _b === void 0 ? void 0 : _b.toJSON(),
+      mapped: (_b2 = this.mapped) === null || _b2 === void 0 ? void 0 : _b2.toJSON(),
       startSelection: (_c = this.startSelection) === null || _c === void 0 ? void 0 : _c.toJSON(),
       selectionsAfter: this.selectionsAfter.map((s) => s.toJSON())
     };
   }
-  static fromJSON(json) {
-    return new _HistEvent(json.changes && ChangeSet.fromJSON(json.changes), [], json.mapped && ChangeDesc.fromJSON(json.mapped), json.startSelection && EditorSelection.fromJSON(json.startSelection), json.selectionsAfter.map(EditorSelection.fromJSON));
+  static fromJSON(json2) {
+    return new _HistEvent(json2.changes && ChangeSet.fromJSON(json2.changes), [], json2.mapped && ChangeDesc.fromJSON(json2.mapped), json2.startSelection && EditorSelection.fromJSON(json2.startSelection), json2.selectionsAfter.map(EditorSelection.fromJSON));
   }
   // This does not check `addToHistory` and such, it assumes the
   // transaction needs to be converted to an item. Returns null when
@@ -18539,7 +18994,7 @@ function updateBranch(branch, to, maxLen, newEvent) {
 function isAdjacent(a, b) {
   let ranges = [], isAdjacent2 = false;
   a.iterChangedRanges((f, t2) => ranges.push(f, t2));
-  b.iterChangedRanges((_f, _t, f, t2) => {
+  b.iterChangedRanges((_f2, _t, f, t2) => {
     for (let i = 0; i < ranges.length; ) {
       let from = ranges[i++], to = ranges[i++];
       if (t2 >= from && f <= to)
@@ -18782,9 +19237,9 @@ function moveByLineBoundary(view, start, forward) {
   if (moved.head == start.head && moved.head != (forward ? line.to : line.from))
     moved = view.moveToLineBoundary(start, forward, false);
   if (!forward && moved.head == line.from && line.length) {
-    let space2 = /^\s*/.exec(view.state.sliceDoc(line.from, Math.min(line.from + 100, line.to)))[0].length;
-    if (space2 && start.head != line.from + space2)
-      moved = EditorSelection.cursor(line.from + space2);
+    let space5 = /^\s*/.exec(view.state.sliceDoc(line.from, Math.min(line.from + 100, line.to)))[0].length;
+    if (space5 && start.head != line.from + space5)
+      moved = EditorSelection.cursor(line.from + space5);
   }
   return moved;
 }
@@ -19026,8 +19481,8 @@ var deleteByGroup = (target, forward) => deleteBy(target, (range) => {
 var deleteGroupBackward = (target) => deleteByGroup(target, false);
 var deleteGroupForward = (target) => deleteByGroup(target, true);
 var deleteToLineEnd = (view) => deleteBy(view, (range) => {
-  let lineEnd = view.lineBlockAt(range.head).to;
-  return range.head < lineEnd ? lineEnd : Math.min(view.state.doc.length, range.head + 1);
+  let lineEnd2 = view.lineBlockAt(range.head).to;
+  return range.head < lineEnd2 ? lineEnd2 : Math.min(view.state.doc.length, range.head + 1);
 });
 var deleteLineBoundaryBackward = (view) => deleteBy(view, (range) => {
   let lineStart = view.moveToLineBoundary(range, false).head;
@@ -19180,16 +19635,16 @@ function newlineAndIndent(atEof) {
       if (atEof)
         from = to = (to <= line.to ? line : state.doc.lineAt(to)).to;
       let cx = new IndentContext(state, { simulateBreak: from, simulateDoubleBreak: !!explode });
-      let indent = getIndentation(cx, from);
-      if (indent == null)
-        indent = countColumn(/^\s*/.exec(state.doc.lineAt(from).text)[0], state.tabSize);
+      let indent2 = getIndentation(cx, from);
+      if (indent2 == null)
+        indent2 = countColumn(/^\s*/.exec(state.doc.lineAt(from).text)[0], state.tabSize);
       while (to < line.to && /\s/.test(line.text[to - line.from]))
         to++;
       if (explode)
         ({ from, to } = explode);
       else if (from > line.from && from < line.from + 100 && !/\S/.test(line.text.slice(0, from)))
         from = line.from;
-      let insert2 = ["", indentString(state, indent)];
+      let insert2 = ["", indentString(state, indent2)];
       if (explode)
         insert2.push(indentString(state, cx.lineIndent(line.from, -1)));
       return {
@@ -19229,15 +19684,15 @@ var indentSelection = ({ state, dispatch }) => {
     return found == null ? -1 : found;
   } });
   let changes = changeBySelectedLine(state, (line, changes2, range) => {
-    let indent = getIndentation(context, line.from);
-    if (indent == null)
+    let indent2 = getIndentation(context, line.from);
+    if (indent2 == null)
       return;
     if (!/\S/.test(line.text))
-      indent = 0;
+      indent2 = 0;
     let cur2 = /^\s*/.exec(line.text)[0];
-    let norm = indentString(state, indent);
+    let norm = indentString(state, indent2);
     if (cur2 != norm || range.from < line.from + cur2.length) {
-      updated[line.from] = indent;
+      updated[line.from] = indent2;
       changes2.push({ from: line.from, to: line.from + cur2.length, insert: norm });
     }
   });
@@ -19257,14 +19712,14 @@ var indentLess = ({ state, dispatch }) => {
   if (state.readOnly)
     return false;
   dispatch(state.update(changeBySelectedLine(state, (line, changes) => {
-    let space2 = /^\s*/.exec(line.text)[0];
-    if (!space2)
+    let space5 = /^\s*/.exec(line.text)[0];
+    if (!space5)
       return;
-    let col = countColumn(space2, state.tabSize), keep = 0;
+    let col = countColumn(space5, state.tabSize), keep = 0;
     let insert2 = indentString(state, Math.max(0, col - getIndentUnit(state)));
-    while (keep < space2.length && keep < insert2.length && space2.charCodeAt(keep) == insert2.charCodeAt(keep))
+    while (keep < space5.length && keep < insert2.length && space5.charCodeAt(keep) == insert2.charCodeAt(keep))
       keep++;
-    changes.push({ from: line.from + keep, to: line.from + space2.length, insert: insert2.slice(keep) });
+    changes.push({ from: line.from + keep, to: line.from + space5.length, insert: insert2.slice(keep) });
   }), { userEvent: "delete.dedent" }));
   return true;
 };
@@ -19628,10 +20083,10 @@ var gotoLine = (view) => {
       return;
     }
     let startLine = state.doc.lineAt(state.selection.main.head);
-    let [, sign, ln, cl, percent] = match;
+    let [, sign, ln, cl, percent2] = match;
     let col = cl ? +cl.slice(1) : 0;
     let line2 = ln ? +ln : startLine.number;
-    if (ln && percent) {
+    if (ln && percent2) {
       let pc = line2 / 100;
       if (sign)
         pc = pc * (sign == "-" ? -1 : 1) + startLine.number / state.doc.lines;
@@ -20177,7 +20632,7 @@ function createSearchPanel(view) {
   return view.state.facet(searchConfigFacet).createPanel(view);
 }
 function defaultQuery(state, fallback) {
-  var _a2, _b, _c, _d, _e;
+  var _a2, _b2, _c, _d, _e2;
   let sel = state.selection.main;
   let selText = sel.empty || sel.to > sel.from + 100 ? "" : state.sliceDoc(sel.from, sel.to);
   if (fallback && !selText)
@@ -20185,10 +20640,10 @@ function defaultQuery(state, fallback) {
   let config2 = state.facet(searchConfigFacet);
   return new SearchQuery({
     search: ((_a2 = fallback === null || fallback === void 0 ? void 0 : fallback.literal) !== null && _a2 !== void 0 ? _a2 : config2.literal) ? selText : selText.replace(/\n/g, "\\n"),
-    caseSensitive: (_b = fallback === null || fallback === void 0 ? void 0 : fallback.caseSensitive) !== null && _b !== void 0 ? _b : config2.caseSensitive,
+    caseSensitive: (_b2 = fallback === null || fallback === void 0 ? void 0 : fallback.caseSensitive) !== null && _b2 !== void 0 ? _b2 : config2.caseSensitive,
     literal: (_c = fallback === null || fallback === void 0 ? void 0 : fallback.literal) !== null && _c !== void 0 ? _c : config2.literal,
     regexp: (_d = fallback === null || fallback === void 0 ? void 0 : fallback.regexp) !== null && _d !== void 0 ? _d : config2.regexp,
-    wholeWord: (_e = fallback === null || fallback === void 0 ? void 0 : fallback.wholeWord) !== null && _e !== void 0 ? _e : config2.wholeWord
+    wholeWord: (_e2 = fallback === null || fallback === void 0 ? void 0 : fallback.wholeWord) !== null && _e2 !== void 0 ? _e2 : config2.wholeWord
   });
 }
 function getSearchInput(view) {
@@ -20365,8 +20820,8 @@ function phrase(view, phrase2) {
 var AnnounceMargin = 30;
 var Break = /[\s\.,:;?!]/;
 function announceMatch(view, { from, to }) {
-  let line = view.state.doc.lineAt(from), lineEnd = view.state.doc.lineAt(to).to;
-  let start = Math.max(line.from, from - AnnounceMargin), end = Math.min(lineEnd, to + AnnounceMargin);
+  let line = view.state.doc.lineAt(from), lineEnd2 = view.state.doc.lineAt(to).to;
+  let start = Math.max(line.from, from - AnnounceMargin), end = Math.min(lineEnd2, to + AnnounceMargin);
   let text = view.state.sliceDoc(start, end);
   if (start != line.from) {
     for (let i = 0; i < AnnounceMargin; i++)
@@ -20375,7 +20830,7 @@ function announceMatch(view, { from, to }) {
         break;
       }
   }
-  if (end != lineEnd) {
+  if (end != lineEnd2) {
     for (let i = text.length - 1; i > text.length - AnnounceMargin; i--)
       if (!Break.test(text[i - 1]) && Break.test(text[i])) {
         text = text.slice(0, i);
@@ -20743,26 +21198,26 @@ var completionConfig = /* @__PURE__ */ Facet.define({
 function joinClass(a, b) {
   return a ? b ? a + " " + b : a : b;
 }
-function defaultPositionInfo(view, list, option, info, space2, tooltip) {
+function defaultPositionInfo(view, list, option, info, space5, tooltip) {
   let rtl = view.textDirection == Direction.RTL, left = rtl, narrow = false;
   let side = "top", offset, maxWidth;
-  let spaceLeft = list.left - space2.left, spaceRight = space2.right - list.right;
+  let spaceLeft = list.left - space5.left, spaceRight = space5.right - list.right;
   let infoWidth = info.right - info.left, infoHeight = info.bottom - info.top;
   if (left && spaceLeft < Math.min(infoWidth, spaceRight))
     left = false;
   else if (!left && spaceRight < Math.min(infoWidth, spaceLeft))
     left = true;
   if (infoWidth <= (left ? spaceLeft : spaceRight)) {
-    offset = Math.max(space2.top, Math.min(option.top, space2.bottom - infoHeight)) - list.top;
+    offset = Math.max(space5.top, Math.min(option.top, space5.bottom - infoHeight)) - list.top;
     maxWidth = Math.min(400, left ? spaceLeft : spaceRight);
   } else {
     narrow = true;
     maxWidth = Math.min(
       400,
-      (rtl ? list.right : space2.right - list.left) - 30
+      (rtl ? list.right : space5.right - list.left) - 30
       /* Info.Margin */
     );
-    let spaceBelow = space2.bottom - list.bottom;
+    let spaceBelow = space5.bottom - list.bottom;
     if (spaceBelow >= infoHeight || spaceBelow > list.top) {
       offset = option.bottom - list.top;
     } else {
@@ -20924,8 +21379,8 @@ var CompletionTooltip = class {
       this.currentClass = cls;
     }
   }
-  positioned(space2) {
-    this.space = space2;
+  positioned(space5) {
+    this.space = space5;
     if (this.info)
       this.view.requestMeasure(this.placeInfoReq);
   }
@@ -21000,14 +21455,14 @@ var CompletionTooltip = class {
     let listRect = this.dom.getBoundingClientRect();
     let infoRect = this.info.getBoundingClientRect();
     let selRect = sel.getBoundingClientRect();
-    let space2 = this.space;
-    if (!space2) {
+    let space5 = this.space;
+    if (!space5) {
       let docElt = this.dom.ownerDocument.documentElement;
-      space2 = { left: 0, top: 0, right: docElt.clientWidth, bottom: docElt.clientHeight };
+      space5 = { left: 0, top: 0, right: docElt.clientWidth, bottom: docElt.clientHeight };
     }
-    if (selRect.top > Math.min(space2.bottom, listRect.bottom) - 10 || selRect.bottom < Math.max(space2.top, listRect.top) + 10)
+    if (selRect.top > Math.min(space5.bottom, listRect.bottom) - 10 || selRect.bottom < Math.max(space5.top, listRect.top) + 10)
       return null;
-    return this.view.state.facet(completionConfig).positionInfo(this.view, listRect, selRect, infoRect, space2, this.dom);
+    return this.view.state.facet(completionConfig).positionInfo(this.view, listRect, selRect, infoRect, space5, this.dom);
   }
   placeInfo(pos) {
     if (this.info) {
@@ -21796,11 +22251,11 @@ var Snippet = class _Snippet {
     let lineObj = state.doc.lineAt(pos), baseIndent = /^\s*/.exec(lineObj.text)[0];
     for (let line of this.lines) {
       if (text.length) {
-        let indent = baseIndent, tabs = /^\t*/.exec(line)[0].length;
+        let indent2 = baseIndent, tabs = /^\t*/.exec(line)[0].length;
         for (let i = 0; i < tabs; i++)
-          indent += state.facet(indentUnit);
-        lineStart.push(pos + indent.length - tabs);
-        line = indent + line.slice(tabs);
+          indent2 += state.facet(indentUnit);
+        lineStart.push(pos + indent2.length - tabs);
+        line = indent2 + line.slice(tabs);
       }
       text.push(line);
       pos += line.length + 1;
@@ -22876,6 +23331,150 @@ var basicSetup = /* @__PURE__ */ (() => [
   ])
 ])();
 
+// node_modules/@codemirror/theme-one-dark/dist/index.js
+var chalky = "#e5c07b";
+var coral = "#e06c75";
+var cyan = "#56b6c2";
+var invalid = "#ffffff";
+var ivory = "#abb2bf";
+var stone = "#7d8799";
+var malibu = "#61afef";
+var sage = "#98c379";
+var whiskey = "#d19a66";
+var violet = "#c678dd";
+var darkBackground = "#21252b";
+var highlightBackground = "#2c313a";
+var background = "#282c34";
+var tooltipBackground = "#353a42";
+var selection = "#3E4451";
+var cursor = "#528bff";
+var oneDarkTheme = /* @__PURE__ */ EditorView.theme({
+  "&": {
+    color: ivory,
+    backgroundColor: background
+  },
+  ".cm-content": {
+    caretColor: cursor
+  },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: cursor },
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: selection },
+  ".cm-panels": { backgroundColor: darkBackground, color: ivory },
+  ".cm-panels.cm-panels-top": { borderBottom: "2px solid black" },
+  ".cm-panels.cm-panels-bottom": { borderTop: "2px solid black" },
+  ".cm-searchMatch": {
+    backgroundColor: "#72a1ff59",
+    outline: "1px solid #457dff"
+  },
+  ".cm-searchMatch.cm-searchMatch-selected": {
+    backgroundColor: "#6199ff2f"
+  },
+  ".cm-activeLine": { backgroundColor: "#6699ff0b" },
+  ".cm-selectionMatch": { backgroundColor: "#aafe661a" },
+  "&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket": {
+    backgroundColor: "#bad0f847"
+  },
+  ".cm-gutters": {
+    backgroundColor: background,
+    color: stone,
+    border: "none"
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: highlightBackground
+  },
+  ".cm-foldPlaceholder": {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#ddd"
+  },
+  ".cm-tooltip": {
+    border: "none",
+    backgroundColor: tooltipBackground
+  },
+  ".cm-tooltip .cm-tooltip-arrow:before": {
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent"
+  },
+  ".cm-tooltip .cm-tooltip-arrow:after": {
+    borderTopColor: tooltipBackground,
+    borderBottomColor: tooltipBackground
+  },
+  ".cm-tooltip-autocomplete": {
+    "& > ul > li[aria-selected]": {
+      backgroundColor: highlightBackground,
+      color: ivory
+    }
+  }
+}, { dark: true });
+var oneDarkHighlightStyle = /* @__PURE__ */ HighlightStyle.define([
+  {
+    tag: tags.keyword,
+    color: violet
+  },
+  {
+    tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName],
+    color: coral
+  },
+  {
+    tag: [/* @__PURE__ */ tags.function(tags.variableName), tags.labelName],
+    color: malibu
+  },
+  {
+    tag: [tags.color, /* @__PURE__ */ tags.constant(tags.name), /* @__PURE__ */ tags.standard(tags.name)],
+    color: whiskey
+  },
+  {
+    tag: [/* @__PURE__ */ tags.definition(tags.name), tags.separator],
+    color: ivory
+  },
+  {
+    tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace],
+    color: chalky
+  },
+  {
+    tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link, /* @__PURE__ */ tags.special(tags.string)],
+    color: cyan
+  },
+  {
+    tag: [tags.meta, tags.comment],
+    color: stone
+  },
+  {
+    tag: tags.strong,
+    fontWeight: "bold"
+  },
+  {
+    tag: tags.emphasis,
+    fontStyle: "italic"
+  },
+  {
+    tag: tags.strikethrough,
+    textDecoration: "line-through"
+  },
+  {
+    tag: tags.link,
+    color: stone,
+    textDecoration: "underline"
+  },
+  {
+    tag: tags.heading,
+    fontWeight: "bold",
+    color: coral
+  },
+  {
+    tag: [tags.atom, tags.bool, /* @__PURE__ */ tags.special(tags.variableName)],
+    color: whiskey
+  },
+  {
+    tag: [tags.processingInstruction, tags.string, tags.inserted],
+    color: sage
+  },
+  {
+    tag: tags.invalid,
+    color: invalid
+  }
+]);
+var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
+
 // node_modules/@lezer/lr/dist/index.js
 var Stack = class _Stack {
   /**
@@ -22933,23 +23532,23 @@ var Stack = class _Stack {
   reduce(action) {
     var _a2;
     let depth = action >> 19, type = action & 65535;
-    let { parser: parser2 } = this.p;
+    let { parser: parser8 } = this.p;
     let lookaheadRecord = this.reducePos < this.pos - 25 && this.setLookAhead(this.pos);
-    let dPrec = parser2.dynamicPrecedence(type);
+    let dPrec = parser8.dynamicPrecedence(type);
     if (dPrec)
       this.score += dPrec;
     if (depth == 0) {
-      if (type < parser2.minRepeatTerm && this.reducePos < this.pos)
+      if (type < parser8.minRepeatTerm && this.reducePos < this.pos)
         this.reducePos = this.pos;
-      this.pushState(parser2.getGoto(this.state, type, true), this.reducePos);
-      if (type < parser2.minRepeatTerm)
+      this.pushState(parser8.getGoto(this.state, type, true), this.reducePos);
+      if (type < parser8.minRepeatTerm)
         this.storeNode(type, this.reducePos, this.reducePos, lookaheadRecord ? 8 : 4, true);
       this.reduceContext(type, this.reducePos);
       return;
     }
     let base2 = this.stack.length - (depth - 1) * 3 - (action & 262144 ? 6 : 0);
     let start = base2 ? this.stack[base2 - 2] : this.p.ranges[0].from;
-    if (type < parser2.minRepeatTerm && start == this.reducePos && this.reducePos < this.pos)
+    if (type < parser8.minRepeatTerm && start == this.reducePos && this.reducePos < this.pos)
       this.reducePos = this.pos;
     let size = this.reducePos - start;
     if (size >= 2e3 && !((_a2 = this.p.parser.nodeSet.types[type]) === null || _a2 === void 0 ? void 0 : _a2.isAnonymous)) {
@@ -22962,20 +23561,20 @@ var Stack = class _Stack {
         this.p.lastBigReductionSize = size;
       }
     }
-    let bufferBase = base2 ? this.stack[base2 - 1] : 0, count = this.bufferBase + this.buffer.length - bufferBase;
-    if (type < parser2.minRepeatTerm || action & 131072) {
-      let pos = parser2.stateFlag(
+    let bufferBase = base2 ? this.stack[base2 - 1] : 0, count2 = this.bufferBase + this.buffer.length - bufferBase;
+    if (type < parser8.minRepeatTerm || action & 131072) {
+      let pos = parser8.stateFlag(
         this.state,
         1
         /* StateFlag.Skipped */
       ) ? this.pos : this.reducePos;
-      this.storeNode(type, start, pos, count + 4, true);
+      this.storeNode(type, start, pos, count2 + 4, true);
     }
     if (action & 262144) {
       this.state = this.stack[base2];
     } else {
       let baseStateID = this.stack[base2 - 3];
-      this.state = parser2.getGoto(baseStateID, type, true);
+      this.state = parser8.getGoto(baseStateID, type, true);
     }
     while (this.stack.length > base2)
       this.stack.pop();
@@ -23034,18 +23633,18 @@ var Stack = class _Stack {
     if (action & 131072) {
       this.pushState(action & 65535, this.pos);
     } else if ((action & 262144) == 0) {
-      let nextState = action, { parser: parser2 } = this.p;
+      let nextState = action, { parser: parser8 } = this.p;
       this.pos = end;
-      let skipped = parser2.stateFlag(
+      let skipped = parser8.stateFlag(
         nextState,
         1
         /* StateFlag.Skipped */
       );
-      if (!skipped && (end > start || type <= parser2.maxNode))
+      if (!skipped && (end > start || type <= parser8.maxNode))
         this.reducePos = end;
       this.pushState(nextState, skipped ? start : Math.min(start, this.reducePos));
       this.shiftContext(type, start);
-      if (type <= parser2.maxNode)
+      if (type <= parser8.maxNode)
         this.buffer.push(type, start, end, 4);
     } else {
       this.pos = end;
@@ -23181,18 +23780,18 @@ var Stack = class _Stack {
   @internal
   */
   forceReduce() {
-    let { parser: parser2 } = this.p;
-    let reduce = parser2.stateSlot(
+    let { parser: parser8 } = this.p;
+    let reduce = parser8.stateSlot(
       this.state,
       5
       /* ParseState.ForcedReduce */
     );
     if ((reduce & 65536) == 0)
       return false;
-    if (!parser2.validAction(this.state, reduce)) {
+    if (!parser8.validAction(this.state, reduce)) {
       let depth = reduce >> 19, term = reduce & 65535;
       let target = this.stack.length - depth * 3;
-      if (target < 0 || parser2.getGoto(this.stack[target], term, false) < 0) {
+      if (target < 0 || parser8.getGoto(this.stack[target], term, false) < 0) {
         let backup = this.findForcedReduction();
         if (backup == null)
           return false;
@@ -23211,18 +23810,18 @@ var Stack = class _Stack {
   isn't a valid action. @internal
   */
   findForcedReduction() {
-    let { parser: parser2 } = this.p, seen = [];
+    let { parser: parser8 } = this.p, seen = [];
     let explore = (state, depth) => {
       if (seen.includes(state))
         return;
       seen.push(state);
-      return parser2.allActions(state, (action) => {
+      return parser8.allActions(state, (action) => {
         if (action & (262144 | 131072)) ;
         else if (action & 65536) {
           let rDepth = (action >> 19) - depth;
           if (rDepth > 1) {
             let term = action & 65535, target = this.stack.length - rDepth * 3;
-            if (target >= 0 && parser2.getGoto(this.stack[target], term, false) >= 0)
+            if (target >= 0 && parser8.getGoto(this.stack[target], term, false) >= 0)
               return rDepth << 19 | 65536 | term;
           }
         } else {
@@ -23258,12 +23857,12 @@ var Stack = class _Stack {
   get deadEnd() {
     if (this.stack.length != 3)
       return false;
-    let { parser: parser2 } = this.p;
-    return parser2.data[parser2.stateSlot(
+    let { parser: parser8 } = this.p;
+    return parser8.data[parser8.stateSlot(
       this.state,
       1
       /* ParseState.Actions */
-    )] == 65535 && !parser2.stateSlot(
+    )] == 65535 && !parser8.stateSlot(
       this.state,
       4
       /* ParseState.DefaultReduce */
@@ -23425,7 +24024,7 @@ var StackBufferCursor = class _StackBufferCursor {
     return new _StackBufferCursor(this.stack, this.pos, this.index);
   }
 };
-function decodeArray(input, Type = Uint16Array) {
+function decodeArray(input, Type2 = Uint16Array) {
   if (typeof input != "string")
     return input;
   let array = null;
@@ -23454,7 +24053,7 @@ function decodeArray(input, Type = Uint16Array) {
     if (array)
       array[out++] = value;
     else
-      array = new Type(value);
+      array = new Type2(value);
   }
   return array;
 }
@@ -23681,21 +24280,21 @@ var InputStream = class {
   }
 };
 var TokenGroup = class {
-  constructor(data, id2) {
-    this.data = data;
+  constructor(data2, id2) {
+    this.data = data2;
     this.id = id2;
   }
   token(input, stack) {
-    let { parser: parser2 } = stack.p;
-    readToken(this.data, input, stack, this.id, parser2.data, parser2.tokenPrecTable);
+    let { parser: parser8 } = stack.p;
+    readToken(this.data, input, stack, this.id, parser8.data, parser8.tokenPrecTable);
   }
 };
 TokenGroup.prototype.contextual = TokenGroup.prototype.fallback = TokenGroup.prototype.extend = false;
 var LocalTokenGroup = class {
-  constructor(data, precTable, elseToken) {
+  constructor(data2, precTable, elseToken) {
     this.precTable = precTable;
     this.elseToken = elseToken;
-    this.data = typeof data == "string" ? decodeArray(data) : data;
+    this.data = typeof data2 == "string" ? decodeArray(data2) : data2;
   }
   token(input, stack) {
     let start = input.pos, skipped = 0;
@@ -23734,35 +24333,35 @@ var ExternalTokenizer = class {
     this.extend = !!options.extend;
   }
 };
-function readToken(data, input, stack, group, precTable, precOffset) {
+function readToken(data2, input, stack, group, precTable, precOffset) {
   let state = 0, groupMask = 1 << group, { dialect } = stack.p.parser;
   scan: for (; ; ) {
-    if ((groupMask & data[state]) == 0)
+    if ((groupMask & data2[state]) == 0)
       break;
-    let accEnd = data[state + 1];
+    let accEnd = data2[state + 1];
     for (let i = state + 3; i < accEnd; i += 2)
-      if ((data[i + 1] & groupMask) > 0) {
-        let term = data[i];
+      if ((data2[i + 1] & groupMask) > 0) {
+        let term = data2[i];
         if (dialect.allows(term) && (input.token.value == -1 || input.token.value == term || overrides(term, input.token.value, precTable, precOffset))) {
           input.acceptToken(term);
           break;
         }
       }
-    let next = input.next, low = 0, high = data[state + 2];
-    if (input.next < 0 && high > low && data[accEnd + high * 3 - 3] == 65535) {
-      state = data[accEnd + high * 3 - 1];
+    let next = input.next, low = 0, high = data2[state + 2];
+    if (input.next < 0 && high > low && data2[accEnd + high * 3 - 3] == 65535) {
+      state = data2[accEnd + high * 3 - 1];
       continue scan;
     }
     for (; low < high; ) {
       let mid = low + high >> 1;
       let index = accEnd + mid + (mid << 1);
-      let from = data[index], to = data[index + 1] || 65536;
+      let from = data2[index], to = data2[index + 1] || 65536;
       if (next < from)
         high = mid;
       else if (next >= to)
         low = mid + 1;
       else {
-        state = data[index + 2];
+        state = data2[index + 2];
         input.advance();
         continue scan;
       }
@@ -23770,8 +24369,8 @@ function readToken(data, input, stack, group, precTable, precOffset) {
     break;
   }
 }
-function findOffset(data, start, term) {
-  for (let i = start, next; (next = data[i]) != 65535; i++)
+function findOffset(data2, start, term) {
+  for (let i = start, next; (next = data2[i]) != 65535; i++)
     if (next == term)
       return i - start;
   return -1;
@@ -23805,7 +24404,7 @@ function cutAt(tree, pos, side) {
       }
   }
 }
-var FragmentCursor = class {
+var FragmentCursor2 = class {
   constructor(fragments, nodeSet) {
     this.fragments = fragments;
     this.nodeSet = nodeSet;
@@ -23888,18 +24487,18 @@ var FragmentCursor = class {
   }
 };
 var TokenCache = class {
-  constructor(parser2, stream) {
+  constructor(parser8, stream) {
     this.stream = stream;
     this.tokens = [];
     this.mainToken = null;
     this.actions = [];
-    this.tokens = parser2.tokenizers.map((_) => new CachedToken());
+    this.tokens = parser8.tokenizers.map((_) => new CachedToken());
   }
   getActions(stack) {
     let actionIndex = 0;
     let main = null;
-    let { parser: parser2 } = stack.p, { tokenizers } = parser2;
-    let mask = parser2.stateSlot(
+    let { parser: parser8 } = stack.p, { tokenizers } = parser8;
+    let mask = parser8.stateSlot(
       stack.state,
       3
       /* ParseState.TokenizerMask */
@@ -23957,10 +24556,10 @@ var TokenCache = class {
     let start = this.stream.clipPos(stack.pos);
     tokenizer.token(this.stream.reset(start, token), stack);
     if (token.value > -1) {
-      let { parser: parser2 } = stack.p;
-      for (let i = 0; i < parser2.specialized.length; i++)
-        if (parser2.specialized[i] == token.value) {
-          let result = parser2.specializers[i](this.stream.read(token.start, token.end), stack);
+      let { parser: parser8 } = stack.p;
+      for (let i = 0; i < parser8.specialized.length; i++)
+        if (parser8.specialized[i] == token.value) {
+          let result = parser8.specializers[i](this.stream.read(token.start, token.end), stack);
           if (result >= 0 && stack.p.parser.dialect.allows(result >> 1)) {
             if ((result & 1) == 0)
               token.value = result >> 1;
@@ -23984,32 +24583,32 @@ var TokenCache = class {
     return index;
   }
   addActions(stack, token, end, index) {
-    let { state } = stack, { parser: parser2 } = stack.p, { data } = parser2;
+    let { state } = stack, { parser: parser8 } = stack.p, { data: data2 } = parser8;
     for (let set = 0; set < 2; set++) {
-      for (let i = parser2.stateSlot(
+      for (let i = parser8.stateSlot(
         state,
         set ? 2 : 1
         /* ParseState.Actions */
       ); ; i += 3) {
-        if (data[i] == 65535) {
-          if (data[i + 1] == 1) {
-            i = pair(data, i + 2);
+        if (data2[i] == 65535) {
+          if (data2[i + 1] == 1) {
+            i = pair(data2, i + 2);
           } else {
-            if (index == 0 && data[i + 1] == 2)
-              index = this.putAction(pair(data, i + 2), token, end, index);
+            if (index == 0 && data2[i + 1] == 2)
+              index = this.putAction(pair(data2, i + 2), token, end, index);
             break;
           }
         }
-        if (data[i] == token)
-          index = this.putAction(pair(data, i + 1), token, end, index);
+        if (data2[i] == token)
+          index = this.putAction(pair(data2, i + 1), token, end, index);
       }
     }
     return index;
   }
 };
 var Parse = class {
-  constructor(parser2, input, fragments, ranges) {
-    this.parser = parser2;
+  constructor(parser8, input, fragments, ranges) {
+    this.parser = parser8;
     this.input = input;
     this.ranges = ranges;
     this.recovering = 0;
@@ -24021,11 +24620,11 @@ var Parse = class {
     this.lastBigReductionSize = 0;
     this.bigReductionCount = 0;
     this.stream = new InputStream(input, ranges);
-    this.tokens = new TokenCache(parser2, this.stream);
-    this.topTerm = parser2.top[1];
+    this.tokens = new TokenCache(parser8, this.stream);
+    this.topTerm = parser8.top[1];
     let { from } = ranges[0];
-    this.stacks = [Stack.start(this, parser2.top[0], from)];
-    this.fragments = fragments.length && this.stream.end - from > parser2.bufferLength * 4 ? new FragmentCursor(fragments, parser2.nodeSet) : null;
+    this.stacks = [Stack.start(this, parser8.top[0], from)];
+    this.fragments = fragments.length && this.stream.end - from > parser8.bufferLength * 4 ? new FragmentCursor2(fragments, parser8.nodeSet) : null;
   }
   get parsedPos() {
     return this.minStackPos;
@@ -24138,18 +24737,18 @@ var Parse = class {
   // given, stacks split off by ambiguous operations will be pushed to
   // `split`, or added to `stacks` if they move `pos` forward.
   advanceStack(stack, stacks, split) {
-    let start = stack.pos, { parser: parser2 } = this;
+    let start = stack.pos, { parser: parser8 } = this;
     let base2 = verbose ? this.stackID(stack) + " -> " : "";
     if (this.stoppedAt != null && start > this.stoppedAt)
       return stack.forceReduce() ? stack : null;
     if (this.fragments) {
       let strictCx = stack.curContext && stack.curContext.tracker.strict, cxHash = strictCx ? stack.curContext.hash : 0;
       for (let cached = this.fragments.nodeAt(start); cached; ) {
-        let match = this.parser.nodeSet.types[cached.type.id] == cached.type ? parser2.getGoto(stack.state, cached.type.id) : -1;
+        let match = this.parser.nodeSet.types[cached.type.id] == cached.type ? parser8.getGoto(stack.state, cached.type.id) : -1;
         if (match > -1 && cached.length && (!strictCx || (cached.prop(NodeProp.contextHash) || 0) == cxHash)) {
           stack.useNode(cached, match);
           if (verbose)
-            console.log(base2 + this.stackID(stack) + ` (via reuse of ${parser2.getName(cached.type.id)})`);
+            console.log(base2 + this.stackID(stack) + ` (via reuse of ${parser8.getName(cached.type.id)})`);
           return true;
         }
         if (!(cached instanceof Tree) || cached.children.length == 0 || cached.positions[0] > 0)
@@ -24161,7 +24760,7 @@ var Parse = class {
           break;
       }
     }
-    let defaultReduce = parser2.stateSlot(
+    let defaultReduce = parser8.stateSlot(
       stack.state,
       4
       /* ParseState.DefaultReduce */
@@ -24169,7 +24768,7 @@ var Parse = class {
     if (defaultReduce > 0) {
       stack.reduce(defaultReduce);
       if (verbose)
-        console.log(base2 + this.stackID(stack) + ` (via always-reduce ${parser2.getName(
+        console.log(base2 + this.stackID(stack) + ` (via always-reduce ${parser8.getName(
           defaultReduce & 65535
           /* Action.ValueMask */
         )})`);
@@ -24187,10 +24786,10 @@ var Parse = class {
       let main = this.tokens.mainToken;
       localStack.apply(action, term, main ? main.start : localStack.pos, end);
       if (verbose)
-        console.log(base2 + this.stackID(localStack) + ` (via ${(action & 65536) == 0 ? "shift" : `reduce of ${parser2.getName(
+        console.log(base2 + this.stackID(localStack) + ` (via ${(action & 65536) == 0 ? "shift" : `reduce of ${parser8.getName(
           action & 65535
           /* Action.ValueMask */
-        )}`} for ${parser2.getName(term)} @ ${start}${localStack == stack ? "" : ", split"})`);
+        )}`} for ${parser8.getName(term)} @ ${start}${localStack == stack ? "" : ", split"})`);
       if (last)
         return true;
       else if (localStack.pos > start)
@@ -24415,23 +25014,23 @@ var LRParser = class _LRParser extends Parser {
   Check if this state has an action for a given terminal @internal
   */
   hasAction(state, terminal) {
-    let data = this.data;
+    let data2 = this.data;
     for (let set = 0; set < 2; set++) {
       for (let i = this.stateSlot(
         state,
         set ? 2 : 1
         /* ParseState.Actions */
       ), next; ; i += 3) {
-        if ((next = data[i]) == 65535) {
-          if (data[i + 1] == 1)
-            next = data[i = pair(data, i + 2)];
-          else if (data[i + 1] == 2)
-            return pair(data, i + 2);
+        if ((next = data2[i]) == 65535) {
+          if (data2[i + 1] == 1)
+            next = data2[i = pair(data2, i + 2)];
+          else if (data2[i + 1] == 2)
+            return pair(data2, i + 2);
           else
             break;
         }
         if (next == terminal || next == 0)
-          return pair(data, i + 1);
+          return pair(data2, i + 1);
       }
     }
     return 0;
@@ -24591,17 +25190,17 @@ var LRParser = class _LRParser extends Parser {
   @internal
   */
   parseDialect(dialect) {
-    let values = Object.keys(this.dialects), flags = values.map(() => false);
+    let values2 = Object.keys(this.dialects), flags = values2.map(() => false);
     if (dialect)
       for (let part of dialect.split(" ")) {
-        let id2 = values.indexOf(part);
+        let id2 = values2.indexOf(part);
         if (id2 >= 0)
           flags[id2] = true;
       }
     let disabled = null;
-    for (let i = 0; i < values.length; i++)
+    for (let i = 0; i < values2.length; i++)
       if (!flags[i]) {
-        for (let j = this.dialects[values[i]], id2; (id2 = this.data[j++]) != 65535; )
+        for (let j = this.dialects[values2[i]], id2; (id2 = this.data[j++]) != 65535; )
           (disabled || (disabled = new Uint8Array(this.maxTerm + 1)))[id2] = 1;
       }
     return new Dialect(dialect, flags, disabled);
@@ -24614,8 +25213,8 @@ var LRParser = class _LRParser extends Parser {
     return new _LRParser(spec);
   }
 };
-function pair(data, off) {
-  return data[off] | data[off + 1] << 16;
+function pair(data2, off) {
+  return data2[off] | data2[off + 1] << 16;
 }
 function findFinished(stacks) {
   let best = null;
@@ -25143,152 +25742,5608 @@ var autoCloseTags = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to, 
   return true;
 });
 
-// node_modules/@codemirror/theme-one-dark/dist/index.js
-var chalky = "#e5c07b";
-var coral = "#e06c75";
-var cyan = "#56b6c2";
-var invalid = "#ffffff";
-var ivory = "#abb2bf";
-var stone = "#7d8799";
-var malibu = "#61afef";
-var sage = "#98c379";
-var whiskey = "#d19a66";
-var violet = "#c678dd";
-var darkBackground = "#21252b";
-var highlightBackground = "#2c313a";
-var background = "#282c34";
-var tooltipBackground = "#353a42";
-var selection = "#3E4451";
-var cursor = "#528bff";
-var oneDarkTheme = /* @__PURE__ */ EditorView.theme({
-  "&": {
-    color: ivory,
-    backgroundColor: background
-  },
-  ".cm-content": {
-    caretColor: cursor
-  },
-  ".cm-cursor, .cm-dropCursor": { borderLeftColor: cursor },
-  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: selection },
-  ".cm-panels": { backgroundColor: darkBackground, color: ivory },
-  ".cm-panels.cm-panels-top": { borderBottom: "2px solid black" },
-  ".cm-panels.cm-panels-bottom": { borderTop: "2px solid black" },
-  ".cm-searchMatch": {
-    backgroundColor: "#72a1ff59",
-    outline: "1px solid #457dff"
-  },
-  ".cm-searchMatch.cm-searchMatch-selected": {
-    backgroundColor: "#6199ff2f"
-  },
-  ".cm-activeLine": { backgroundColor: "#6699ff0b" },
-  ".cm-selectionMatch": { backgroundColor: "#aafe661a" },
-  "&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket": {
-    backgroundColor: "#bad0f847"
-  },
-  ".cm-gutters": {
-    backgroundColor: background,
-    color: stone,
-    border: "none"
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: highlightBackground
-  },
-  ".cm-foldPlaceholder": {
-    backgroundColor: "transparent",
-    border: "none",
-    color: "#ddd"
-  },
-  ".cm-tooltip": {
-    border: "none",
-    backgroundColor: tooltipBackground
-  },
-  ".cm-tooltip .cm-tooltip-arrow:before": {
-    borderTopColor: "transparent",
-    borderBottomColor: "transparent"
-  },
-  ".cm-tooltip .cm-tooltip-arrow:after": {
-    borderTopColor: tooltipBackground,
-    borderBottomColor: tooltipBackground
-  },
-  ".cm-tooltip-autocomplete": {
-    "& > ul > li[aria-selected]": {
-      backgroundColor: highlightBackground,
-      color: ivory
+// node_modules/@lezer/python/dist/index.js
+var printKeyword = 1;
+var indent = 194;
+var dedent = 195;
+var newline$1 = 196;
+var blankLineStart = 197;
+var newlineBracketed = 198;
+var eof = 199;
+var stringContent = 200;
+var Escape = 2;
+var replacementStart = 3;
+var stringEnd = 201;
+var ParenL = 24;
+var ParenthesizedExpression = 25;
+var TupleExpression = 49;
+var ComprehensionExpression = 50;
+var BracketL = 55;
+var ArrayExpression = 56;
+var ArrayComprehensionExpression = 57;
+var BraceL = 59;
+var DictionaryExpression = 60;
+var DictionaryComprehensionExpression = 61;
+var SetExpression = 62;
+var SetComprehensionExpression = 63;
+var ArgList = 65;
+var subscript = 238;
+var String$1 = 71;
+var stringStart = 241;
+var stringStartD = 242;
+var stringStartL = 243;
+var stringStartLD = 244;
+var stringStartR = 245;
+var stringStartRD = 246;
+var stringStartRL = 247;
+var stringStartRLD = 248;
+var FormatString = 72;
+var stringStartF = 249;
+var stringStartFD = 250;
+var stringStartFL = 251;
+var stringStartFLD = 252;
+var stringStartFR = 253;
+var stringStartFRD = 254;
+var stringStartFRL = 255;
+var stringStartFRLD = 256;
+var FormatReplacement = 73;
+var nestedFormatReplacement = 77;
+var importList = 263;
+var TypeParamList = 112;
+var ParamList = 130;
+var SequencePattern = 151;
+var MappingPattern = 152;
+var PatternArgList = 155;
+var newline2 = 10;
+var carriageReturn = 13;
+var space2 = 32;
+var tab = 9;
+var hash = 35;
+var parenOpen = 40;
+var dot2 = 46;
+var braceOpen = 123;
+var braceClose = 125;
+var singleQuote = 39;
+var doubleQuote = 34;
+var backslash = 92;
+var letter_o = 111;
+var letter_x = 120;
+var letter_N = 78;
+var letter_u = 117;
+var letter_U = 85;
+var bracketed = /* @__PURE__ */ new Set([
+  ParenthesizedExpression,
+  TupleExpression,
+  ComprehensionExpression,
+  importList,
+  ArgList,
+  ParamList,
+  ArrayExpression,
+  ArrayComprehensionExpression,
+  subscript,
+  SetExpression,
+  SetComprehensionExpression,
+  FormatString,
+  FormatReplacement,
+  nestedFormatReplacement,
+  DictionaryExpression,
+  DictionaryComprehensionExpression,
+  SequencePattern,
+  MappingPattern,
+  PatternArgList,
+  TypeParamList
+]);
+function isLineBreak(ch) {
+  return ch == newline2 || ch == carriageReturn;
+}
+function isHex(ch) {
+  return ch >= 48 && ch <= 57 || ch >= 65 && ch <= 70 || ch >= 97 && ch <= 102;
+}
+var newlines = new ExternalTokenizer((input, stack) => {
+  let prev;
+  if (input.next < 0) {
+    input.acceptToken(eof);
+  } else if (stack.context.flags & cx_Bracketed) {
+    if (isLineBreak(input.next)) input.acceptToken(newlineBracketed, 1);
+  } else if (((prev = input.peek(-1)) < 0 || isLineBreak(prev)) && stack.canShift(blankLineStart)) {
+    let spaces2 = 0;
+    while (input.next == space2 || input.next == tab) {
+      input.advance();
+      spaces2++;
+    }
+    if (input.next == newline2 || input.next == carriageReturn || input.next == hash)
+      input.acceptToken(blankLineStart, -spaces2);
+  } else if (isLineBreak(input.next)) {
+    input.acceptToken(newline$1, 1);
+  }
+}, { contextual: true });
+var indentation = new ExternalTokenizer((input, stack) => {
+  let context = stack.context;
+  if (context.flags) return;
+  let prev = input.peek(-1);
+  if (prev == newline2 || prev == carriageReturn) {
+    let depth = 0, chars = 0;
+    for (; ; ) {
+      if (input.next == space2) depth++;
+      else if (input.next == tab) depth += 8 - depth % 8;
+      else break;
+      input.advance();
+      chars++;
+    }
+    if (depth != context.indent && input.next != newline2 && input.next != carriageReturn && input.next != hash) {
+      if (depth < context.indent) input.acceptToken(dedent, -chars);
+      else input.acceptToken(indent);
     }
   }
-}, { dark: true });
-var oneDarkHighlightStyle = /* @__PURE__ */ HighlightStyle.define([
-  {
-    tag: tags.keyword,
-    color: violet
+});
+var cx_Bracketed = 1;
+var cx_String = 2;
+var cx_DoubleQuote = 4;
+var cx_Long = 8;
+var cx_Raw = 16;
+var cx_Format = 32;
+function Context(parent, indent2, flags) {
+  this.parent = parent;
+  this.indent = indent2;
+  this.flags = flags;
+  this.hash = (parent ? parent.hash + parent.hash << 8 : 0) + indent2 + (indent2 << 4) + flags + (flags << 6);
+}
+var topIndent2 = new Context(null, 0, 0);
+function countIndent(space5) {
+  let depth = 0;
+  for (let i = 0; i < space5.length; i++)
+    depth += space5.charCodeAt(i) == tab ? 8 - depth % 8 : 1;
+  return depth;
+}
+var stringFlags = new Map([
+  [stringStart, 0],
+  [stringStartD, cx_DoubleQuote],
+  [stringStartL, cx_Long],
+  [stringStartLD, cx_Long | cx_DoubleQuote],
+  [stringStartR, cx_Raw],
+  [stringStartRD, cx_Raw | cx_DoubleQuote],
+  [stringStartRL, cx_Raw | cx_Long],
+  [stringStartRLD, cx_Raw | cx_Long | cx_DoubleQuote],
+  [stringStartF, cx_Format],
+  [stringStartFD, cx_Format | cx_DoubleQuote],
+  [stringStartFL, cx_Format | cx_Long],
+  [stringStartFLD, cx_Format | cx_Long | cx_DoubleQuote],
+  [stringStartFR, cx_Format | cx_Raw],
+  [stringStartFRD, cx_Format | cx_Raw | cx_DoubleQuote],
+  [stringStartFRL, cx_Format | cx_Raw | cx_Long],
+  [stringStartFRLD, cx_Format | cx_Raw | cx_Long | cx_DoubleQuote]
+].map(([term, flags]) => [term, flags | cx_String]));
+var trackIndent = new ContextTracker({
+  start: topIndent2,
+  reduce(context, term, _, input) {
+    if (context.flags & cx_Bracketed && bracketed.has(term) || (term == String$1 || term == FormatString) && context.flags & cx_String)
+      return context.parent;
+    return context;
   },
-  {
-    tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName],
-    color: coral
+  shift(context, term, stack, input) {
+    if (term == indent)
+      return new Context(context, countIndent(input.read(input.pos, stack.pos)), 0);
+    if (term == dedent)
+      return context.parent;
+    if (term == ParenL || term == BracketL || term == BraceL || term == replacementStart)
+      return new Context(context, 0, cx_Bracketed);
+    if (stringFlags.has(term))
+      return new Context(context, 0, stringFlags.get(term) | context.flags & cx_Bracketed);
+    return context;
   },
-  {
-    tag: [/* @__PURE__ */ tags.function(tags.variableName), tags.labelName],
-    color: malibu
-  },
-  {
-    tag: [tags.color, /* @__PURE__ */ tags.constant(tags.name), /* @__PURE__ */ tags.standard(tags.name)],
-    color: whiskey
-  },
-  {
-    tag: [/* @__PURE__ */ tags.definition(tags.name), tags.separator],
-    color: ivory
-  },
-  {
-    tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace],
-    color: chalky
-  },
-  {
-    tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link, /* @__PURE__ */ tags.special(tags.string)],
-    color: cyan
-  },
-  {
-    tag: [tags.meta, tags.comment],
-    color: stone
-  },
-  {
-    tag: tags.strong,
-    fontWeight: "bold"
-  },
-  {
-    tag: tags.emphasis,
-    fontStyle: "italic"
-  },
-  {
-    tag: tags.strikethrough,
-    textDecoration: "line-through"
-  },
-  {
-    tag: tags.link,
-    color: stone,
-    textDecoration: "underline"
-  },
-  {
-    tag: tags.heading,
-    fontWeight: "bold",
-    color: coral
-  },
-  {
-    tag: [tags.atom, tags.bool, /* @__PURE__ */ tags.special(tags.variableName)],
-    color: whiskey
-  },
-  {
-    tag: [tags.processingInstruction, tags.string, tags.inserted],
-    color: sage
-  },
-  {
-    tag: tags.invalid,
-    color: invalid
+  hash(context) {
+    return context.hash;
   }
+});
+var legacyPrint = new ExternalTokenizer((input) => {
+  for (let i = 0; i < 5; i++) {
+    if (input.next != "print".charCodeAt(i)) return;
+    input.advance();
+  }
+  if (/\w/.test(String.fromCharCode(input.next))) return;
+  for (let off = 0; ; off++) {
+    let next = input.peek(off);
+    if (next == space2 || next == tab) continue;
+    if (next != parenOpen && next != dot2 && next != newline2 && next != carriageReturn && next != hash)
+      input.acceptToken(printKeyword);
+    return;
+  }
+});
+var strings = new ExternalTokenizer((input, stack) => {
+  let { flags } = stack.context;
+  let quote = flags & cx_DoubleQuote ? doubleQuote : singleQuote;
+  let long = (flags & cx_Long) > 0;
+  let escapes = !(flags & cx_Raw);
+  let format = (flags & cx_Format) > 0;
+  let start = input.pos;
+  for (; ; ) {
+    if (input.next < 0) {
+      break;
+    } else if (format && input.next == braceOpen) {
+      if (input.peek(1) == braceOpen) {
+        input.advance(2);
+      } else {
+        if (input.pos == start) {
+          input.acceptToken(replacementStart, 1);
+          return;
+        }
+        break;
+      }
+    } else if (escapes && input.next == backslash) {
+      if (input.pos == start) {
+        input.advance();
+        let escaped = input.next;
+        if (escaped >= 0) {
+          input.advance();
+          skipEscape(input, escaped);
+        }
+        input.acceptToken(Escape);
+        return;
+      }
+      break;
+    } else if (input.next == backslash && !escapes && input.peek(1) > -1) {
+      input.advance(2);
+    } else if (input.next == quote && (!long || input.peek(1) == quote && input.peek(2) == quote)) {
+      if (input.pos == start) {
+        input.acceptToken(stringEnd, long ? 3 : 1);
+        return;
+      }
+      break;
+    } else if (input.next == newline2) {
+      if (long) {
+        input.advance();
+      } else if (input.pos == start) {
+        input.acceptToken(stringEnd);
+        return;
+      }
+      break;
+    } else {
+      input.advance();
+    }
+  }
+  if (input.pos > start) input.acceptToken(stringContent);
+});
+function skipEscape(input, ch) {
+  if (ch == letter_o) {
+    for (let i = 0; i < 2 && input.next >= 48 && input.next <= 55; i++) input.advance();
+  } else if (ch == letter_x) {
+    for (let i = 0; i < 2 && isHex(input.next); i++) input.advance();
+  } else if (ch == letter_u) {
+    for (let i = 0; i < 4 && isHex(input.next); i++) input.advance();
+  } else if (ch == letter_U) {
+    for (let i = 0; i < 8 && isHex(input.next); i++) input.advance();
+  } else if (ch == letter_N) {
+    if (input.next == braceOpen) {
+      input.advance();
+      while (input.next >= 0 && input.next != braceClose && input.next != singleQuote && input.next != doubleQuote && input.next != newline2) input.advance();
+      if (input.next == braceClose) input.advance();
+    }
+  }
+}
+var pythonHighlighting = styleTags({
+  'async "*" "**" FormatConversion FormatSpec': tags.modifier,
+  "for while if elif else try except finally return raise break continue with pass assert await yield match case": tags.controlKeyword,
+  "in not and or is del": tags.operatorKeyword,
+  "from def class global nonlocal lambda": tags.definitionKeyword,
+  import: tags.moduleKeyword,
+  "with as print": tags.keyword,
+  Boolean: tags.bool,
+  None: tags.null,
+  VariableName: tags.variableName,
+  "CallExpression/VariableName": tags.function(tags.variableName),
+  "FunctionDefinition/VariableName": tags.function(tags.definition(tags.variableName)),
+  "ClassDefinition/VariableName": tags.definition(tags.className),
+  PropertyName: tags.propertyName,
+  "CallExpression/MemberExpression/PropertyName": tags.function(tags.propertyName),
+  Comment: tags.lineComment,
+  Number: tags.number,
+  String: tags.string,
+  FormatString: tags.special(tags.string),
+  Escape: tags.escape,
+  UpdateOp: tags.updateOperator,
+  "ArithOp!": tags.arithmeticOperator,
+  BitOp: tags.bitwiseOperator,
+  CompareOp: tags.compareOperator,
+  AssignOp: tags.definitionOperator,
+  Ellipsis: tags.punctuation,
+  At: tags.meta,
+  "( )": tags.paren,
+  "[ ]": tags.squareBracket,
+  "{ }": tags.brace,
+  ".": tags.derefOperator,
+  ", ;": tags.separator
+});
+var spec_identifier2 = { __proto__: null, await: 44, or: 54, and: 56, in: 60, not: 62, is: 64, if: 70, else: 72, lambda: 76, yield: 94, from: 96, async: 102, for: 104, None: 162, True: 164, False: 164, del: 178, pass: 182, break: 186, continue: 190, return: 194, raise: 202, import: 206, as: 208, global: 212, nonlocal: 214, assert: 218, type: 223, elif: 236, while: 240, try: 246, except: 248, finally: 250, with: 254, def: 258, class: 268, match: 279, case: 285 };
+var parser2 = LRParser.deserialize({
+  version: 14,
+  states: "##jQ`QeOOP$}OSOOO&WQtO'#HUOOQS'#Co'#CoOOQS'#Cp'#CpO'vQdO'#CnO*UQtO'#HTOOQS'#HU'#HUOOQS'#DU'#DUOOQS'#HT'#HTO*rQdO'#D_O+VQdO'#DfO+gQdO'#DjO+zOWO'#DuO,VOWO'#DvO.[QtO'#GuOOQS'#Gu'#GuO'vQdO'#GtO0ZQtO'#GtOOQS'#Eb'#EbO0rQdO'#EcOOQS'#Gs'#GsO0|QdO'#GrOOQV'#Gr'#GrO1XQdO'#FYOOQS'#G^'#G^O1^QdO'#FXOOQV'#IS'#ISOOQV'#Gq'#GqOOQV'#Fq'#FqQ`QeOOO'vQdO'#CqO1lQdO'#C}O1sQdO'#DRO2RQdO'#HYO2cQtO'#EVO'vQdO'#EWOOQS'#EY'#EYOOQS'#E['#E[OOQS'#E^'#E^O2wQdO'#E`O3_QdO'#EdO3rQdO'#EfO3zQtO'#EfO1XQdO'#EiO0rQdO'#ElO1XQdO'#EnO0rQdO'#EtO0rQdO'#EwO4VQdO'#EyO4^QdO'#FOO4iQdO'#EzO0rQdO'#FOO1XQdO'#FQO1XQdO'#FVO4nQdO'#F[P4uOdO'#GpPOOO)CBd)CBdOOQS'#Ce'#CeOOQS'#Cf'#CfOOQS'#Cg'#CgOOQS'#Ch'#ChOOQS'#Ci'#CiOOQS'#Cj'#CjOOQS'#Cl'#ClO'vQdO,59OO'vQdO,59OO'vQdO,59OO'vQdO,59OO'vQdO,59OO'vQdO,59OO5TQdO'#DoOOQS,5:Y,5:YO5hQdO'#HdOOQS,5:],5:]O5uQ!fO,5:]O5zQtO,59YO1lQdO,59bO1lQdO,59bO1lQdO,59bO8jQdO,59bO8oQdO,59bO8vQdO,59jO8}QdO'#HTO:TQdO'#HSOOQS'#HS'#HSOOQS'#D['#D[O:lQdO,59aO'vQdO,59aO:zQdO,59aOOQS,59y,59yO;PQdO,5:RO'vQdO,5:ROOQS,5:Q,5:QO;_QdO,5:QO;dQdO,5:XO'vQdO,5:XO'vQdO,5:VOOQS,5:U,5:UO;uQdO,5:UO;zQdO,5:WOOOW'#Fy'#FyO<POWO,5:aOOQS,5:a,5:aO<[QdO'#HwOOOW'#Dw'#DwOOOW'#Fz'#FzO<lOWO,5:bOOQS,5:b,5:bOOQS'#F}'#F}O<zQtO,5:iO?lQtO,5=`O@VQ#xO,5=`O@vQtO,5=`OOQS,5:},5:}OA_QeO'#GWOBqQdO,5;^OOQV,5=^,5=^OB|QtO'#IPOCkQdO,5;tOOQS-E:[-E:[OOQV,5;s,5;sO4dQdO'#FQOOQV-E9o-E9oOCsQtO,59]OEzQtO,59iOFeQdO'#HVOFpQdO'#HVO1XQdO'#HVOF{QdO'#DTOGTQdO,59mOGYQdO'#HZO'vQdO'#HZO0rQdO,5=tOOQS,5=t,5=tO0rQdO'#EROOQS'#ES'#ESOGwQdO'#GPOHXQdO,58|OHXQdO,58|O*xQdO,5:oOHgQtO'#H]OOQS,5:r,5:rOOQS,5:z,5:zOHzQdO,5;OOI]QdO'#IOO1XQdO'#H}OOQS,5;Q,5;QOOQS'#GT'#GTOIqQtO,5;QOJPQdO,5;QOJUQdO'#IQOOQS,5;T,5;TOJdQdO'#H|OOQS,5;W,5;WOJuQdO,5;YO4iQdO,5;`O4iQdO,5;cOJ}QtO'#ITO'vQdO'#ITOKXQdO,5;eO4VQdO,5;eO0rQdO,5;jO1XQdO,5;lOK^QeO'#EuOLjQgO,5;fO!!kQdO'#IUO4iQdO,5;jO!!vQdO,5;lO!#OQdO,5;qO!#ZQtO,5;vO'vQdO,5;vPOOO,5=[,5=[P!#bOSO,5=[P!#jOdO,5=[O!&bQtO1G.jO!&iQtO1G.jO!)YQtO1G.jO!)dQtO1G.jO!+}QtO1G.jO!,bQtO1G.jO!,uQdO'#HcO!-TQtO'#GuO0rQdO'#HcO!-_QdO'#HbOOQS,5:Z,5:ZO!-gQdO,5:ZO!-lQdO'#HeO!-wQdO'#HeO!.[QdO,5>OOOQS'#Ds'#DsOOQS1G/w1G/wOOQS1G.|1G.|O!/[QtO1G.|O!/cQtO1G.|O1lQdO1G.|O!0OQdO1G/UOOQS'#DZ'#DZO0rQdO,59tOOQS1G.{1G.{O!0VQdO1G/eO!0gQdO1G/eO!0oQdO1G/fO'vQdO'#H[O!0tQdO'#H[O!0yQtO1G.{O!1ZQdO,59iO!2aQdO,5=zO!2qQdO,5=zO!2yQdO1G/mO!3OQtO1G/mOOQS1G/l1G/lO!3`QdO,5=uO!4VQdO,5=uO0rQdO1G/qO!4tQdO1G/sO!4yQtO1G/sO!5ZQtO1G/qOOQS1G/p1G/pOOQS1G/r1G/rOOOW-E9w-E9wOOQS1G/{1G/{O!5kQdO'#HxO0rQdO'#HxO!5|QdO,5>cOOOW-E9x-E9xOOQS1G/|1G/|OOQS-E9{-E9{O!6[Q#xO1G2zO!6{QtO1G2zO'vQdO,5<jOOQS,5<j,5<jOOQS-E9|-E9|OOQS,5<r,5<rOOQS-E:U-E:UOOQV1G0x1G0xO1XQdO'#GRO!7dQtO,5>kOOQS1G1`1G1`O!8RQdO1G1`OOQS'#DV'#DVO0rQdO,5=qOOQS,5=q,5=qO!8WQdO'#FrO!8cQdO,59oO!8kQdO1G/XO!8uQtO,5=uOOQS1G3`1G3`OOQS,5:m,5:mO!9fQdO'#GtOOQS,5<k,5<kOOQS-E9}-E9}O!9wQdO1G.hOOQS1G0Z1G0ZO!:VQdO,5=wO!:gQdO,5=wO0rQdO1G0jO0rQdO1G0jO!:xQdO,5>jO!;ZQdO,5>jO1XQdO,5>jO!;lQdO,5>iOOQS-E:R-E:RO!;qQdO1G0lO!;|QdO1G0lO!<RQdO,5>lO!<aQdO,5>lO!<oQdO,5>hO!=VQdO,5>hO!=hQdO'#EpO0rQdO1G0tO!=sQdO1G0tO!=xQgO1G0zO!AvQgO1G0}O!EqQdO,5>oO!E{QdO,5>oO!FTQtO,5>oO0rQdO1G1PO!F_QdO1G1PO4iQdO1G1UO!!vQdO1G1WOOQV,5;a,5;aO!FdQfO,5;aO!FiQgO1G1QO!JjQdO'#GZO4iQdO1G1QO4iQdO1G1QO!JzQdO,5>pO!KXQdO,5>pO1XQdO,5>pOOQV1G1U1G1UO!KaQdO'#FSO!KrQ!fO1G1WO!KzQdO1G1WOOQV1G1]1G1]O4iQdO1G1]O!LPQdO1G1]O!LXQdO'#F^OOQV1G1b1G1bO!#ZQtO1G1bPOOO1G2v1G2vP!L^OSO1G2vOOQS,5=},5=}OOQS'#Dp'#DpO0rQdO,5=}O!LfQdO,5=|O!LyQdO,5=|OOQS1G/u1G/uO!MRQdO,5>PO!McQdO,5>PO!MkQdO,5>PO!NOQdO,5>PO!N`QdO,5>POOQS1G3j1G3jOOQS7+$h7+$hO!8kQdO7+$pO#!RQdO1G.|O#!YQdO1G.|OOQS1G/`1G/`OOQS,5<`,5<`O'vQdO,5<`OOQS7+%P7+%PO#!aQdO7+%POOQS-E9r-E9rOOQS7+%Q7+%QO#!qQdO,5=vO'vQdO,5=vOOQS7+$g7+$gO#!vQdO7+%PO##OQdO7+%QO##TQdO1G3fOOQS7+%X7+%XO##eQdO1G3fO##mQdO7+%XOOQS,5<_,5<_O'vQdO,5<_O##rQdO1G3aOOQS-E9q-E9qO#$iQdO7+%]OOQS7+%_7+%_O#$wQdO1G3aO#%fQdO7+%_O#%kQdO1G3gO#%{QdO1G3gO#&TQdO7+%]O#&YQdO,5>dO#&sQdO,5>dO#&sQdO,5>dOOQS'#Dx'#DxO#'UO&jO'#DzO#'aO`O'#HyOOOW1G3}1G3}O#'fQdO1G3}O#'nQdO1G3}O#'yQ#xO7+(fO#(jQtO1G2UP#)TQdO'#GOOOQS,5<m,5<mOOQS-E:P-E:POOQS7+&z7+&zOOQS1G3]1G3]OOQS,5<^,5<^OOQS-E9p-E9pOOQS7+$s7+$sO#)bQdO,5=`O#){QdO,5=`O#*^QtO,5<aO#*qQdO1G3cOOQS-E9s-E9sOOQS7+&U7+&UO#+RQdO7+&UO#+aQdO,5<nO#+uQdO1G4UOOQS-E:Q-E:QO#,WQdO1G4UOOQS1G4T1G4TOOQS7+&W7+&WO#,iQdO7+&WOOQS,5<p,5<pO#,tQdO1G4WOOQS-E:S-E:SOOQS,5<l,5<lO#-SQdO1G4SOOQS-E:O-E:OO1XQdO'#EqO#-jQdO'#EqO#-uQdO'#IRO#-}QdO,5;[OOQS7+&`7+&`O0rQdO7+&`O#.SQgO7+&fO!JmQdO'#GXO4iQdO7+&fO4iQdO7+&iO#2QQtO,5<tO'vQdO,5<tO#2[QdO1G4ZOOQS-E:W-E:WO#2fQdO1G4ZO4iQdO7+&kO0rQdO7+&kOOQV7+&p7+&pO!KrQ!fO7+&rO!KzQdO7+&rO`QeO1G0{OOQV-E:X-E:XO4iQdO7+&lO4iQdO7+&lOOQV,5<u,5<uO#2nQdO,5<uO!JmQdO,5<uOOQV7+&l7+&lO#2yQgO7+&lO#6tQdO,5<vO#7PQdO1G4[OOQS-E:Y-E:YO#7^QdO1G4[O#7fQdO'#IWO#7tQdO'#IWO1XQdO'#IWOOQS'#IW'#IWO#8PQdO'#IVOOQS,5;n,5;nO#8XQdO,5;nO0rQdO'#FUOOQV7+&r7+&rO4iQdO7+&rOOQV7+&w7+&wO4iQdO7+&wO#8^QfO,5;xOOQV7+&|7+&|POOO7+(b7+(bO#8cQdO1G3iOOQS,5<c,5<cO#8qQdO1G3hOOQS-E9u-E9uO#9UQdO,5<dO#9aQdO,5<dO#9tQdO1G3kOOQS-E9v-E9vO#:UQdO1G3kO#:^QdO1G3kO#:nQdO1G3kO#:UQdO1G3kOOQS<<H[<<H[O#:yQtO1G1zOOQS<<Hk<<HkP#;WQdO'#FtO8vQdO1G3bO#;eQdO1G3bO#;jQdO<<HkOOQS<<Hl<<HlO#;zQdO7+)QOOQS<<Hs<<HsO#<[QtO1G1yP#<{QdO'#FsO#=YQdO7+)RO#=jQdO7+)RO#=rQdO<<HwO#=wQdO7+({OOQS<<Hy<<HyO#>nQdO,5<bO'vQdO,5<bOOQS-E9t-E9tOOQS<<Hw<<HwOOQS,5<g,5<gO0rQdO,5<gO#>sQdO1G4OOOQS-E9y-E9yO#?^QdO1G4OO<[QdO'#H{OOOO'#D{'#D{OOOO'#F|'#F|O#?oO&jO,5:fOOOW,5>e,5>eOOOW7+)i7+)iO#?zQdO7+)iO#@SQdO1G2zO#@mQdO1G2zP'vQdO'#FuO0rQdO<<IpO1XQdO1G2YP1XQdO'#GSO#AOQdO7+)pO#AaQdO7+)pOOQS<<Ir<<IrP1XQdO'#GUP0rQdO'#GQOOQS,5;],5;]O#ArQdO,5>mO#BQQdO,5>mOOQS1G0v1G0vOOQS<<Iz<<IzOOQV-E:V-E:VO4iQdO<<JQOOQV,5<s,5<sO4iQdO,5<sOOQV<<JQ<<JQOOQV<<JT<<JTO#BYQtO1G2`P#BdQdO'#GYO#BkQdO7+)uO#BuQgO<<JVO4iQdO<<JVOOQV<<J^<<J^O4iQdO<<J^O!KrQ!fO<<J^O#FpQgO7+&gOOQV<<JW<<JWO#FzQgO<<JWOOQV1G2a1G2aO1XQdO1G2aO#JuQdO1G2aO4iQdO<<JWO1XQdO1G2bP0rQdO'#G[O#KQQdO7+)vO#K_QdO7+)vOOQS'#FT'#FTO0rQdO,5>rO#KgQdO,5>rO#KrQdO,5>rO#K}QdO,5>qO#L`QdO,5>qOOQS1G1Y1G1YOOQS,5;p,5;pOOQV<<Jc<<JcO#LhQdO1G1dOOQS7+)T7+)TP#LmQdO'#FwO#L}QdO1G2OO#MbQdO1G2OO#MrQdO1G2OP#M}QdO'#FxO#N[QdO7+)VO#NlQdO7+)VO#NlQdO7+)VO#NtQdO7+)VO$ UQdO7+(|O8vQdO7+(|OOQSAN>VAN>VO$ oQdO<<LmOOQSAN>cAN>cO0rQdO1G1|O$!PQtO1G1|P$!ZQdO'#FvOOQS1G2R1G2RP$!hQdO'#F{O$!uQdO7+)jO$#`QdO,5>gOOOO-E9z-E9zOOOW<<MT<<MTO$#nQdO7+(fOOQSAN?[AN?[OOQS7+'t7+'tO$$XQdO<<M[OOQS,5<q,5<qO$$jQdO1G4XOOQS-E:T-E:TOOQVAN?lAN?lOOQV1G2_1G2_O4iQdOAN?qO$$xQgOAN?qOOQVAN?xAN?xO4iQdOAN?xOOQV<<JR<<JRO4iQdOAN?rO4iQdO7+'{OOQV7+'{7+'{O1XQdO7+'{OOQVAN?rAN?rOOQS7+'|7+'|O$(sQdO<<MbOOQS1G4^1G4^O0rQdO1G4^OOQS,5<w,5<wO$)QQdO1G4]OOQS-E:Z-E:ZOOQU'#G_'#G_O$)cQfO7+'OO$)nQdO'#F_O$*uQdO7+'jO$+VQdO7+'jOOQS7+'j7+'jO$+bQdO<<LqO$+rQdO<<LqO$+rQdO<<LqO$+zQdO'#H^OOQS<<Lh<<LhO$,UQdO<<LhOOQS7+'h7+'hOOQS'#D|'#D|OOOO1G4R1G4RO$,oQdO1G4RO$,wQdO1G4RP!=hQdO'#GVOOQVG25]G25]O4iQdOG25]OOQVG25dG25dOOQVG25^G25^OOQV<<Kg<<KgO4iQdO<<KgOOQS7+)x7+)xP$-SQdO'#G]OOQU-E:]-E:]OOQV<<Jj<<JjO$-vQtO'#FaOOQS'#Fc'#FcO$.WQdO'#FbO$.xQdO'#FbOOQS'#Fb'#FbO$.}QdO'#IYO$)nQdO'#FiO$)nQdO'#FiO$/fQdO'#FjO$)nQdO'#FkO$/mQdO'#IZOOQS'#IZ'#IZO$0[QdO,5;yOOQS<<KU<<KUO$0dQdO<<KUO$0tQdOANB]O$1UQdOANB]O$1^QdO'#H_OOQS'#H_'#H_O1sQdO'#DcO$1wQdO,5=xOOQSANBSANBSOOOO7+)m7+)mO$2`QdO7+)mOOQVLD*wLD*wOOQVANARANARO5uQ!fO'#GaO$2hQtO,5<SO$)nQdO'#FmOOQS,5<W,5<WOOQS'#Fd'#FdO$3YQdO,5;|O$3_QdO,5;|OOQS'#Fg'#FgO$)nQdO'#G`O$4PQdO,5<QO$4kQdO,5>tO$4{QdO,5>tO1XQdO,5<PO$5^QdO,5<TO$5cQdO,5<TO$)nQdO'#I[O$5hQdO'#I[O$5mQdO,5<UOOQS,5<V,5<VO0rQdO'#FpOOQU1G1e1G1eO4iQdO1G1eOOQSAN@pAN@pO$5rQdOG27wO$6SQdO,59}OOQS1G3d1G3dOOOO<<MX<<MXOOQS,5<{,5<{OOQS-E:_-E:_O$6XQtO'#FaO$6`QdO'#I]O$6nQdO'#I]O$6vQdO,5<XOOQS1G1h1G1hO$6{QdO1G1hO$7QQdO,5<zOOQS-E:^-E:^O$7lQdO,5=OO$8TQdO1G4`OOQS-E:b-E:bOOQS1G1k1G1kOOQS1G1o1G1oO$8eQdO,5>vO$)nQdO,5>vOOQS1G1p1G1pOOQS,5<[,5<[OOQU7+'P7+'PO$+zQdO1G/iO$)nQdO,5<YO$8sQdO,5>wO$8zQdO,5>wOOQS1G1s1G1sOOQS7+'S7+'SP$)nQdO'#GdO$9SQdO1G4bO$9^QdO1G4bO$9fQdO1G4bOOQS7+%T7+%TO$9tQdO1G1tO$:SQtO'#FaO$:ZQdO,5<}OOQS,5<},5<}O$:iQdO1G4cOOQS-E:a-E:aO$)nQdO,5<|O$:pQdO,5<|O$:uQdO7+)|OOQS-E:`-E:`O$;PQdO7+)|O$)nQdO,5<ZP$)nQdO'#GcO$;XQdO1G2hO$)nQdO1G2hP$;gQdO'#GbO$;nQdO<<MhO$;xQdO1G1uO$<WQdO7+(SO8vQdO'#C}O8vQdO,59bO8vQdO,59bO8vQdO,59bO$<fQtO,5=`O8vQdO1G.|O0rQdO1G/XO0rQdO7+$pP$<yQdO'#GOO'vQdO'#GtO$=WQdO,59bO$=]QdO,59bO$=dQdO,59mO$=iQdO1G/UO1sQdO'#DRO8vQdO,59j",
+  stateData: "$>S~O%cOS%^OSSOS%]PQ~OPdOVaOfoOhYOopOs!POvqO!PrO!Q{O!T!SO!U!RO!XZO!][O!h`O!r`O!s`O!t`O!{tO!}uO#PvO#RwO#TxO#XyO#ZzO#^|O#_|O#a}O#c!OO#l!QO#o!TO#s!UO#u!VO#z!WO#}hO$P!XO%oRO%pRO%tSO%uWO&Z]O&[]O&]]O&^]O&_]O&`]O&a]O&b]O&c^O&d^O&e^O&f^O&g^O&h^O&i^O&j^O~O%]!YO~OV!aO_!aOa!bOh!iO!X!kO!f!mO%j![O%k!]O%l!^O%m!_O%n!_O%o!`O%p!`O%q!aO%r!aO%s!aO~Ok%xXl%xXm%xXn%xXo%xXp%xXs%xXz%xX{%xX!x%xX#g%xX%[%xX%_%xX%z%xXg%xX!T%xX!U%xX%{%xX!W%xX![%xX!Q%xX#[%xXt%xX!m%xX~P%SOfoOhYO!XZO!][O!h`O!r`O!s`O!t`O%oRO%pRO%tSO%uWO&Z]O&[]O&]]O&^]O&_]O&`]O&a]O&b]O&c^O&d^O&e^O&f^O&g^O&h^O&i^O&j^O~Oz%wX{%wX#g%wX%[%wX%_%wX%z%wX~Ok!pOl!qOm!oOn!oOo!rOp!sOs!tO!x%wX~P)pOV!zOg!|Oo0cOv0qO!PrO~P'vOV#OOo0cOv0qO!W#PO~P'vOV#SOa#TOo0cOv0qO![#UO~P'vOQ#XO%`#XO%a#ZO~OQ#^OR#[O%`#^O%a#`O~OV%iX_%iXa%iXh%iXk%iXl%iXm%iXn%iXo%iXp%iXs%iXz%iX!X%iX!f%iX%j%iX%k%iX%l%iX%m%iX%n%iX%o%iX%p%iX%q%iX%r%iX%s%iXg%iX!T%iX!U%iX~O&Z]O&[]O&]]O&^]O&_]O&`]O&a]O&b]O&c^O&d^O&e^O&f^O&g^O&h^O&i^O&j^O{%iX!x%iX#g%iX%[%iX%_%iX%z%iX%{%iX!W%iX![%iX!Q%iX#[%iXt%iX!m%iX~P,eOz#dO{%hX!x%hX#g%hX%[%hX%_%hX%z%hX~Oo0cOv0qO~P'vO#g#gO%[#iO%_#iO~O%uWO~O!T#nO#u!VO#z!WO#}hO~OopO~P'vOV#sOa#tO%uWO{wP~OV#xOo0cOv0qO!Q#yO~P'vO{#{O!x$QO%z#|O#g!yX%[!yX%_!yX~OV#xOo0cOv0qO#g#SX%[#SX%_#SX~P'vOo0cOv0qO#g#WX%[#WX%_#WX~P'vOh$WO%uWO~O!f$YO!r$YO%uWO~OV$eO~P'vO!U$gO#s$hO#u$iO~O{$jO~OV$qO~P'vOS$sO%[$rO%_$rO%c$tO~OV$}Oa$}Og%POo0cOv0qO~P'vOo0cOv0qO{%SO~P'vO&Y%UO~Oa!bOh!iO!X!kO!f!mOVba_bakbalbambanbaobapbasbazba{ba!xba#gba%[ba%_ba%jba%kba%lba%mba%nba%oba%pba%qba%rba%sba%zbagba!Tba!Uba%{ba!Wba![ba!Qba#[batba!mba~On%ZO~Oo%ZO~P'vOo0cO~P'vOk0eOl0fOm0dOn0dOo0mOp0nOs0rOg%wX!T%wX!U%wX%{%wX!W%wX![%wX!Q%wX#[%wX!m%wX~P)pO%{%]Og%vXz%vX!T%vX!U%vX!W%vX{%vX~Og%_Oz%`O!T%dO!U%cO~Og%_O~Oz%gO!T%dO!U%cO!W&SX~O!W%kO~Oz%lO{%nO!T%dO!U%cO![%}X~O![%rO~O![%sO~OQ#XO%`#XO%a%uO~OV%wOo0cOv0qO!PrO~P'vOQ#^OR#[O%`#^O%a%zO~OV!qa_!qaa!qah!qak!qal!qam!qan!qao!qap!qas!qaz!qa{!qa!X!qa!f!qa!x!qa#g!qa%[!qa%_!qa%j!qa%k!qa%l!qa%m!qa%n!qa%o!qa%p!qa%q!qa%r!qa%s!qa%z!qag!qa!T!qa!U!qa%{!qa!W!qa![!qa!Q!qa#[!qat!qa!m!qa~P#yOz%|O{%ha!x%ha#g%ha%[%ha%_%ha%z%ha~P%SOV&OOopOvqO{%ha!x%ha#g%ha%[%ha%_%ha%z%ha~P'vOz%|O{%ha!x%ha#g%ha%[%ha%_%ha%z%ha~OPdOVaOopOvqO!PrO!Q{O!{tO!}uO#PvO#RwO#TxO#XyO#ZzO#^|O#_|O#a}O#c!OO#g$zX%[$zX%_$zX~P'vO#g#gO%[&TO%_&TO~O!f&UOh&sX%[&sXz&sX#[&sX#g&sX%_&sX#Z&sXg&sX~Oh!iO%[&WO~Okealeameaneaoeapeaseazea{ea!xea#gea%[ea%_ea%zeagea!Tea!Uea%{ea!Wea![ea!Qea#[eatea!mea~P%SOsqazqa{qa#gqa%[qa%_qa%zqa~Ok!pOl!qOm!oOn!oOo!rOp!sO!xqa~PEcO%z&YOz%yX{%yX~O%uWOz%yX{%yX~Oz&]O{wX~O{&_O~Oz%lO#g%}X%[%}X%_%}Xg%}X{%}X![%}X!m%}X%z%}X~OV0lOo0cOv0qO!PrO~P'vO%z#|O#gUa%[Ua%_Ua~Oz&hO#g&PX%[&PX%_&PXn&PX~P%SOz&kO!Q&jO#g#Wa%[#Wa%_#Wa~Oz&lO#[&nO#g&rX%[&rX%_&rXg&rX~O!f$YO!r$YO#Z&qO%uWO~O#Z&qO~Oz&sO#g&tX%[&tX%_&tX~Oz&uO#g&pX%[&pX%_&pX{&pX~O!X&wO%z&xO~Oz&|On&wX~P%SOn'PO~OPdOVaOopOvqO!PrO!Q{O!{tO!}uO#PvO#RwO#TxO#XyO#ZzO#^|O#_|O#a}O#c!OO%['UO~P'vOt'YO#p'WO#q'XOP#naV#naf#nah#nao#nas#nav#na!P#na!Q#na!T#na!U#na!X#na!]#na!h#na!r#na!s#na!t#na!{#na!}#na#P#na#R#na#T#na#X#na#Z#na#^#na#_#na#a#na#c#na#l#na#o#na#s#na#u#na#z#na#}#na$P#na%X#na%o#na%p#na%t#na%u#na&Z#na&[#na&]#na&^#na&_#na&`#na&a#na&b#na&c#na&d#na&e#na&f#na&g#na&h#na&i#na&j#na%Z#na%_#na~Oz'ZO#[']O{&xX~Oh'_O!X&wO~Oh!iO{$jO!X&wO~O{'eO~P%SO%['hO%_'hO~OS'iO%['hO%_'hO~OV!aO_!aOa!bOh!iO!X!kO!f!mO%l!^O%m!_O%n!_O%o!`O%p!`O%q!aO%r!aO%s!aOkWilWimWinWioWipWisWizWi{Wi!xWi#gWi%[Wi%_Wi%jWi%zWigWi!TWi!UWi%{Wi!WWi![Wi!QWi#[WitWi!mWi~O%k!]O~P!#uO%kWi~P!#uOV!aO_!aOa!bOh!iO!X!kO!f!mO%o!`O%p!`O%q!aO%r!aO%s!aOkWilWimWinWioWipWisWizWi{Wi!xWi#gWi%[Wi%_Wi%jWi%kWi%lWi%zWigWi!TWi!UWi%{Wi!WWi![Wi!QWi#[WitWi!mWi~O%m!_O%n!_O~P!&pO%mWi%nWi~P!&pOa!bOh!iO!X!kO!f!mOkWilWimWinWioWipWisWizWi{Wi!xWi#gWi%[Wi%_Wi%jWi%kWi%lWi%mWi%nWi%oWi%pWi%zWigWi!TWi!UWi%{Wi!WWi![Wi!QWi#[WitWi!mWi~OV!aO_!aO%q!aO%r!aO%s!aO~P!)nOVWi_Wi%qWi%rWi%sWi~P!)nO!T%dO!U%cOg&VXz&VX~O%z'kO%{'kO~P,eOz'mOg&UX~Og'oO~Oz'pO{'rO!W&XX~Oo0cOv0qOz'pO{'sO!W&XX~P'vO!W'uO~Om!oOn!oOo!rOp!sOkjisjizji{ji!xji#gji%[ji%_ji%zji~Ol!qO~P!.aOlji~P!.aOk0eOl0fOm0dOn0dOo0mOp0nO~Ot'wO~P!/jOV'|Og'}Oo0cOv0qO~P'vOg'}Oz(OO~Og(QO~O!U(SO~Og(TOz(OO!T%dO!U%cO~P%SOk0eOl0fOm0dOn0dOo0mOp0nOgqa!Tqa!Uqa%{qa!Wqa![qa!Qqa#[qatqa!mqa~PEcOV'|Oo0cOv0qO!W&Sa~P'vOz(WO!W&Sa~O!W(XO~Oz(WO!T%dO!U%cO!W&Sa~P%SOV(]Oo0cOv0qO![%}a#g%}a%[%}a%_%}ag%}a{%}a!m%}a%z%}a~P'vOz(^O![%}a#g%}a%[%}a%_%}ag%}a{%}a!m%}a%z%}a~O![(aO~Oz(^O!T%dO!U%cO![%}a~P%SOz(dO!T%dO!U%cO![&Ta~P%SOz(gO{&lX![&lX!m&lX%z&lX~O{(kO![(mO!m(nO%z(jO~OV&OOopOvqO{%hi!x%hi#g%hi%[%hi%_%hi%z%hi~P'vOz(pO{%hi!x%hi#g%hi%[%hi%_%hi%z%hi~O!f&UOh&sa%[&saz&sa#[&sa#g&sa%_&sa#Z&sag&sa~O%[(uO~OV#sOa#tO%uWO~Oz&]O{wa~OopOvqO~P'vOz(^O#g%}a%[%}a%_%}ag%}a{%}a![%}a!m%}a%z%}a~P%SOz(zO#g%hX%[%hX%_%hX%z%hX~O%z#|O#gUi%[Ui%_Ui~O#g&Pa%[&Pa%_&Pan&Pa~P'vOz(}O#g&Pa%[&Pa%_&Pan&Pa~O%uWO#g&ra%[&ra%_&rag&ra~Oz)SO#g&ra%[&ra%_&rag&ra~Og)VO~OV)WOh$WO%uWO~O#Z)XO~O%uWO#g&ta%[&ta%_&ta~Oz)ZO#g&ta%[&ta%_&ta~Oo0cOv0qO#g&pa%[&pa%_&pa{&pa~P'vOz)^O#g&pa%[&pa%_&pa{&pa~OV)`Oa)`O%uWO~O%z)eO~Ot)hO#j)gOP#hiV#hif#hih#hio#his#hiv#hi!P#hi!Q#hi!T#hi!U#hi!X#hi!]#hi!h#hi!r#hi!s#hi!t#hi!{#hi!}#hi#P#hi#R#hi#T#hi#X#hi#Z#hi#^#hi#_#hi#a#hi#c#hi#l#hi#o#hi#s#hi#u#hi#z#hi#}#hi$P#hi%X#hi%o#hi%p#hi%t#hi%u#hi&Z#hi&[#hi&]#hi&^#hi&_#hi&`#hi&a#hi&b#hi&c#hi&d#hi&e#hi&f#hi&g#hi&h#hi&i#hi&j#hi%Z#hi%_#hi~Ot)iOP#kiV#kif#kih#kio#kis#kiv#ki!P#ki!Q#ki!T#ki!U#ki!X#ki!]#ki!h#ki!r#ki!s#ki!t#ki!{#ki!}#ki#P#ki#R#ki#T#ki#X#ki#Z#ki#^#ki#_#ki#a#ki#c#ki#l#ki#o#ki#s#ki#u#ki#z#ki#}#ki$P#ki%X#ki%o#ki%p#ki%t#ki%u#ki&Z#ki&[#ki&]#ki&^#ki&_#ki&`#ki&a#ki&b#ki&c#ki&d#ki&e#ki&f#ki&g#ki&h#ki&i#ki&j#ki%Z#ki%_#ki~OV)kOn&wa~P'vOz)lOn&wa~Oz)lOn&wa~P%SOn)pO~O%Y)tO~Ot)wO#p'WO#q)vOP#niV#nif#nih#nio#nis#niv#ni!P#ni!Q#ni!T#ni!U#ni!X#ni!]#ni!h#ni!r#ni!s#ni!t#ni!{#ni!}#ni#P#ni#R#ni#T#ni#X#ni#Z#ni#^#ni#_#ni#a#ni#c#ni#l#ni#o#ni#s#ni#u#ni#z#ni#}#ni$P#ni%X#ni%o#ni%p#ni%t#ni%u#ni&Z#ni&[#ni&]#ni&^#ni&_#ni&`#ni&a#ni&b#ni&c#ni&d#ni&e#ni&f#ni&g#ni&h#ni&i#ni&j#ni%Z#ni%_#ni~OV)zOo0cOv0qO{$jO~P'vOo0cOv0qO{&xa~P'vOz*OO{&xa~OV*SOa*TOg*WO%q*UO%uWO~O{$jO&{*YO~Oh'_O~Oh!iO{$jO~O%[*_O~O%[*aO%_*aO~OV$}Oa$}Oo0cOv0qOg&Ua~P'vOz*dOg&Ua~Oo0cOv0qO{*gO!W&Xa~P'vOz*hO!W&Xa~Oo0cOv0qOz*hO{*kO!W&Xa~P'vOo0cOv0qOz*hO!W&Xa~P'vOz*hO{*kO!W&Xa~Om0dOn0dOo0mOp0nOgjikjisjizji!Tji!Uji%{ji!Wji{ji![ji#gji%[ji%_ji!Qji#[jitji!mji%zji~Ol0fO~P!NkOlji~P!NkOV'|Og*pOo0cOv0qO~P'vOn*rO~Og*pOz*tO~Og*uO~OV'|Oo0cOv0qO!W&Si~P'vOz*vO!W&Si~O!W*wO~OV(]Oo0cOv0qO![%}i#g%}i%[%}i%_%}ig%}i{%}i!m%}i%z%}i~P'vOz*zO!T%dO!U%cO![&Ti~Oz*}O![%}i#g%}i%[%}i%_%}ig%}i{%}i!m%}i%z%}i~O![+OO~Oa+QOo0cOv0qO![&Ti~P'vOz*zO![&Ti~O![+SO~OV+UOo0cOv0qO{&la![&la!m&la%z&la~P'vOz+VO{&la![&la!m&la%z&la~O!]+YO&n+[O![!nX~O![+^O~O{(kO![+_O~O{(kO![+_O!m+`O~OV&OOopOvqO{%hq!x%hq#g%hq%[%hq%_%hq%z%hq~P'vOz$ri{$ri!x$ri#g$ri%[$ri%_$ri%z$ri~P%SOV&OOopOvqO~P'vOV&OOo0cOv0qO#g%ha%[%ha%_%ha%z%ha~P'vOz+aO#g%ha%[%ha%_%ha%z%ha~Oz$ia#g$ia%[$ia%_$ian$ia~P%SO#g&Pi%[&Pi%_&Pin&Pi~P'vOz+dO#g#Wq%[#Wq%_#Wq~O#[+eOz$va#g$va%[$va%_$vag$va~O%uWO#g&ri%[&ri%_&rig&ri~Oz+gO#g&ri%[&ri%_&rig&ri~OV+iOh$WO%uWO~O%uWO#g&ti%[&ti%_&ti~Oo0cOv0qO#g&pi%[&pi%_&pi{&pi~P'vO{#{Oz#eX!W#eX~Oz+mO!W&uX~O!W+oO~Ot+rO#j)gOP#hqV#hqf#hqh#hqo#hqs#hqv#hq!P#hq!Q#hq!T#hq!U#hq!X#hq!]#hq!h#hq!r#hq!s#hq!t#hq!{#hq!}#hq#P#hq#R#hq#T#hq#X#hq#Z#hq#^#hq#_#hq#a#hq#c#hq#l#hq#o#hq#s#hq#u#hq#z#hq#}#hq$P#hq%X#hq%o#hq%p#hq%t#hq%u#hq&Z#hq&[#hq&]#hq&^#hq&_#hq&`#hq&a#hq&b#hq&c#hq&d#hq&e#hq&f#hq&g#hq&h#hq&i#hq&j#hq%Z#hq%_#hq~On$|az$|a~P%SOV)kOn&wi~P'vOz+yOn&wi~Oz,TO{$jO#[,TO~O#q,VOP#nqV#nqf#nqh#nqo#nqs#nqv#nq!P#nq!Q#nq!T#nq!U#nq!X#nq!]#nq!h#nq!r#nq!s#nq!t#nq!{#nq!}#nq#P#nq#R#nq#T#nq#X#nq#Z#nq#^#nq#_#nq#a#nq#c#nq#l#nq#o#nq#s#nq#u#nq#z#nq#}#nq$P#nq%X#nq%o#nq%p#nq%t#nq%u#nq&Z#nq&[#nq&]#nq&^#nq&_#nq&`#nq&a#nq&b#nq&c#nq&d#nq&e#nq&f#nq&g#nq&h#nq&i#nq&j#nq%Z#nq%_#nq~O#[,WOz%Oa{%Oa~Oo0cOv0qO{&xi~P'vOz,YO{&xi~O{#{O%z,[Og&zXz&zX~O%uWOg&zXz&zX~Oz,`Og&yX~Og,bO~O%Y,eO~O!T%dO!U%cOg&Viz&Vi~OV$}Oa$}Oo0cOv0qOg&Ui~P'vO{,hOz$la!W$la~Oo0cOv0qO{,iOz$la!W$la~P'vOo0cOv0qO{*gO!W&Xi~P'vOz,lO!W&Xi~Oo0cOv0qOz,lO!W&Xi~P'vOz,lO{,oO!W&Xi~Og$hiz$hi!W$hi~P%SOV'|Oo0cOv0qO~P'vOn,qO~OV'|Og,rOo0cOv0qO~P'vOV'|Oo0cOv0qO!W&Sq~P'vOz$gi![$gi#g$gi%[$gi%_$gig$gi{$gi!m$gi%z$gi~P%SOV(]Oo0cOv0qO~P'vOa+QOo0cOv0qO![&Tq~P'vOz,sO![&Tq~O![,tO~OV(]Oo0cOv0qO![%}q#g%}q%[%}q%_%}qg%}q{%}q!m%}q%z%}q~P'vO{,uO~OV+UOo0cOv0qO{&li![&li!m&li%z&li~P'vOz,zO{&li![&li!m&li%z&li~O!]+YO&n+[O![!na~O{(kO![,}O~OV&OOo0cOv0qO#g%hi%[%hi%_%hi%z%hi~P'vOz-OO#g%hi%[%hi%_%hi%z%hi~O%uWO#g&rq%[&rq%_&rqg&rq~Oz-RO#g&rq%[&rq%_&rqg&rq~OV)`Oa)`O%uWO!W&ua~Oz-TO!W&ua~On$|iz$|i~P%SOV)kO~P'vOV)kOn&wq~P'vOt-XOP#myV#myf#myh#myo#mys#myv#my!P#my!Q#my!T#my!U#my!X#my!]#my!h#my!r#my!s#my!t#my!{#my!}#my#P#my#R#my#T#my#X#my#Z#my#^#my#_#my#a#my#c#my#l#my#o#my#s#my#u#my#z#my#}#my$P#my%X#my%o#my%p#my%t#my%u#my&Z#my&[#my&]#my&^#my&_#my&`#my&a#my&b#my&c#my&d#my&e#my&f#my&g#my&h#my&i#my&j#my%Z#my%_#my~O%Z-]O%_-]O~P`O#q-^OP#nyV#nyf#nyh#nyo#nys#nyv#ny!P#ny!Q#ny!T#ny!U#ny!X#ny!]#ny!h#ny!r#ny!s#ny!t#ny!{#ny!}#ny#P#ny#R#ny#T#ny#X#ny#Z#ny#^#ny#_#ny#a#ny#c#ny#l#ny#o#ny#s#ny#u#ny#z#ny#}#ny$P#ny%X#ny%o#ny%p#ny%t#ny%u#ny&Z#ny&[#ny&]#ny&^#ny&_#ny&`#ny&a#ny&b#ny&c#ny&d#ny&e#ny&f#ny&g#ny&h#ny&i#ny&j#ny%Z#ny%_#ny~Oz-aO{$jO#[-aO~Oo0cOv0qO{&xq~P'vOz-dO{&xq~O%z,[Og&zaz&za~O{#{Og&zaz&za~OV*SOa*TO%q*UO%uWOg&ya~Oz-hOg&ya~O$S-lO~OV$}Oa$}Oo0cOv0qO~P'vOo0cOv0qO{-mOz$li!W$li~P'vOo0cOv0qOz$li!W$li~P'vO{-mOz$li!W$li~Oo0cOv0qO{*gO~P'vOo0cOv0qO{*gO!W&Xq~P'vOz-pO!W&Xq~Oo0cOv0qOz-pO!W&Xq~P'vOs-sO!T%dO!U%cOg&Oq!W&Oq![&Oqz&Oq~P!/jOa+QOo0cOv0qO![&Ty~P'vOz$ji![$ji~P%SOa+QOo0cOv0qO~P'vOV+UOo0cOv0qO~P'vOV+UOo0cOv0qO{&lq![&lq!m&lq%z&lq~P'vO{(kO![-xO!m-yO%z-wO~OV&OOo0cOv0qO#g%hq%[%hq%_%hq%z%hq~P'vO%uWO#g&ry%[&ry%_&ryg&ry~OV)`Oa)`O%uWO!W&ui~Ot-}OP#m!RV#m!Rf#m!Rh#m!Ro#m!Rs#m!Rv#m!R!P#m!R!Q#m!R!T#m!R!U#m!R!X#m!R!]#m!R!h#m!R!r#m!R!s#m!R!t#m!R!{#m!R!}#m!R#P#m!R#R#m!R#T#m!R#X#m!R#Z#m!R#^#m!R#_#m!R#a#m!R#c#m!R#l#m!R#o#m!R#s#m!R#u#m!R#z#m!R#}#m!R$P#m!R%X#m!R%o#m!R%p#m!R%t#m!R%u#m!R&Z#m!R&[#m!R&]#m!R&^#m!R&_#m!R&`#m!R&a#m!R&b#m!R&c#m!R&d#m!R&e#m!R&f#m!R&g#m!R&h#m!R&i#m!R&j#m!R%Z#m!R%_#m!R~Oo0cOv0qO{&xy~P'vOV*SOa*TO%q*UO%uWOg&yi~O$S-lO%Z.VO%_.VO~OV.aOh._O!X.^O!].`O!h.YO!s.[O!t.[O%p.XO%uWO&Z]O&[]O&]]O&^]O&_]O&`]O&a]O&b]O~Oo0cOv0qOz$lq!W$lq~P'vO{.fOz$lq!W$lq~Oo0cOv0qO{*gO!W&Xy~P'vOz.gO!W&Xy~Oo0cOv.kO~P'vOs-sO!T%dO!U%cOg&Oy!W&Oy![&Oyz&Oy~P!/jO{(kO![.nO~O{(kO![.nO!m.oO~OV*SOa*TO%q*UO%uWO~Oh.tO!f.rOz$TX#[$TX%j$TXg$TX~Os$TX{$TX!W$TX![$TX~P$-bO%o.vO%p.vOs$UXz$UX{$UX#[$UX%j$UX!W$UXg$UX![$UX~O!h.xO~Oz.|O#[/OO%j.yOs&|X{&|X!W&|Xg&|X~Oa/RO~P$)zOh.tOs&}Xz&}X{&}X#[&}X%j&}X!W&}Xg&}X![&}X~Os/VO{$jO~Oo0cOv0qOz$ly!W$ly~P'vOo0cOv0qO{*gO!W&X!R~P'vOz/ZO!W&X!R~Og&RXs&RX!T&RX!U&RX!W&RX![&RXz&RX~P!/jOs-sO!T%dO!U%cOg&Qa!W&Qa![&Qaz&Qa~O{(kO![/^O~O!f.rOh$[as$[az$[a{$[a#[$[a%j$[a!W$[ag$[a![$[a~O!h/eO~O%o.vO%p.vOs$Uaz$Ua{$Ua#[$Ua%j$Ua!W$Uag$Ua![$Ua~O%j.yOs$Yaz$Ya{$Ya#[$Ya!W$Yag$Ya![$Ya~Os&|a{&|a!W&|ag&|a~P$)nOz/jOs&|a{&|a!W&|ag&|a~O!W/mO~Og/mO~O{/oO~O![/pO~Oo0cOv0qO{*gO!W&X!Z~P'vO{/sO~O%z/tO~P$-bOz/uO#[/OO%j.yOg'PX~Oz/uOg'PX~Og/wO~O!h/xO~O#[/OOs%Saz%Sa{%Sa%j%Sa!W%Sag%Sa![%Sa~O#[/OO%j.yOs%Waz%Wa{%Wa!W%Wag%Wa~Os&|i{&|i!W&|ig&|i~P$)nOz/zO#[/OO%j.yO!['Oa~Og'Pa~P$)nOz0SOg'Pa~Oa0UO!['Oi~P$)zOz0WO!['Oi~Oz0WO#[/OO%j.yO!['Oi~O#[/OO%j.yOg$biz$bi~O%z0ZO~P$-bO#[/OO%j.yOg%Vaz%Va~Og'Pi~P$)nO{0^O~Oa0UO!['Oq~P$)zOz0`O!['Oq~O#[/OO%j.yOz%Ui![%Ui~Oa0UO~P$)zOa0UO!['Oy~P$)zO#[/OO%j.yOg$ciz$ci~O#[/OO%j.yOz%Uq![%Uq~Oz+aO#g%ha%[%ha%_%ha%z%ha~P%SOV&OOo0cOv0qO~P'vOn0hO~Oo0hO~P'vO{0iO~Ot0jO~P!/jO&]&Z&j&h&i&g&f&d&e&c&b&`&a&_&^&[%u~",
+  goto: "!=j'QPPPPPP'RP'Z*s+[+t,_,y-fP.SP'Z.r.r'ZPPP'Z2[PPPPPP2[5PPP5PP7b7k=sPP=v>h>kPP'Z'ZPP>zPP'Z'ZPP'Z'Z'Z'Z'Z?O?w'ZP?zP@QDXGuGyPG|HWH['ZPPPH_Hk'RP'R'RP'RP'RP'RP'RP'R'R'RP'RPP'RPP'RP'RPHqH}IVPI^IdPI^PI^I^PPPI^PKrPK{LVL]KrPI^LfPI^PLmLsPLwM]MzNeLwLwNkNxLwLwLwLw! ^! d! g! l! o! y!!P!!]!!o!!u!#P!#V!#s!#y!$P!$Z!$a!$g!$y!%T!%Z!%a!%k!%q!%w!%}!&T!&Z!&e!&k!&u!&{!'U!'[!'k!'s!'}!(UPPPPPPPPPPP!([!(_!(e!(n!(x!)TPPPPPPPPPPPP!-u!/Z!3^!6oPP!6w!7W!7a!8Y!8P!8c!8i!8l!8o!8r!8z!9jPPPPPPPPPPPPPPPPP!9m!9q!9wP!:]!:a!:m!:v!;S!;j!;m!;p!;v!;|!<S!<VP!<_!<h!=d!=g]eOn#g$j)t,P'}`OTYZ[adnoprtxy}!P!Q!R!U!X!c!d!e!f!g!h!i!k!o!p!q!s!t!z#O#S#T#[#d#g#x#y#{#}$Q$e$g$h$j$q$}%S%Z%^%`%c%g%l%n%w%|&O&Z&_&h&j&k&u&x&|'P'W'Z'l'm'p'r's'w'|(O(S(W(](^(d(g(p(r(z(})^)e)g)k)l)p)t)z*O*Y*d*g*h*k*q*r*t*v*y*z*}+Q+U+V+Y+a+c+d+k+x+y,P,X,Y,],g,h,i,k,l,o,q,s,u,w,y,z-O-d-f-m-p-s.f.g/V/Z/s0c0d0e0f0h0i0j0k0l0n0r{!cQ#c#p$R$d$p%e%j%p%q&`'O'g(q(|)j*o*x+w,v0g}!dQ#c#p$R$d$p$u%e%j%p%q&`'O'g(q(|)j*o*x+w,v0g!P!eQ#c#p$R$d$p$u$v%e%j%p%q&`'O'g(q(|)j*o*x+w,v0g!R!fQ#c#p$R$d$p$u$v$w%e%j%p%q&`'O'g(q(|)j*o*x+w,v0g!T!gQ#c#p$R$d$p$u$v$w$x%e%j%p%q&`'O'g(q(|)j*o*x+w,v0g!V!hQ#c#p$R$d$p$u$v$w$x$y%e%j%p%q&`'O'g(q(|)j*o*x+w,v0g!Z!hQ!n#c#p$R$d$p$u$v$w$x$y$z%e%j%p%q&`'O'g(q(|)j*o*x+w,v0g'}TOTYZ[adnoprtxy}!P!Q!R!U!X!c!d!e!f!g!h!i!k!o!p!q!s!t!z#O#S#T#[#d#g#x#y#{#}$Q$e$g$h$j$q$}%S%Z%^%`%c%g%l%n%w%|&O&Z&_&h&j&k&u&x&|'P'W'Z'l'm'p'r's'w'|(O(S(W(](^(d(g(p(r(z(})^)e)g)k)l)p)t)z*O*Y*d*g*h*k*q*r*t*v*y*z*}+Q+U+V+Y+a+c+d+k+x+y,P,X,Y,],g,h,i,k,l,o,q,s,u,w,y,z-O-d-f-m-p-s.f.g/V/Z/s0c0d0e0f0h0i0j0k0l0n0r&eVOYZ[dnprxy}!P!Q!U!i!k!o!p!q!s!t#[#d#g#y#{#}$Q$h$j$}%S%Z%^%`%g%l%n%w%|&Z&_&j&k&u&x'P'W'Z'l'm'p'r's'w(O(W(^(d(g(p(r(z)^)e)g)p)t)z*O*Y*d*g*h*k*q*r*t*v*y*z*}+U+V+Y+a+d+k,P,X,Y,],g,h,i,k,l,o,q,s,u,w,y,z-O-d-f-m-p-s.f.g/V/Z/s0c0d0e0f0h0i0j0k0n0r%oXOYZ[dnrxy}!P!Q!U!i!k#[#d#g#y#{#}$Q$h$j$}%S%^%`%g%l%n%w%|&Z&_&j&k&u&x'P'W'Z'l'm'p'r's'w(O(W(^(d(g(p(r(z)^)e)g)p)t)z*O*Y*d*g*h*k*q*t*v*y*z*}+U+V+Y+a+d+k,P,X,Y,],g,h,i,k,l,o,s,u,w,y,z-O-d-f-m-p.f.g/V/Z0i0j0kQ#vqQ/[.kR0o0q't`OTYZ[adnoprtxy}!P!Q!R!U!X!c!d!e!f!g!h!k!o!p!q!s!t!z#O#S#T#[#d#g#x#y#{#}$Q$e$g$h$j$q$}%S%Z%^%`%c%g%l%n%w%|&O&Z&_&h&j&k&u&x&|'P'W'Z'l'p'r's'w'|(O(S(W(](^(d(g(p(r(z(})^)e)g)k)l)p)t)z*O*Y*g*h*k*q*r*t*v*y*z*}+Q+U+V+Y+a+c+d+k+x+y,P,X,Y,],h,i,k,l,o,q,s,u,w,y,z-O-d-f-m-p-s.f.g/V/Z/s0c0d0e0f0h0i0j0k0l0n0rh#jhz{$W$Z&l&q)S)X+f+g-RW#rq&].k0qQ$]|Q$a!OQ$n!VQ$o!WW$|!i'm*d,gS&[#s#tQ'S$iQ(s&UQ)U&nU)Y&s)Z+jW)a&w+m-T-{Q*Q']W*R'_,`-h.TQ+l)`S,_*S*TQ-Q+eQ-_,TQ-c,WQ.R-al.W-l.^._.a.z.|/R/j/o/t/y0U0Z0^Q/S.`Q/a.tQ/l/OU0P/u0S0[X0V/z0W0_0`R&Z#r!_!wYZ!P!Q!k%S%`%g'p'r's(O(W)g*g*h*k*q*t*v,h,i,k,l,o-m-p.f.g/ZR%^!vQ!{YQ%x#[Q&d#}Q&g$QR,{+YT.j-s/s!Y!jQ!n#c#p$R$d$p$u$v$w$x$y$z%e%j%p%q&`'O'g(q(|)j*o*x+w,v0gQ&X#kQ'c$oR*^'dR'l$|Q%V!mR/_.r'|_OTYZ[adnoprtxy}!P!Q!R!U!X!c!d!e!f!g!h!i!k!o!p!q!s!t!z#O#S#T#[#d#g#x#y#{#}$Q$e$g$h$j$q$}%S%Z%^%`%c%g%l%n%w%|&O&Z&_&h&j&k&u&x&|'P'W'Z'l'm'p'r's'w'|(O(S(W(](^(d(g(p(r(z(})^)e)g)k)l)p)t)z*O*Y*d*g*h*k*q*r*t*v*y*z*}+Q+U+V+Y+a+c+d+k+x+y,P,X,Y,],g,h,i,k,l,o,q,s,u,w,y,z-O-d-f-m-p-s.f.g/V/Z/s0c0d0e0f0h0i0j0k0l0n0rS#a_#b!P.[-l.^._.`.a.t.z.|/R/j/o/t/u/y/z0S0U0W0Z0[0^0_0`'|_OTYZ[adnoprtxy}!P!Q!R!U!X!c!d!e!f!g!h!i!k!o!p!q!s!t!z#O#S#T#[#d#g#x#y#{#}$Q$e$g$h$j$q$}%S%Z%^%`%c%g%l%n%w%|&O&Z&_&h&j&k&u&x&|'P'W'Z'l'm'p'r's'w'|(O(S(W(](^(d(g(p(r(z(})^)e)g)k)l)p)t)z*O*Y*d*g*h*k*q*r*t*v*y*z*}+Q+U+V+Y+a+c+d+k+x+y,P,X,Y,],g,h,i,k,l,o,q,s,u,w,y,z-O-d-f-m-p-s.f.g/V/Z/s0c0d0e0f0h0i0j0k0l0n0rT#a_#bT#^^#_R(o%xa(l%x(n(o+`,{-y-z.oT+[(k+]R-z,{Q$PsQ+l)aQ,^*RR-e,_X#}s$O$P&fQ&y$aQ'a$nQ'd$oR)s'SQ)b&wV-S+m-T-{ZgOn$j)t,PXkOn)t,PQ$k!TQ&z$bQ&{$cQ'^$mQ'b$oQ)q'RQ)x'WQ){'XQ)|'YQ*Z'`S*]'c'dQ+s)gQ+u)hQ+v)iQ+z)oS+|)r*[Q,Q)vQ,R)wS,S)y)zQ,d*^Q-V+rQ-W+tQ-Y+{S-Z+},OQ-`,UQ-b,VQ-|-XQ.O-[Q.P-^Q.Q-_Q.p-}Q.q.RQ/W.dR/r/XWkOn)t,PR#mjQ'`$nS)r'S'aR,O)sQ,]*RR-f,^Q*['`Q+})rR-[,OZiOjn)t,PQ'f$pR*`'gT-j,e-ku.c-l.^._.a.t.z.|/R/j/o/t/u/y0S0U0Z0[0^t.c-l.^._.a.t.z.|/R/j/o/t/u/y0S0U0Z0[0^Q/S.`X0V/z0W0_0`!P.Z-l.^._.`.a.t.z.|/R/j/o/t/u/y/z0S0U0W0Z0[0^0_0`Q.w.YR/f.xg.z.].{/b/i/n/|0O0Q0]0a0bu.b-l.^._.a.t.z.|/R/j/o/t/u/y0S0U0Z0[0^X.u.W.b/a0PR/c.tV0R/u0S0[R/X.dQnOS#on,PR,P)tQ&^#uR(x&^S%m#R#wS(_%m(bT(b%p&`Q%a!yQ%h!}W(P%a%h(U(YQ(U%eR(Y%jQ&i$RR)O&iQ(e%qQ*{(`T+R(e*{Q'n%OR*e'nS'q%R%SY*i'q*j,m-q.hU*j'r's'tU,m*k*l*mS-q,n,oR.h-rQ#Y]R%t#YQ#_^R%y#_Q(h%vS+W(h+XR+X(iQ+](kR,|+]Q#b_R%{#bQ#ebQ%}#cW&Q#e%}({+bQ({&cR+b0gQ$OsS&e$O&fR&f$PQ&v$_R)_&vQ&V#jR(t&VQ&m$VS)T&m+hR+h)UQ$Z{R&p$ZQ&t$]R)[&tQ+n)bR-U+nQ#hfR&S#hQ)f&zR+q)fQ&}$dS)m&})nR)n'OQ'V$kR)u'VQ'[$lS*P'[,ZR,Z*QQ,a*VR-i,aWjOn)t,PR#ljQ-k,eR.U-kd.{.]/b/i/n/|0O0Q0]0a0bR/h.{U.s.W/a0PR/`.sQ/{/nS0X/{0YR0Y/|S/v/b/cR0T/vQ.}.]R/k.}R!ZPXmOn)t,PWlOn)t,PR'T$jYfOn$j)t,PR&R#g[sOn#g$j)t,PR&d#}&dQOYZ[dnprxy}!P!Q!U!i!k!o!p!q!s!t#[#d#g#y#{#}$Q$h$j$}%S%Z%^%`%g%l%n%w%|&Z&_&j&k&u&x'P'W'Z'l'm'p'r's'w(O(W(^(d(g(p(r(z)^)e)g)p)t)z*O*Y*d*g*h*k*q*r*t*v*y*z*}+U+V+Y+a+d+k,P,X,Y,],g,h,i,k,l,o,q,s,u,w,y,z-O-d-f-m-p-s.f.g/V/Z/s0c0d0e0f0h0i0j0k0n0rQ!nTQ#caQ#poU$Rt%c(SS$d!R$gQ$p!XQ$u!cQ$v!dQ$w!eQ$x!fQ$y!gQ$z!hQ%e!zQ%j#OQ%p#SQ%q#TQ&`#xQ'O$eQ'g$qQ(q&OU(|&h(}+cW)j&|)l+x+yQ*o'|Q*x(]Q+w)kQ,v+QR0g0lQ!yYQ!}ZQ$b!PQ$c!QQ%R!kQ't%S^'{%`%g(O(W*q*t*v^*f'p*h,k,l-p.g/ZQ*l'rQ*m'sQ+t)gQ,j*gQ,n*kQ-n,hQ-o,iQ-r,oQ.e-mR/Y.f[bOn#g$j)t,P!^!vYZ!P!Q!k%S%`%g'p'r's(O(W)g*g*h*k*q*t*v,h,i,k,l,o-m-p.f.g/ZQ#R[Q#fdS#wrxQ$UyW$_}$Q'P)pS$l!U$hW${!i'm*d,gS%v#[+Y`&P#d%|(p(r(z+a-O0kQ&a#yQ&b#{Q&c#}Q'j$}Q'z%^W([%l(^*y*}Q(`%nQ(i%wQ(v&ZS(y&_0iQ)P&jQ)Q&kU)]&u)^+kQ)d&xQ)y'WY)}'Z*O,X,Y-dQ*b'lS*n'w0jW+P(d*z,s,wW+T(g+V,y,zQ+p)eQ,U)zQ,c*YQ,x+UQ-P+dQ-e,]Q-v,uQ.S-fR/q/VhUOn#d#g$j%|&_'w(p(r)t,P%U!uYZ[drxy}!P!Q!U!i!k#[#y#{#}$Q$h$}%S%^%`%g%l%n%w&Z&j&k&u&x'P'W'Z'l'm'p'r's(O(W(^(d(g(z)^)e)g)p)z*O*Y*d*g*h*k*q*t*v*y*z*}+U+V+Y+a+d+k,X,Y,],g,h,i,k,l,o,s,u,w,y,z-O-d-f-m-p.f.g/V/Z0i0j0kQ#qpW%W!o!s0d0nQ%X!pQ%Y!qQ%[!tQ%f0cS'v%Z0hQ'x0eQ'y0fQ,p*rQ-u,qS.i-s/sR0p0rU#uq.k0qR(w&][cOn#g$j)t,PZ!xY#[#}$Q+YQ#W[Q#zrR$TxQ%b!yQ%i!}Q%o#RQ'j${Q(V%eQ(Z%jQ(c%pQ(f%qQ*|(`Q,f*bQ-t,pQ.m-uR/].lQ$StQ(R%cR*s(SQ.l-sR/}/sR#QZR#V[R%Q!iQ%O!iV*c'm*d,g!Z!lQ!n#c#p$R$d$p$u$v$w$x$y$z%e%j%p%q&`'O'g(q(|)j*o*x+w,v0gR%T!kT#]^#_Q%x#[R,{+YQ(m%xS+_(n(oQ,}+`Q-x,{S.n-y-zR/^.oT+Z(k+]Q$`}Q&g$QQ)o'PR+{)pQ$XzQ)W&qR+i)XQ$XzQ&o$WQ)W&qR+i)XQ#khW$Vz$W&q)XQ$[{Q&r$ZZ)R&l)S+f+g-RR$^|R)c&wXlOn)t,PQ$f!RR'Q$gQ$m!UR'R$hR*X'_Q*V'_V-g,`-h.TQ.d-lQ/P.^R/Q._U.]-l.^._Q/U.aQ/b.tQ/g.zU/i.|/j/yQ/n/RQ/|/oQ0O/tU0Q/u0S0[Q0]0UQ0a0ZR0b0^R/T.`R/d.t",
+  nodeNames: "\u26A0 print Escape { Comment Script AssignStatement * BinaryExpression BitOp BitOp BitOp BitOp ArithOp ArithOp @ ArithOp ** UnaryExpression ArithOp BitOp AwaitExpression await ) ( ParenthesizedExpression BinaryExpression or and CompareOp in not is UnaryExpression ConditionalExpression if else LambdaExpression lambda ParamList VariableName AssignOp , : NamedExpression AssignOp YieldExpression yield from TupleExpression ComprehensionExpression async for LambdaExpression ] [ ArrayExpression ArrayComprehensionExpression } { DictionaryExpression DictionaryComprehensionExpression SetExpression SetComprehensionExpression CallExpression ArgList AssignOp MemberExpression . PropertyName Number String FormatString FormatReplacement FormatSelfDoc FormatConversion FormatSpec FormatReplacement FormatSelfDoc ContinuedString Ellipsis None Boolean TypeDef AssignOp UpdateStatement UpdateOp ExpressionStatement DeleteStatement del PassStatement pass BreakStatement break ContinueStatement continue ReturnStatement return YieldStatement PrintStatement RaiseStatement raise ImportStatement import as ScopeStatement global nonlocal AssertStatement assert TypeDefinition type TypeParamList TypeParam StatementGroup ; IfStatement Body elif WhileStatement while ForStatement TryStatement try except finally WithStatement with FunctionDefinition def ParamList AssignOp TypeDef ClassDefinition class DecoratedStatement Decorator At MatchStatement match MatchBody MatchClause case CapturePattern LiteralPattern ArithOp ArithOp AsPattern OrPattern LogicOp AttributePattern SequencePattern MappingPattern StarPattern ClassPattern PatternArgList KeywordPattern KeywordPattern Guard",
+  maxTerm: 277,
+  context: trackIndent,
+  nodeProps: [
+    ["isolate", -5, 4, 71, 72, 73, 77, ""],
+    ["group", -15, 6, 85, 87, 88, 90, 92, 94, 96, 98, 99, 100, 102, 105, 108, 110, "Statement Statement", -22, 8, 18, 21, 25, 40, 49, 50, 56, 57, 60, 61, 62, 63, 64, 67, 70, 71, 72, 79, 80, 81, 82, "Expression", -10, 114, 116, 119, 121, 122, 126, 128, 133, 135, 138, "Statement", -9, 143, 144, 147, 148, 150, 151, 152, 153, 154, "Pattern"],
+    ["openedBy", 23, "(", 54, "[", 58, "{"],
+    ["closedBy", 24, ")", 55, "]", 59, "}"]
+  ],
+  propSources: [pythonHighlighting],
+  skippedNodes: [0, 4],
+  repeatNodeCount: 34,
+  tokenData: "!2|~R!`OX%TXY%oY[%T[]%o]p%Tpq%oqr'ars)Yst*xtu%Tuv,dvw-hwx.Uxy/tyz0[z{0r{|2S|}2p}!O3W!O!P4_!P!Q:Z!Q!R;k!R![>_![!]Do!]!^Es!^!_FZ!_!`Gk!`!aHX!a!b%T!b!cIf!c!dJU!d!eK^!e!hJU!h!i!#f!i!tJU!t!u!,|!u!wJU!w!x!.t!x!}JU!}#O!0S#O#P&o#P#Q!0j#Q#R!1Q#R#SJU#S#T%T#T#UJU#U#VK^#V#YJU#Y#Z!#f#Z#fJU#f#g!,|#g#iJU#i#j!.t#j#oJU#o#p!1n#p#q!1s#q#r!2a#r#s!2f#s$g%T$g;'SJU;'S;=`KW<%lOJU`%YT&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%T`%lP;=`<%l%To%v]&n`%c_OX%TXY%oY[%T[]%o]p%Tpq%oq#O%T#O#P&o#P#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%To&tX&n`OY%TYZ%oZ]%T]^%o^#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tc'f[&n`O!_%T!_!`([!`#T%T#T#U(r#U#f%T#f#g(r#g#h(r#h#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tc(cTmR&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tc(yT!mR&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk)aV&n`&[ZOr%Trs)vs#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk){V&n`Or%Trs*bs#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk*iT&n`&^ZO#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%To+PZS_&n`OY*xYZ%TZ]*x]^%T^#o*x#o#p+r#p#q*x#q#r+r#r;'S*x;'S;=`,^<%lO*x_+wTS_OY+rZ]+r^;'S+r;'S;=`,W<%lO+r_,ZP;=`<%l+ro,aP;=`<%l*xj,kV%rQ&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tj-XT!xY&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tj-oV%lQ&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk.]V&n`&ZZOw%Twx.rx#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk.wV&n`Ow%Twx/^x#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk/eT&n`&]ZO#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk/{ThZ&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tc0cTgR&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk0yXVZ&n`Oz%Tz{1f{!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk1mVaR&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk2ZV%oZ&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tc2wTzR&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%To3_W%pZ&n`O!_%T!_!`-Q!`!a3w!a#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Td4OT&{S&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk4fX!fQ&n`O!O%T!O!P5R!P!Q%T!Q![6T![#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk5WV&n`O!O%T!O!P5m!P#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk5tT!rZ&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti6[a!hX&n`O!Q%T!Q![6T![!g%T!g!h7a!h!l%T!l!m9s!m#R%T#R#S6T#S#X%T#X#Y7a#Y#^%T#^#_9s#_#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti7fZ&n`O{%T{|8X|}%T}!O8X!O!Q%T!Q![8s![#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti8^V&n`O!Q%T!Q![8s![#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti8z]!hX&n`O!Q%T!Q![8s![!l%T!l!m9s!m#R%T#R#S8s#S#^%T#^#_9s#_#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti9zT!hX&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk:bX%qR&n`O!P%T!P!Q:}!Q!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tj;UV%sQ&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti;ro!hX&n`O!O%T!O!P=s!P!Q%T!Q![>_![!d%T!d!e?q!e!g%T!g!h7a!h!l%T!l!m9s!m!q%T!q!rA]!r!z%T!z!{Bq!{#R%T#R#S>_#S#U%T#U#V?q#V#X%T#X#Y7a#Y#^%T#^#_9s#_#c%T#c#dA]#d#l%T#l#mBq#m#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti=xV&n`O!Q%T!Q![6T![#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti>fc!hX&n`O!O%T!O!P=s!P!Q%T!Q![>_![!g%T!g!h7a!h!l%T!l!m9s!m#R%T#R#S>_#S#X%T#X#Y7a#Y#^%T#^#_9s#_#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti?vY&n`O!Q%T!Q!R@f!R!S@f!S#R%T#R#S@f#S#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Ti@mY!hX&n`O!Q%T!Q!R@f!R!S@f!S#R%T#R#S@f#S#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TiAbX&n`O!Q%T!Q!YA}!Y#R%T#R#SA}#S#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TiBUX!hX&n`O!Q%T!Q!YA}!Y#R%T#R#SA}#S#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TiBv]&n`O!Q%T!Q![Co![!c%T!c!iCo!i#R%T#R#SCo#S#T%T#T#ZCo#Z#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TiCv]!hX&n`O!Q%T!Q![Co![!c%T!c!iCo!i#R%T#R#SCo#S#T%T#T#ZCo#Z#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%ToDvV{_&n`O!_%T!_!`E]!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TcEdT%{R&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TkEzT#gZ&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TkFbXmR&n`O!^%T!^!_F}!_!`([!`!a([!a#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TjGUV%mQ&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TkGrV%zZ&n`O!_%T!_!`([!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TkH`WmR&n`O!_%T!_!`([!`!aHx!a#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TjIPV%nQ&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TkIoV_Q#}P&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%ToJ_]&n`&YS%uZO!Q%T!Q![JU![!c%T!c!}JU!}#R%T#R#SJU#S#T%T#T#oJU#p#q%T#r$g%T$g;'SJU;'S;=`KW<%lOJUoKZP;=`<%lJUoKge&n`&YS%uZOr%Trs)Ysw%Twx.Ux!Q%T!Q![JU![!c%T!c!tJU!t!uLx!u!}JU!}#R%T#R#SJU#S#T%T#T#fJU#f#gLx#g#oJU#p#q%T#r$g%T$g;'SJU;'S;=`KW<%lOJUoMRa&n`&YS%uZOr%TrsNWsw%Twx! vx!Q%T!Q![JU![!c%T!c!}JU!}#R%T#R#SJU#S#T%T#T#oJU#p#q%T#r$g%T$g;'SJU;'S;=`KW<%lOJUkN_V&n`&`ZOr%TrsNts#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%TkNyV&n`Or%Trs! `s#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk! gT&n`&bZO#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk! }V&n`&_ZOw%Twx!!dx#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!!iV&n`Ow%Twx!#Ox#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!#VT&n`&aZO#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%To!#oe&n`&YS%uZOr%Trs!%Qsw%Twx!&px!Q%T!Q![JU![!c%T!c!tJU!t!u!(`!u!}JU!}#R%T#R#SJU#S#T%T#T#fJU#f#g!(`#g#oJU#p#q%T#r$g%T$g;'SJU;'S;=`KW<%lOJUk!%XV&n`&dZOr%Trs!%ns#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!%sV&n`Or%Trs!&Ys#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!&aT&n`&fZO#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!&wV&n`&cZOw%Twx!'^x#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!'cV&n`Ow%Twx!'xx#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!(PT&n`&eZO#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%To!(ia&n`&YS%uZOr%Trs!)nsw%Twx!+^x!Q%T!Q![JU![!c%T!c!}JU!}#R%T#R#SJU#S#T%T#T#oJU#p#q%T#r$g%T$g;'SJU;'S;=`KW<%lOJUk!)uV&n`&hZOr%Trs!*[s#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!*aV&n`Or%Trs!*vs#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!*}T&n`&jZO#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!+eV&n`&gZOw%Twx!+zx#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!,PV&n`Ow%Twx!,fx#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tk!,mT&n`&iZO#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%To!-Vi&n`&YS%uZOr%TrsNWsw%Twx! vx!Q%T!Q![JU![!c%T!c!dJU!d!eLx!e!hJU!h!i!(`!i!}JU!}#R%T#R#SJU#S#T%T#T#UJU#U#VLx#V#YJU#Y#Z!(`#Z#oJU#p#q%T#r$g%T$g;'SJU;'S;=`KW<%lOJUo!.}a&n`&YS%uZOr%Trs)Ysw%Twx.Ux!Q%T!Q![JU![!c%T!c!}JU!}#R%T#R#SJU#S#T%T#T#oJU#p#q%T#r$g%T$g;'SJU;'S;=`KW<%lOJUk!0ZT!XZ&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tc!0qT!WR&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%Tj!1XV%kQ&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%T~!1sO!]~k!1zV%jR&n`O!_%T!_!`-Q!`#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%T~!2fO![~i!2mT%tX&n`O#o%T#p#q%T#r;'S%T;'S;=`%i<%lO%T",
+  tokenizers: [legacyPrint, indentation, newlines, strings, 0, 1, 2, 3, 4],
+  topRules: { "Script": [0, 5] },
+  specialized: [{ term: 221, get: (value) => spec_identifier2[value] || -1 }],
+  tokenPrec: 7668
+});
+
+// node_modules/@codemirror/lang-python/dist/index.js
+var cache2 = /* @__PURE__ */ new NodeWeakMap();
+var ScopeNodes2 = /* @__PURE__ */ new Set([
+  "Script",
+  "Body",
+  "FunctionDefinition",
+  "ClassDefinition",
+  "LambdaExpression",
+  "ForStatement",
+  "MatchClause"
 ]);
-var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
+function defID2(type) {
+  return (node, def, outer) => {
+    if (outer)
+      return false;
+    let id2 = node.node.getChild("VariableName");
+    if (id2)
+      def(id2, type);
+    return true;
+  };
+}
+var gatherCompletions2 = {
+  FunctionDefinition: /* @__PURE__ */ defID2("function"),
+  ClassDefinition: /* @__PURE__ */ defID2("class"),
+  ForStatement(node, def, outer) {
+    if (outer)
+      for (let child = node.node.firstChild; child; child = child.nextSibling) {
+        if (child.name == "VariableName")
+          def(child, "variable");
+        else if (child.name == "in")
+          break;
+      }
+  },
+  ImportStatement(_node, def) {
+    var _a2, _b2;
+    let { node } = _node;
+    let isFrom = ((_a2 = node.firstChild) === null || _a2 === void 0 ? void 0 : _a2.name) == "from";
+    for (let ch = node.getChild("import"); ch; ch = ch.nextSibling) {
+      if (ch.name == "VariableName" && ((_b2 = ch.nextSibling) === null || _b2 === void 0 ? void 0 : _b2.name) != "as")
+        def(ch, isFrom ? "variable" : "namespace");
+    }
+  },
+  AssignStatement(node, def) {
+    for (let child = node.node.firstChild; child; child = child.nextSibling) {
+      if (child.name == "VariableName")
+        def(child, "variable");
+      else if (child.name == ":" || child.name == "AssignOp")
+        break;
+    }
+  },
+  ParamList(node, def) {
+    for (let prev = null, child = node.node.firstChild; child; child = child.nextSibling) {
+      if (child.name == "VariableName" && (!prev || !/\*|AssignOp/.test(prev.name)))
+        def(child, "variable");
+      prev = child;
+    }
+  },
+  CapturePattern: /* @__PURE__ */ defID2("variable"),
+  AsPattern: /* @__PURE__ */ defID2("variable"),
+  __proto__: null
+};
+function getScope2(doc2, node) {
+  let cached = cache2.get(node);
+  if (cached)
+    return cached;
+  let completions = [], top2 = true;
+  function def(node2, type) {
+    let name2 = doc2.sliceString(node2.from, node2.to);
+    completions.push({ label: name2, type });
+  }
+  node.cursor(IterMode.IncludeAnonymous).iterate((node2) => {
+    if (node2.name) {
+      let gather = gatherCompletions2[node2.name];
+      if (gather && gather(node2, def, top2) || !top2 && ScopeNodes2.has(node2.name))
+        return false;
+      top2 = false;
+    } else if (node2.to - node2.from > 8192) {
+      for (let c of getScope2(doc2, node2.node))
+        completions.push(c);
+      return false;
+    }
+  });
+  cache2.set(node, completions);
+  return completions;
+}
+var Identifier2 = /^[\w\xa1-\uffff][\w\d\xa1-\uffff]*$/;
+var dontComplete2 = ["String", "FormatString", "Comment", "PropertyName"];
+function localCompletionSource2(context) {
+  let inner = syntaxTree(context.state).resolveInner(context.pos, -1);
+  if (dontComplete2.indexOf(inner.name) > -1)
+    return null;
+  let isWord = inner.name == "VariableName" || inner.to - inner.from < 20 && Identifier2.test(context.state.sliceDoc(inner.from, inner.to));
+  if (!isWord && !context.explicit)
+    return null;
+  let options = [];
+  for (let pos = inner; pos; pos = pos.parent) {
+    if (ScopeNodes2.has(pos.name))
+      options = options.concat(getScope2(context.state.doc, pos));
+  }
+  return {
+    options,
+    from: isWord ? inner.from : context.pos,
+    validFor: Identifier2
+  };
+}
+var globals = /* @__PURE__ */ [
+  "__annotations__",
+  "__builtins__",
+  "__debug__",
+  "__doc__",
+  "__import__",
+  "__name__",
+  "__loader__",
+  "__package__",
+  "__spec__",
+  "False",
+  "None",
+  "True"
+].map((n) => ({ label: n, type: "constant" })).concat(/* @__PURE__ */ [
+  "ArithmeticError",
+  "AssertionError",
+  "AttributeError",
+  "BaseException",
+  "BlockingIOError",
+  "BrokenPipeError",
+  "BufferError",
+  "BytesWarning",
+  "ChildProcessError",
+  "ConnectionAbortedError",
+  "ConnectionError",
+  "ConnectionRefusedError",
+  "ConnectionResetError",
+  "DeprecationWarning",
+  "EOFError",
+  "Ellipsis",
+  "EncodingWarning",
+  "EnvironmentError",
+  "Exception",
+  "FileExistsError",
+  "FileNotFoundError",
+  "FloatingPointError",
+  "FutureWarning",
+  "GeneratorExit",
+  "IOError",
+  "ImportError",
+  "ImportWarning",
+  "IndentationError",
+  "IndexError",
+  "InterruptedError",
+  "IsADirectoryError",
+  "KeyError",
+  "KeyboardInterrupt",
+  "LookupError",
+  "MemoryError",
+  "ModuleNotFoundError",
+  "NameError",
+  "NotADirectoryError",
+  "NotImplemented",
+  "NotImplementedError",
+  "OSError",
+  "OverflowError",
+  "PendingDeprecationWarning",
+  "PermissionError",
+  "ProcessLookupError",
+  "RecursionError",
+  "ReferenceError",
+  "ResourceWarning",
+  "RuntimeError",
+  "RuntimeWarning",
+  "StopAsyncIteration",
+  "StopIteration",
+  "SyntaxError",
+  "SyntaxWarning",
+  "SystemError",
+  "SystemExit",
+  "TabError",
+  "TimeoutError",
+  "TypeError",
+  "UnboundLocalError",
+  "UnicodeDecodeError",
+  "UnicodeEncodeError",
+  "UnicodeError",
+  "UnicodeTranslateError",
+  "UnicodeWarning",
+  "UserWarning",
+  "ValueError",
+  "Warning",
+  "ZeroDivisionError"
+].map((n) => ({ label: n, type: "type" }))).concat(/* @__PURE__ */ [
+  "bool",
+  "bytearray",
+  "bytes",
+  "classmethod",
+  "complex",
+  "float",
+  "frozenset",
+  "int",
+  "list",
+  "map",
+  "memoryview",
+  "object",
+  "range",
+  "set",
+  "staticmethod",
+  "str",
+  "super",
+  "tuple",
+  "type"
+].map((n) => ({ label: n, type: "class" }))).concat(/* @__PURE__ */ [
+  "abs",
+  "aiter",
+  "all",
+  "anext",
+  "any",
+  "ascii",
+  "bin",
+  "breakpoint",
+  "callable",
+  "chr",
+  "compile",
+  "delattr",
+  "dict",
+  "dir",
+  "divmod",
+  "enumerate",
+  "eval",
+  "exec",
+  "exit",
+  "filter",
+  "format",
+  "getattr",
+  "globals",
+  "hasattr",
+  "hash",
+  "help",
+  "hex",
+  "id",
+  "input",
+  "isinstance",
+  "issubclass",
+  "iter",
+  "len",
+  "license",
+  "locals",
+  "max",
+  "min",
+  "next",
+  "oct",
+  "open",
+  "ord",
+  "pow",
+  "print",
+  "property",
+  "quit",
+  "repr",
+  "reversed",
+  "round",
+  "setattr",
+  "slice",
+  "sorted",
+  "sum",
+  "vars",
+  "zip"
+].map((n) => ({ label: n, type: "function" })));
+var snippets2 = [
+  /* @__PURE__ */ snippetCompletion("def ${name}(${params}):\n	${}", {
+    label: "def",
+    detail: "function",
+    type: "keyword"
+  }),
+  /* @__PURE__ */ snippetCompletion("for ${name} in ${collection}:\n	${}", {
+    label: "for",
+    detail: "loop",
+    type: "keyword"
+  }),
+  /* @__PURE__ */ snippetCompletion("while ${}:\n	${}", {
+    label: "while",
+    detail: "loop",
+    type: "keyword"
+  }),
+  /* @__PURE__ */ snippetCompletion("try:\n	${}\nexcept ${error}:\n	${}", {
+    label: "try",
+    detail: "/ except block",
+    type: "keyword"
+  }),
+  /* @__PURE__ */ snippetCompletion("if ${}:\n	\n", {
+    label: "if",
+    detail: "block",
+    type: "keyword"
+  }),
+  /* @__PURE__ */ snippetCompletion("if ${}:\n	${}\nelse:\n	${}", {
+    label: "if",
+    detail: "/ else block",
+    type: "keyword"
+  }),
+  /* @__PURE__ */ snippetCompletion("class ${name}:\n	def __init__(self, ${params}):\n			${}", {
+    label: "class",
+    detail: "definition",
+    type: "keyword"
+  }),
+  /* @__PURE__ */ snippetCompletion("import ${module}", {
+    label: "import",
+    detail: "statement",
+    type: "keyword"
+  }),
+  /* @__PURE__ */ snippetCompletion("from ${module} import ${names}", {
+    label: "from",
+    detail: "import",
+    type: "keyword"
+  })
+];
+var globalCompletion = /* @__PURE__ */ ifNotIn(dontComplete2, /* @__PURE__ */ completeFromList(/* @__PURE__ */ globals.concat(snippets2)));
+function innerBody(context) {
+  let { node, pos } = context;
+  let lineIndent = context.lineIndent(pos, -1);
+  let found = null;
+  for (; ; ) {
+    let before = node.childBefore(pos);
+    if (!before) {
+      break;
+    } else if (before.name == "Comment") {
+      pos = before.from;
+    } else if (before.name == "Body" || before.name == "MatchBody") {
+      if (context.baseIndentFor(before) + context.unit <= lineIndent)
+        found = before;
+      node = before;
+    } else if (before.name == "MatchClause") {
+      node = before;
+    } else if (before.type.is("Statement")) {
+      node = before;
+    } else {
+      break;
+    }
+  }
+  return found;
+}
+function indentBody(context, node) {
+  let base2 = context.baseIndentFor(node);
+  let line = context.lineAt(context.pos, -1), to = line.from + line.text.length;
+  if (/^\s*($|#)/.test(line.text) && context.node.to < to + 100 && !/\S/.test(context.state.sliceDoc(to, context.node.to)) && context.lineIndent(context.pos, -1) <= base2)
+    return null;
+  if (/^\s*(else:|elif |except |finally:|case\s+[^=:]+:)/.test(context.textAfter) && context.lineIndent(context.pos, -1) > base2)
+    return null;
+  return base2 + context.unit;
+}
+var pythonLanguage = /* @__PURE__ */ LRLanguage.define({
+  name: "python",
+  parser: /* @__PURE__ */ parser2.configure({
+    props: [
+      /* @__PURE__ */ indentNodeProp.add({
+        Body: (context) => {
+          var _a2;
+          let body = /^\s*(#|$)/.test(context.textAfter) && innerBody(context) || context.node;
+          return (_a2 = indentBody(context, body)) !== null && _a2 !== void 0 ? _a2 : context.continue();
+        },
+        MatchBody: (context) => {
+          var _a2;
+          let inner = innerBody(context);
+          return (_a2 = indentBody(context, inner || context.node)) !== null && _a2 !== void 0 ? _a2 : context.continue();
+        },
+        IfStatement: (cx) => /^\s*(else:|elif )/.test(cx.textAfter) ? cx.baseIndent : cx.continue(),
+        "ForStatement WhileStatement": (cx) => /^\s*else:/.test(cx.textAfter) ? cx.baseIndent : cx.continue(),
+        TryStatement: (cx) => /^\s*(except[ :]|finally:|else:)/.test(cx.textAfter) ? cx.baseIndent : cx.continue(),
+        MatchStatement: (cx) => {
+          if (/^\s*case /.test(cx.textAfter))
+            return cx.baseIndent + cx.unit;
+          return cx.continue();
+        },
+        "TupleExpression ComprehensionExpression ParamList ArgList ParenthesizedExpression": /* @__PURE__ */ delimitedIndent({ closing: ")" }),
+        "DictionaryExpression DictionaryComprehensionExpression SetExpression SetComprehensionExpression": /* @__PURE__ */ delimitedIndent({ closing: "}" }),
+        "ArrayExpression ArrayComprehensionExpression": /* @__PURE__ */ delimitedIndent({ closing: "]" }),
+        MemberExpression: (cx) => cx.baseIndent + cx.unit,
+        "String FormatString": () => null,
+        Script: (context) => {
+          var _a2;
+          let inner = innerBody(context);
+          return (_a2 = inner && indentBody(context, inner)) !== null && _a2 !== void 0 ? _a2 : context.continue();
+        }
+      }),
+      /* @__PURE__ */ foldNodeProp.add({
+        "ArrayExpression DictionaryExpression SetExpression TupleExpression": foldInside,
+        Body: (node, state) => ({ from: node.from + 1, to: node.to - (node.to == state.doc.length ? 0 : 1) }),
+        "String FormatString": (node, state) => ({ from: state.doc.lineAt(node.from).to, to: node.to })
+      })
+    ]
+  }),
+  languageData: {
+    closeBrackets: {
+      brackets: ["(", "[", "{", "'", '"', "'''", '"""'],
+      stringPrefixes: [
+        "f",
+        "fr",
+        "rf",
+        "r",
+        "u",
+        "b",
+        "br",
+        "rb",
+        "F",
+        "FR",
+        "RF",
+        "R",
+        "U",
+        "B",
+        "BR",
+        "RB"
+      ]
+    },
+    commentTokens: { line: "#" },
+    // Indent logic logic are triggered upon below input patterns
+    indentOnInput: /^\s*([\}\]\)]|else:|elif |except |finally:|case\s+[^:]*:?)$/
+  }
+});
+function python() {
+  return new LanguageSupport(pythonLanguage, [
+    pythonLanguage.data.of({ autocomplete: localCompletionSource2 }),
+    pythonLanguage.data.of({ autocomplete: globalCompletion })
+  ]);
+}
+
+// node_modules/@lezer/rust/dist/index.js
+var closureParamDelim = 1;
+var tpOpen = 2;
+var tpClose = 3;
+var RawString = 4;
+var Float = 5;
+var _b = 98;
+var _e = 101;
+var _f = 102;
+var _r = 114;
+var _E = 69;
+var Zero = 48;
+var Dot = 46;
+var Plus = 43;
+var Minus = 45;
+var Hash = 35;
+var Quote = 34;
+var Pipe = 124;
+var LessThan = 60;
+var GreaterThan = 62;
+function isNum(ch) {
+  return ch >= 48 && ch <= 57;
+}
+function isNum_(ch) {
+  return isNum(ch) || ch == 95;
+}
+var literalTokens = new ExternalTokenizer((input, stack) => {
+  if (isNum(input.next)) {
+    let isFloat = false;
+    do {
+      input.advance();
+    } while (isNum_(input.next));
+    if (input.next == Dot) {
+      isFloat = true;
+      input.advance();
+      if (isNum(input.next)) {
+        do {
+          input.advance();
+        } while (isNum_(input.next));
+      } else if (input.next == Dot || input.next > 127 || /\w/.test(String.fromCharCode(input.next))) {
+        return;
+      }
+    }
+    if (input.next == _e || input.next == _E) {
+      isFloat = true;
+      input.advance();
+      if (input.next == Plus || input.next == Minus) input.advance();
+      if (!isNum_(input.next)) return;
+      do {
+        input.advance();
+      } while (isNum_(input.next));
+    }
+    if (input.next == _f) {
+      let after = input.peek(1);
+      if (after == Zero + 3 && input.peek(2) == Zero + 2 || after == Zero + 6 && input.peek(2) == Zero + 4) {
+        input.advance(3);
+        isFloat = true;
+      } else {
+        return;
+      }
+    }
+    if (isFloat) input.acceptToken(Float);
+  } else if (input.next == _b || input.next == _r) {
+    if (input.next == _b) input.advance();
+    if (input.next != _r) return;
+    input.advance();
+    let count2 = 0;
+    while (input.next == Hash) {
+      count2++;
+      input.advance();
+    }
+    if (input.next != Quote) return;
+    input.advance();
+    content: for (; ; ) {
+      if (input.next < 0) return;
+      let isQuote = input.next == Quote;
+      input.advance();
+      if (isQuote) {
+        for (let i = 0; i < count2; i++) {
+          if (input.next != Hash) continue content;
+          input.advance();
+        }
+        input.acceptToken(RawString);
+        return;
+      }
+    }
+  }
+});
+var closureParam = new ExternalTokenizer((input) => {
+  if (input.next == Pipe) input.acceptToken(closureParamDelim, 1);
+});
+var tpDelim = new ExternalTokenizer((input) => {
+  if (input.next == LessThan) input.acceptToken(tpOpen, 1);
+  else if (input.next == GreaterThan) input.acceptToken(tpClose, 1);
+});
+var rustHighlighting = styleTags({
+  "const macro_rules struct union enum type fn impl trait let static": tags.definitionKeyword,
+  "mod use crate": tags.moduleKeyword,
+  "pub unsafe async mut extern default move": tags.modifier,
+  "for if else loop while match continue break return await": tags.controlKeyword,
+  "as in ref": tags.operatorKeyword,
+  "where _ crate super dyn": tags.keyword,
+  "self": tags.self,
+  String: tags.string,
+  Char: tags.character,
+  RawString: tags.special(tags.string),
+  Boolean: tags.bool,
+  Identifier: tags.variableName,
+  "CallExpression/Identifier": tags.function(tags.variableName),
+  BoundIdentifier: tags.definition(tags.variableName),
+  "FunctionItem/BoundIdentifier": tags.function(tags.definition(tags.variableName)),
+  LoopLabel: tags.labelName,
+  FieldIdentifier: tags.propertyName,
+  "CallExpression/FieldExpression/FieldIdentifier": tags.function(tags.propertyName),
+  Lifetime: tags.special(tags.variableName),
+  ScopeIdentifier: tags.namespace,
+  TypeIdentifier: tags.typeName,
+  "MacroInvocation/Identifier MacroInvocation/ScopedIdentifier/Identifier": tags.macroName,
+  "MacroInvocation/TypeIdentifier MacroInvocation/ScopedIdentifier/TypeIdentifier": tags.macroName,
+  '"!"': tags.macroName,
+  UpdateOp: tags.updateOperator,
+  LineComment: tags.lineComment,
+  BlockComment: tags.blockComment,
+  Integer: tags.integer,
+  Float: tags.float,
+  ArithOp: tags.arithmeticOperator,
+  LogicOp: tags.logicOperator,
+  BitOp: tags.bitwiseOperator,
+  CompareOp: tags.compareOperator,
+  "=": tags.definitionOperator,
+  ".. ... => ->": tags.punctuation,
+  "( )": tags.paren,
+  "[ ]": tags.squareBracket,
+  "{ }": tags.brace,
+  ". DerefOp": tags.derefOperator,
+  "&": tags.operator,
+  ", ; ::": tags.separator,
+  "Attribute/...": tags.meta
+});
+var spec_identifier3 = { __proto__: null, self: 28, super: 32, crate: 34, impl: 46, true: 72, false: 72, pub: 88, in: 92, const: 96, unsafe: 104, async: 108, move: 110, if: 114, let: 118, ref: 142, mut: 144, _: 198, else: 200, match: 204, as: 248, return: 252, await: 262, break: 270, continue: 276, while: 312, loop: 316, for: 320, macro_rules: 327, mod: 334, extern: 342, struct: 346, where: 364, union: 379, enum: 382, type: 390, default: 395, fn: 396, trait: 412, use: 420, static: 438, dyn: 476 };
+var parser3 = LRParser.deserialize({
+  version: 14,
+  states: "$2xQ]Q_OOP$wOWOOO&sQWO'#CnO)WQWO'#I`OOQP'#I`'#I`OOQQ'#Ie'#IeO)hO`O'#C}OOQR'#Ih'#IhO)sQWO'#IuOOQO'#Hk'#HkO)xQWO'#DpOOQR'#Iw'#IwO)xQWO'#DpO*ZQWO'#DpOOQO'#Iv'#IvO,SQWO'#J`O,ZQWO'#EiOOQV'#Hp'#HpO,cQYO'#F{OOQV'#El'#ElOOQV'#Em'#EmOOQV'#En'#EnO.YQ_O'#EkO0_Q_O'#EoO2gQWOOO4QQ_O'#FPO7hQWO'#J`OOQV'#FY'#FYO7{Q_O'#F^O:WQ_O'#FaOOQO'#F`'#F`O=sQ_O'#FcO=}Q_O'#FbO@VQWO'#FgOOQO'#J`'#J`OOQV'#Io'#IoOA]Q_O'#InOEPQWO'#InOOQV'#Fw'#FwOF[QWO'#JuOFcQWO'#F|OOQO'#IO'#IOOGrQWO'#GhOOQV'#Im'#ImOOQV'#Il'#IlOOQV'#Hj'#HjQGyQ_OOOKeQ_O'#DUOKlQYO'#CqOOQP'#I_'#I_OOQV'#Hg'#HgQ]Q_OOOLuQWO'#I`ONsQYO'#DXO!!eQWO'#JuO!!lQWO'#JuO!!vQ_O'#DfO!%]Q_O'#E}O!(sQ_O'#FWO!,ZQWO'#FZO!.^QXO'#FbO!.cQ_O'#EeO!!vQ_O'#FmO!0uQWO'#FoO!0zQWO'#FoO!1PQ^O'#FqO!1WQWO'#JuO!1_QWO'#FtO!1dQWO'#FxO!2WQWO'#JjO!2_QWO'#GOO!2_QWO'#G`O!2_QWO'#GbO!2_QWO'#GsOOQO'#Ju'#JuO!2dQWO'#GhO!2lQYO'#GpO!2_QWO'#GqO!3uQ^O'#GtO!3|QWO'#GuO!4hQWO'#HOP!4sOpO'#CcPOOO)CC})CC}OOOO'#Hi'#HiO!5OO`O,59iOOQV,59i,59iO!5ZQYO,5?aOOQO-E;i-E;iOOQO,5:[,5:[OOQP,59Z,59ZO)xQWO,5:[O)xQWO,5:[O!5oQWO,5?kO!5zQYO,5;qO!6PQYO,5;TO!6hQWO,59QO!7kQXO'#CnO!7xQXO'#I`O!9SQWO'#CoO,^QWO'#EiOOQV-E;n-E;nO!9eQWO'#FsOOQV,5<g,5<gO!9SQWO'#CoO!9jQWO'#CoO!9oQWO'#I`O! yQWO'#JuO!9yQWO'#J`O!:aQWO,5;VOOQO'#In'#InO!0zQWO'#DaO!<aQWO'#DcO!<iQWO,5;ZO.YQ_O,5;ZOOQO,5;[,5;[OOQV'#Er'#ErOOQV'#Es'#EsOOQV'#Et'#EtOOQV'#Eu'#EuOOQV'#Ev'#EvOOQV'#Ew'#EwOOQV'#Ex'#ExOOQV'#Ey'#EyO.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;fO!=PQ_O,5;kO!@gQ_O'#FROOQO,5;l,5;lO!BrQWO,5;pO.YQ_O,5;wOKlQYO,5;gO!D_QWO,5;kO!EOQWO,5;xOOQO,5;x,5;xO!E]QWO,5;xO!EbQ_O,5;xO!GmQWO'#CfO!GrQWO,5<QO!G|Q_O,5<QOOQO,5;{,5;{O!JjQXO'#CnO!K{QXO'#I`OOQS'#Dk'#DkOOQP'#Ir'#IrO!LuQ[O'#IrO!L}QXO'#DjO!M{QWO'#DnO!M{QWO'#DnO!N^QWO'#DnOOQP'#It'#ItO!NcQXO'#ItO# ^Q^O'#DoO# hQWO'#DrO# pQ^O'#DzO# zQ^O'#D|O#!RQWO'#EPO#!^QXO'#FdOOQP'#ES'#ESOOQP'#Iq'#IqO#!lQXO'#JfOOQP'#Je'#JeO#!tQXO,5;}O#!yQXO'#I`O!1PQ^O'#DyO!1PQ^O'#FdO##sQWO,5;|OOQO,5;|,5;|OKlQYO,5;|O#$ZQWO'#FhOOQO,5<R,5<ROOQV,5=l,5=lO#&`QYO'#FzOOQV,5<h,5<hO#&gQWO,5<hO#&nQWO,5=SO!1WQWO,59rO!1dQWO,5<dO#&uQWO,5=iO!2_QWO,5<jO!2_QWO,5<zO!2_QWO,5<|O!2_QWO,5=QO#&|QWO,5=]O#'TQWO,5=SO!2_QWO,5=]O!3|QWO,5=aO#']QWO,5=jOOQO-E;|-E;|O#'hQWO'#JjOOQV-E;h-E;hO#(PQWO'#HRO#(WQ_O,59pOOQV,59p,59pO#(_QWO,59pO#(dQ_O,59pO#)SQZO'#CuO#+[QZO'#CvOOQV'#C|'#C|O#-wQWO'#HTO#.OQYO'#IdOOQO'#Hh'#HhO#.WQWO'#CwO#.WQWO'#CwO#.iQWO'#CwOOQR'#Ic'#IcO#.nQZO'#IbO#1TQYO'#HTO#1qQYO'#H[O#2}QYO'#H_OKlQYO'#H`OOQR'#Hb'#HbO#4ZQWO'#HeO#4`QYO,59]OOQR'#Ib'#IbO#5PQZO'#CtO#7[QYO'#HUO#7aQWO'#HTO#7fQYO'#CrO#8VQWO'#H]O#7fQYO'#HcOOQV-E;e-E;eO#8_QWO,59sOOQV,59{,59{O#8mQYO,5=[OOQV,59},59}O!0zQWO,59}O#;aQWO'#IpOOQO'#Ip'#IpO!1PQ^O'#DhO!0zQWO,5:QO#;hQWO,5;iO#<OQWO,5;rO#<fQ_O,5;rOOQO,5;u,5;uO#@PQ_O,5;|O#BXQWO,5;PO!0zQWO,5<XO#B`QWO,5<ZOOQV,5<Z,5<ZO#BkQWO,5<]O!1PQ^O'#EOOOQQ'#D_'#D_O#BsQWO,59rO#BxQWO,5<`O#B}QWO,5<dOOQO,5@U,5@UO#CVQWO,5=iOOQQ'#Cv'#CvO#C[QYO,5<jO#CmQYO,5<zO#CxQYO,5<|O#DTQYO,5=_O#DcQYO,5=SO#E{QYO'#GQO#FYQYO,5=[O#FmQWO,5=[O#F{QYO,5=[O#HUQYO,5=]O#HdQWO,5=`O!1PQ^O,5=`O#HrQWO'#CnO#ITQWO'#I`OOQO'#Jy'#JyO#IfQWO'#IQO#IkQWO'#GwOOQO'#Jz'#JzO#JSQWO'#GzOOQO'#G|'#G|OOQO'#Jx'#JxO#IkQWO'#GwO#JZQWO'#GxO#J`QWO,5=aO#JeQWO,5=jO!1dQWO,5=jO#'`QWO,5=jPOOO'#Hf'#HfP#JjOpO,58}POOO,58},58}OOOO-E;g-E;gOOQV1G/T1G/TO#JuQWO1G4{O#JzQ^O'#CyPOQQ'#Cx'#CxOOQO1G/v1G/vOOQP1G.u1G.uO)xQWO1G/vO#NTQ!fO'#ETO#N[Q!fO'#EaO#NcQ!fO'#EbO$ kQWO1G1yO$!_Q_O1G1yOOQP1G5V1G5VOOQO1G1]1G1]O$&RQWO1G0oO$&WQWO'#CiO!7xQXO'#I`O!6PQYO1G.lO!5oQWO,5<_O!9SQWO,59ZO!9SQWO,59ZO!5oQWO,5?kO$&iQWO1G0uO$(vQWO1G0wO$*nQWO1G0wO$+UQWO1G0wO$-YQWO1G0wO$-aQWO1G0wO$/bQWO1G0wO$/iQWO1G0wO$1jQWO1G0wO$1qQWO1G0wO$3YQWO1G1QO$5ZQWO1G1VO$5zQ_O'#JcO$8SQWO'#JcOOQO'#Jb'#JbO$8^QWO,5;mOOQO'#Dw'#DwOOQO1G1[1G1[OOQO1G1Y1G1YO$8cQWO1G1cOOQO1G1R1G1RO$8jQ_O'#HrO$:xQWO,5@OO.YQ_O1G1dOOQO1G1d1G1dO$;QQWO1G1dO$;_QWO1G1dO$;dQWO1G1eOOQO1G1l1G1lO$;lQWO1G1lOOQP,5?^,5?^O$;vQ^O,5:kO$<aQXO,5:YO!M{QWO,5:YO!M{QWO,5:YO!1PQ^O,5:gO$=bQWO'#IyOOQO'#Ix'#IxO$=pQWO,5:ZO# ^Q^O,5:ZO$=uQWO'#DsOOQP,5:^,5:^O$>WQWO,5:fOOQP,5:h,5:hO!1PQ^O,5:hO!1PQ^O,5:mO$>]QYO,5<OO$>gQ_O'#HsO$>tQXO,5@QOOQV1G1i1G1iOOQP,5:e,5:eO$>|QXO,5<OO$?[QWO1G1hO$?dQWO'#CnO$?oQWO'#FiOOQO'#Fi'#FiO$?wQWO'#FjO.YQ_O'#FkOOQO'#Ji'#JiO$?|QWO'#JhOOQO'#Jg'#JgO$@UQWO,5<SOOQQ'#Hv'#HvO$@ZQYO,5<fOOQV,5<f,5<fO$@bQYO,5<fOOQV1G2S1G2SO$@iQWO1G2nO$@qQWO1G/^O$@vQWO1G2OO#CVQWO1G3TO$AOQYO1G2UO#CmQYO1G2fO#CxQYO1G2hO$AaQYO1G2lO!2_QWO1G2wO#DcQYO1G2nO#HUQYO1G2wO$AiQWO1G2{O$AnQWO1G3UO!1dQWO1G3UO$AsQWO1G3UOOQV1G/[1G/[O$A{QWO1G/[O$BQQ_O1G/[O#7aQWO,5=oO$BXQYO,5?OO$BmQWO,5?OO$BrQZO'#IeOOQO-E;f-E;fOOQR,59c,59cO#.WQWO,59cO#.WQWO,59cOOQR,5=n,5=nO$E_QYO'#HVO$FwQZO,5=oO!5oQWO,5={O$IZQWO,5=oO$IbQZO,5=vO$KqQYO,5=vO$>]QYO,5=vO$LRQWO'#KRO$L^QWO,5=xOOQR,5=y,5=yO$LcQWO,5=zO$>]QYO,5>PO$>]QYO,5>POOQO1G.w1G.wO$>]QYO1G.wO$LnQYO,5=pO$LvQZO,59^OOQR,59^,59^O$>]QYO,5=wO% YQZO,5=}OOQR,5=},5=}O%#lQWO1G/_O!6PQYO1G/_O#FYQYO1G2vO%#qQWO1G2vO%$PQYO1G2vOOQV1G/i1G/iO%%YQWO,5:SO%%bQ_O1G/lO%*kQWO1G1^O%+RQWO1G1hOOQO1G1h1G1hO$>]QYO1G1hO%+iQ^O'#EgOOQV1G0k1G0kOOQV1G1s1G1sO!!vQ_O1G1sO!0zQWO1G1uO!1PQ^O1G1wO!.cQ_O1G1wOOQP,5:j,5:jO$>]QYO1G/^OOQO'#Cn'#CnO%+vQWO1G1zOOQV1G2O1G2OO%,OQWO'#CnO%,WQWO1G3TO%,]QWO1G3TO%,bQYO'#GQO%,sQWO'#G]O%-UQYO'#G_O%.hQYO'#GXOOQV1G2U1G2UO%/wQWO1G2UO%/|QWO1G2UO$ARQWO1G2UOOQV1G2f1G2fO%/wQWO1G2fO#CpQWO1G2fO%0UQWO'#GdOOQV1G2h1G2hO%0gQWO1G2hO#C{QWO1G2hO%0lQYO'#GSO$>]QYO1G2lO$AdQWO1G2lOOQV1G2y1G2yO%1xQWO1G2yO%3hQ^O'#GkO%3rQWO1G2nO#DfQWO1G2nO%4QQYO,5<lO%4[QYO,5<lO%4jQYO,5<lO%5XQYO,5<lOOQQ,5<l,5<lO!1WQWO'#JuO%5dQYO,5<lO%5lQWO1G2vOOQV1G2v1G2vO%5tQWO1G2vO$>]QYO1G2vOOQV1G2w1G2wO%5tQWO1G2wO%5yQWO1G2wO#HXQWO1G2wOOQV1G2z1G2zO.YQ_O1G2zO$>]QYO1G2zO%6RQWO1G2zOOQO,5>l,5>lOOQO-E<O-E<OOOQO,5=c,5=cOOQO,5=e,5=eOOQO,5=g,5=gOOQO,5=h,5=hO%6aQWO'#J|OOQO'#J{'#J{O%6iQWO,5=fO%6nQWO,5=cO!1dQWO,5=dOOQV1G2{1G2{O$>]QYO1G3UPOOO-E;d-E;dPOOO1G.i1G.iOOQO7+*g7+*gO%7VQYO'#IcO%7nQYO'#IfO%7yQYO'#IfO%8RQYO'#IfO%8^QYO,59eOOQO7+%b7+%bOOQP7+$a7+$aO%8cQ!fO'#JTOOQS'#EX'#EXOOQS'#EY'#EYOOQS'#EZ'#EZOOQS'#JT'#JTO%;UQWO'#EWOOQS'#E`'#E`OOQS'#JR'#JROOQS'#Hn'#HnO%;ZQ!fO,5:oOOQV,5:o,5:oOOQV'#JQ'#JQO%;bQ!fO,5:{OOQV,5:{,5:{O%;iQ!fO,5:|OOQV,5:|,5:|OOQV7+'e7+'eOOQV7+&Z7+&ZO%;pQ!fO,59TOOQO,59T,59TO%>YQWO7+$WO%>_QWO1G1yOOQV1G1y1G1yO!9SQWO1G.uO%>dQWO,5?}O%>nQ_O'#HqO%@|QWO,5?}OOQO1G1X1G1XOOQO7+&}7+&}O%AUQWO,5>^OOQO-E;p-E;pO%AcQWO7+'OO.YQ_O7+'OOOQO7+'O7+'OOOQO7+'P7+'PO%AjQWO7+'POOQO7+'W7+'WOOQP1G0V1G0VO%ArQXO1G/tO!M{QWO1G/tO%BsQXO1G0RO%CkQ^O'#HlO%C{QWO,5?eOOQP1G/u1G/uO%DWQWO1G/uO%D]QWO'#D_OOQO'#Dt'#DtO%DhQWO'#DtO%DmQWO'#I{OOQO'#Iz'#IzO%DuQWO,5:_O%DzQWO'#DtO%EPQWO'#DtOOQP1G0Q1G0QOOQP1G0S1G0SOOQP1G0X1G0XO%EXQXO1G1jO%EdQXO'#FeOOQP,5>_,5>_O!1PQ^O'#FeOOQP-E;q-E;qO$>]QYO1G1jOOQO7+'S7+'SOOQO,5<T,5<TO%ErQWO,5<UO.YQ_O,5<UO%EwQWO,5<VO%FRQWO'#HtO%FdQWO,5@SOOQO1G1n1G1nOOQQ-E;t-E;tOOQV1G2Q1G2QO%FlQYO1G2QO#DcQYO7+(YO$>]QYO7+$xOOQV7+'j7+'jO%FsQWO7+(oO%FxQWO7+(oOOQV7+'p7+'pO%/wQWO7+'pO%F}QWO7+'pO%GVQWO7+'pOOQV7+(Q7+(QO%/wQWO7+(QO#CpQWO7+(QOOQV7+(S7+(SO%0gQWO7+(SO#C{QWO7+(SO$>]QYO7+(WO%GeQWO7+(WO#HUQYO7+(cO%GjQWO7+(YO#DfQWO7+(YOOQV7+(c7+(cO%5tQWO7+(cO%5yQWO7+(cO#HXQWO7+(cOOQV7+(g7+(gO$>]QYO7+(pO%GxQWO7+(pO!1dQWO7+(pOOQV7+$v7+$vO%G}QWO7+$vO%HSQZO1G3ZO%JfQWO1G4jOOQO1G4j1G4jOOQR1G.}1G.}O#.WQWO1G.}O%JkQWO'#KQOOQO'#HW'#HWO%J|QWO'#HXO%KXQWO'#KQOOQO'#KP'#KPO%KaQWO,5=qO%KfQYO'#H[O%LrQWO'#GmO%L}QYO'#CtO%MXQWO'#GmO$>]QYO1G3ZOOQR1G3g1G3gO#7aQWO1G3ZO%M^QZO1G3bO$>]QYO1G3bO& mQYO'#IVO& }QWO,5@mOOQR1G3d1G3dOOQR1G3f1G3fO.YQ_O1G3fOOQR1G3k1G3kO&!VQYO7+$cO&!_QYO'#KOOOQQ'#J}'#J}O&!gQYO1G3[O&!lQZO1G3cOOQQ7+$y7+$yO&${QWO7+$yO&%QQWO7+(bOOQV7+(b7+(bO%5tQWO7+(bO$>]QYO7+(bO#FYQYO7+(bO&%YQWO7+(bO!.cQ_O1G/nO&%hQWO7+%WO$?[QWO7+'SO&%pQWO'#EhO&%{Q^O'#EhOOQU'#Ho'#HoO&%{Q^O,5;ROOQV,5;R,5;RO&&VQWO,5;RO&&[Q^O,5;RO!0zQWO7+'_OOQV7+'a7+'aO&&iQWO7+'cO&&qQWO7+'cO&&xQWO7+$xO&'TQ!fO7+'fO&'[Q!fO7+'fOOQV7+(o7+(oO!1dQWO7+(oO&'cQYO,5<lO&'nQYO,5<lO!1dQWO'#GWO&'|QWO'#JpO&([QWO'#G^O!BxQWO'#G^O&(aQWO'#JpOOQO'#Jo'#JoO&(iQWO,5<wOOQO'#DX'#DXO&(nQYO'#JrO&)}QWO'#JrO$>]QYO'#JrOOQO'#Jq'#JqO&*YQWO,5<yO&*_QWO'#GZO#D^QWO'#G[O&*gQWO'#G[O&*oQWO'#JmOOQO'#Jl'#JlO&*zQYO'#GTOOQO,5<s,5<sO&+PQWO7+'pO&+UQWO'#JtO&+dQWO'#GeO#BxQWO'#GeO&+uQWO'#JtOOQO'#Js'#JsO&+}QWO,5=OO$>]QYO'#GUO&,SQYO'#JkOOQQ,5<n,5<nO&,kQWO7+(WOOQV7+(e7+(eO&.TQ^O'#D|O&._QWO'#GlO&.gQ^O'#JwOOQO'#Gn'#GnO&.nQWO'#JwOOQO'#Jv'#JvO&.vQWO,5=VO&.{QWO'#I`O&/]Q^O'#GmO&/dQWO'#IqO&/rQWO'#GmOOQV7+(Y7+(YO&/zQWO7+(YO$>]QYO7+(YO&0SQYO'#HxO&0hQYO1G2WOOQQ1G2W1G2WOOQQ,5<m,5<mO$>]QYO,5<qO&0pQWO,5<rO&0uQWO7+(bO&1QQWO7+(fO&1XQWO7+(fOOQV7+(f7+(fO.YQ_O7+(fO$>]QYO7+(fO&1dQWO'#IRO&1nQWO,5@hOOQO1G3Q1G3QOOQO1G2}1G2}OOQO1G3P1G3POOQO1G3R1G3ROOQO1G3S1G3SOOQO1G3O1G3OO&1vQWO7+(pO$>]QYO,59fO&2RQ^O'#ISO&2xQYO,5?QOOQR1G/P1G/PO&3QQ!bO,5:pO&3VQ!fO,5:rOOQS-E;l-E;lOOQV1G0Z1G0ZOOQV1G0g1G0gOOQV1G0h1G0hO&3^QWO'#JTOOQO1G.o1G.oOOQV<<Gr<<GrO&3iQWO1G5iO$5zQ_O,5>]O&3qQWO,5>]OOQO-E;o-E;oOOQO<<Jj<<JjO&3{QWO<<JjOOQO<<Jk<<JkO&4SQXO7+%`O&5TQWO,5>WOOQO-E;j-E;jOOQP7+%a7+%aO!1PQ^O,5:`O&5cQWO'#HmO&5wQWO,5?gOOQP1G/y1G/yOOQO,5:`,5:`O&6PQWO,5:`O%DzQWO,5:`O$>]QYO,5<PO&6UQXO,5<PO&6dQXO7+'UO.YQ_O1G1pO&6oQWO1G1pOOQO,5>`,5>`OOQO-E;r-E;rOOQV7+'l7+'lO&6yQWO<<KtO#DfQWO<<KtO&7XQWO<<HdOOQV<<LZ<<LZO!1dQWO<<LZOOQV<<K[<<K[O&7dQWO<<K[O%/wQWO<<K[O&7iQWO<<K[OOQV<<Kl<<KlO%/wQWO<<KlOOQV<<Kn<<KnO%0gQWO<<KnO&7qQWO<<KrO$>]QYO<<KrOOQV<<K}<<K}O%5tQWO<<K}O%5yQWO<<K}O#HXQWO<<K}OOQV<<Kt<<KtO&7yQWO<<KtO$>]QYO<<KtO&8RQWO<<L[O$>]QYO<<L[O&8^QWO<<L[OOQV<<Hb<<HbO$>]QYO7+(uOOQO7+*U7+*UOOQR7+$i7+$iO&8cQWO,5@lOOQO'#Gm'#GmO&8kQWO'#GmO&8vQYO'#IUO&8cQWO,5@lOOQR1G3]1G3]O&:cQYO,5=vO&;rQYO,5=XO&;|QWO,5=XOOQO,5=X,5=XOOQR7+(u7+(uO&<RQZO7+(uO&>eQZO7+(|O&@tQWO,5>qOOQO-E<T-E<TO&APQWO7+)QOOQO<<G}<<G}O&AWQYO'#ITO&AcQYO,5@jOOQQ7+(v7+(vOOQQ<<He<<HeO$>]QYO<<K|OOQV<<K|<<K|O&0uQWO<<K|O&AkQWO<<K|O%5tQWO<<K|O&AsQWO7+%YOOQV<<Hr<<HrOOQO<<Jn<<JnO.YQ_O,5;SO&AzQWO,5;SO.YQ_O'#EjO&BPQWO,5;SOOQU-E;m-E;mO&B[QWO1G0mOOQV1G0m1G0mO&%{Q^O1G0mOOQV<<Jy<<JyO!.cQ_O<<J}OOQV<<J}<<J}OOQV<<Hd<<HdO.YQ_O<<HdO&BaQWO'#FvO&BfQWO<<KQO&BnQ!fO<<KQO&BuQWO<<KQO&BzQWO<<KQO&CSQ!fO<<KQOOQV<<KQ<<KQO&CZQWO<<LZO&C`QWO,5@[O$>]QYO,5<xO&ChQWO,5<xO&CmQWO'#H{O&C`QWO,5@[OOQV1G2c1G2cO&DRQWO,5@^O$>]QYO,5@^O&D^QYO'#H|O&EsQWO,5@^OOQO1G2e1G2eO%,nQWO,5<uOOQO,5<v,5<vO&E{QYO'#HzO&G_QWO,5@XO%,bQYO,5=pO$>]QYO,5<oO&GjQWO,5@`O.YQ_O,5=PO&GrQWO,5=PO&G}QWO,5=PO&H`QWO'#H}O&GjQWO,5@`OOQV1G2j1G2jO&HtQYO,5<pO%0lQYO,5>PO&I]QYO,5@VOOQV<<Kr<<KrO&ItQWO,5=XO&KfQ^O,5:hO&KmQWO,5=XO$>]QYO,5=WO&KuQWO,5@cO&K}QWO,5@cO&MvQ^O'#IPO&KuQWO,5@cOOQO1G2q1G2qO&NTQWO,5=WO&N]QWO<<KtO&NkQYO,5>oO&NvQYO,5>dO' UQYO,5>dOOQQ,5>d,5>dOOQQ-E;v-E;vOOQQ7+'r7+'rO' aQYO1G2]O$>]QYO1G2^OOQV<<LQ<<LQO.YQ_O<<LQO' lQWO<<LQO' sQWO<<LQOOQO,5>m,5>mOOQO-E<P-E<POOQV<<L[<<L[O.YQ_O<<L[O'!OQYO1G/QO'!ZQYO,5>nOOQQ,5>n,5>nO'!fQYO,5>nOOQQ-E<Q-E<QOOQS1G0[1G0[O'$tQ!fO1G0^O'%RQ!fO1G0^O'%YQWO1G3wOOQOAN@UAN@UO'%dQWO1G/zOOQO,5>X,5>XOOQO-E;k-E;kO!1PQ^O1G/zOOQO1G/z1G/zO'%oQWO1G/zO'%tQXO1G1kO$>]QYO1G1kO'&PQWO7+'[OOQVANA`ANA`O'&ZQWOANA`O$>]QYOANA`O'&cQWOANA`OOQVAN>OAN>OO.YQ_OAN>OO'&qQWOANAuOOQVAN@vAN@vO'&vQWOAN@vOOQVANAWANAWOOQVANAYANAYOOQVANA^ANA^O'&{QWOANA^OOQVANAiANAiO%5tQWOANAiO%5yQWOANAiO''TQWOANA`OOQVANAvANAvO.YQ_OANAvO''cQWOANAvO$>]QYOANAvOOQR<<La<<LaO''nQWO1G6WO%JkQWO,5>pOOQO'#HY'#HYO''vQWO'#HZOOQO,5>p,5>pOOQO-E<S-E<SO'(RQYO1G2sO'(]QWO1G2sOOQO1G2s1G2sO$>]QYO<<LaOOQR<<Ll<<LlOOQQ,5>o,5>oOOQQ-E<R-E<RO&0uQWOANAhOOQVANAhANAhO%5tQWOANAhO$>]QYOANAhO'(bQWO1G1rO')UQ^O1G0nO.YQ_O1G0nO'*zQWO,5;UO'+RQWO1G0nP'+WQWO'#ERP&%{Q^O'#HpOOQV7+&X7+&XO'+cQWO7+&XO&&qQWOAN@iO'+hQWOAN>OO!5oQWO,5<bOOQS,5>a,5>aO'+oQWOAN@lO'+tQWOAN@lOOQS-E;s-E;sOOQVAN@lAN@lO'+|QWOAN@lOOQVANAuANAuO',UQWO1G5vO',^QWO1G2dO$>]QYO1G2dO&'|QWO,5>gOOQO,5>g,5>gOOQO-E;y-E;yO',iQWO1G5xO',qQWO1G5xO&(nQYO,5>hO',|QWO,5>hO$>]QYO,5>hOOQO-E;z-E;zO'-XQWO'#JnOOQO1G2a1G2aOOQO,5>f,5>fOOQO-E;x-E;xO&'cQYO,5<lO'-gQYO1G2ZO'.RQWO1G5zO'.ZQWO1G2kO.YQ_O1G2kO'.eQWO1G2kO&+UQWO,5>iOOQO,5>i,5>iOOQO-E;{-E;{OOQQ,5>c,5>cOOQQ-E;u-E;uO'.pQWO1G2sO'/QQWO1G2rO'/]QWO1G5}O'/eQ^O,5>kOOQO'#Go'#GoOOQO,5>k,5>kO'/lQWO,5>kOOQO-E;}-E;}O$>]QYO1G2rO'/zQYO7+'xO'0VQWOANAlOOQVANAlANAlO.YQ_OANAlO'0^QWOANAvOOQS7+%x7+%xO'0eQWO7+%xO'0pQ!fO7+%xO'0}QWO7+%fO!1PQ^O7+%fO'1YQXO7+'VOOQVG26zG26zO'1eQWOG26zO'1sQWOG26zO$>]QYOG26zO'1{QWOG23jOOQVG27aG27aOOQVG26bG26bOOQVG26xG26xOOQVG27TG27TO%5tQWOG27TO'2SQWOG27bOOQVG27bG27bO.YQ_OG27bO'2ZQWOG27bOOQO1G4[1G4[OOQO7+(_7+(_OOQRANA{ANA{OOQVG27SG27SO%5tQWOG27SO&0uQWOG27SO'2fQ^O7+&YO'4PQWO7+'^O'4sQ^O7+&YO.YQ_O7+&YP.YQ_O,5;SP'6PQWO,5;SP'6UQWO,5;SOOQV<<Is<<IsOOQVG26TG26TOOQVG23jG23jOOQO1G1|1G1|OOQVG26WG26WO'6aQWOG26WP&B}QWO'#HuO'6fQWO7+(OOOQO1G4R1G4RO'6qQWO7++dO'6yQWO1G4SO$>]QYO1G4SO%,nQWO'#HyO'7UQWO,5@YO'7dQWO7+(VO.YQ_O7+(VOOQO1G4T1G4TOOQO1G4V1G4VO'7nQWO1G4VO'7|QWO7+(^OOQVG27WG27WO'8XQWOG27WOOQS<<Id<<IdO'8`QWO<<IdO'8kQWO<<IQOOQVLD,fLD,fO'8vQWOLD,fO'9OQWOLD,fOOQVLD)ULD)UOOQVLD,oLD,oOOQVLD,|LD,|O'9^QWOLD,|O.YQ_OLD,|OOQVLD,nLD,nO%5tQWOLD,nO'9eQ^O<<ItO';OQWO<<JxO';rQ^O<<ItP'=OQWO1G0nP'=oQ^O1G0nP.YQ_O1G0nP'?bQWO1G0nOOQVLD+rLD+rO'?gQWO7+)nOOQO,5>e,5>eOOQO-E;w-E;wO'?rQWO<<KqOOQVLD,rLD,rOOQSAN?OAN?OOOQV!$(!Q!$(!QO'?|QWO!$(!QOOQV!$(!h!$(!hO'@UQWO!$(!hOOQV!$(!Y!$(!YO'@]Q^OAN?`POQU7+&Y7+&YP'AvQWO7+&YP'BgQ^O7+&YP.YQ_O7+&YOOQV!)9El!)9ElOOQV!)9FS!)9FSPOQU<<It<<ItP'DYQWO<<ItP'DyQ^O<<ItPOQUAN?`AN?`O'FlQWO'#CnO'FsQXO'#CnO'GlQWO'#I`O'IRQXO'#I`O'IxQWO'#DpO'IxQWO'#DpO!.cQ_O'#EkO'JZQ_O'#EoO'JbQ_O'#FPO'MfQ_O'#FbO'MmQXO'#I`O'NdQ_O'#E}O( gQ_O'#FWO'IxQWO,5:[O'IxQWO,5:[O!.cQ_O,5;ZO!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;fO(!jQ_O,5;kO(%nQWO,5;kO(&OQWO,5;|O(&VQYO'#CuO(&bQYO'#CvO(&mQWO'#CwO(&mQWO'#CwO('OQYO'#CtO('ZQWO,5;iO('bQWO,5;rO('iQ_O,5;rO((oQ_O,5;|O'IxQWO1G/vO((vQWO1G0uO(*eQWO1G0wO(*oQWO1G0wO(,dQWO1G0wO(,kQWO1G0wO(.]QWO1G0wO(.dQWO1G0wO(0UQWO1G0wO(0]QWO1G0wO(0dQWO1G1QO(0tQWO1G1VO(1UQYO'#IeO(&mQWO,59cO(&mQWO,59cO(1aQWO1G1^O(1hQWO1G1hO(&mQWO1G.}O(1oQWO'#DpO!.^QXO'#FbO(1tQWO,5;ZO(1{QWO'#Cw",
+  stateData: "(2_~O&|OSUOS&}PQ~OPoOQ!QOSVOTVOZeO[lO^RO_RO`ROa!UOd[Og!nOsVOtVOuVOw!POyvO|!VO}mO!Q!dO!U!WO!W!XO!X!^O!Z!YO!]!pO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO$i!eO$m!fO$q!gO$s!hO%T!iO%V!jO%Z!kO%]!lO%^!mO%f!oO%j!qO%s!rO'Q`O'TQO'ZkO'^UO'gcO'qiO(QdO~O&}!sO~OZbX[bXdbXdlXobXwjX}bX!lbX!qbX!tbX#ObX#PbX#pbX'gbX'qbX'rbX'xbX'ybX'zbX'{bX'|bX'}bX(ObX(PbX(QbX(RbX(TbX~OybXXbX!ebX!PbXvbX#RbX~P$|OZ'SX['SXd'SXd'XXo'SXw'kXy'SX}'SX!l'SX!q'SX!t'SX#O'SX#P'SX#p'SX'g'SX'q'SX'r'SX'x'SX'y'SX'z'SX'{'SX'|'SX'}'SX(O'SX(P'SX(Q'SX(R'SX(T'SXv'SX~OX'SX!e'SX!P'SX#R'SX~P'ZOr!uO']!wO'_!uO~Od!xO~O^RO_RO`ROaRO'TQO~Od!}O~Od#PO[(SXo(SXy(SX}(SX!l(SX!q(SX!t(SX#O(SX#P(SX#p(SX'g(SX'q(SX'r(SX'x(SX'y(SX'z(SX'{(SX'|(SX'}(SX(O(SX(P(SX(Q(SX(R(SX(T(SXv(SX~OZ#OO~P*`OZ#RO[#QO~OQ!QO^#TO_#TO`#TOa#]Od#ZOg!nOyvO|!VO!Q!dO!U#^O!W!lO!]!pO$i!eO$m!fO$q!gO$s!hO%T!iO%V!jO%Z!kO%]!lO%^!mO%f!oO%j!qO%s!rO'Q#VO'T#SO~OPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdO~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!j#eO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdO~P)xO[#}Oo#xO}#zO!l#yO!q#jO!t#yO#O#xO#P#uO#p$OO'g#gO'q#yO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO~OPoOQ!QOSVOTVOZeOd[OsVOtVOuVOw!PO!U#bO!W#cO!X!^O!Z!YO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO[#sXo#sXy#sX}#sX!l#sX!q#sX!t#sX#O#sX#P#sX#p#sX'g#sX'q#sX'r#sX'x#sX'y#sX'z#sX'{#sX'|#sX'}#sX(O#sX(P#sX(Q#sX(R#sX(T#sXX#sX!e#sX!P#sXv#sX#R#sX~P)xOX(SX!e(SX!P(SXw(SX#R(SX~P*`OPoOQ!QOSVOTVOX$ROZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q$UO'ZkO'^UO'gcO'qiO(QdO~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!P$XO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q$UO'ZkO'^UO'gcO'qiO(QdO~P)xOQ!QOSVOTVO[$gO^$pO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!l$lO!q$hO#V$lO'T$YO'^UO'g$[O~O!j$rOP(XP~P<cOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Q$uO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdO~P)xOw$vO~Oo'bX#O'bX#P'bX#p'bX'r'bX'x'bX'y'bX'z'bX'{'bX'|'bX'}'bX(O'bX(P'bX(R'bX(T'bX~OP%tXQ%tXS%tXT%tXZ%tX[%tX^%tX_%tX`%tXa%tXd%tXg%tXs%tXt%tXu%tXw%tXy%tX|%tX}%tX!Q%tX!U%tX!W%tX!X%tX!Z%tX!]%tX!l%tX!q%tX!t%tX#Y%tX#r%tX#{%tX$O%tX$b%tX$d%tX$f%tX$i%tX$m%tX$q%tX$s%tX%T%tX%V%tX%Z%tX%]%tX%^%tX%f%tX%j%tX%s%tX&z%tX'Q%tX'T%tX'Z%tX'^%tX'g%tX'q%tX(Q%tXv%tX~P@[Oy$xO['bX}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bXv'bX~P@[Ow$yO!Q(iX!U(iX!W(iX$q(iX%](iX%^(iX~Oy$zO~PEsO!Q$}O!U%UO!W!lO$m%OO$q%PO$s%QO%T%RO%V%SO%Z%TO%]!lO%^%VO%f%WO%j%XO%s%YO~O!Q!lO!U!lO!W!lO$q%[O%]!lO~O%^%VO~PGaOPoOQ!QOSVOTVOZeO[lO^RO_RO`ROa!UOd[Og!nOsVOtVOuVOw!POyvO|!VO}mO!Q!dO!U!WO!W!XO!X!^O!Z!YO!]!pO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO$i!eO$m!fO$q!gO$s!hO%T!iO%V!jO%Z!kO%]!lO%^!mO%f!oO%j!qO%s!rO'Q#VO'TQO'ZkO'^UO'gcO'qiO(QdO~Ov%`O~P]OQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO!Q{X!U{X!W{X$m{X$q{X$s{X%T{X%V{X%Z{X%]{X%^{X%f{X%j{X%s{X~P'ZO!Q{X!U{X!W{X$m{X$q{X$s{X%T{X%V{X%Z{X%]{X%^{X%f{X%j{X%s{X~O}%}O'T{XQ{XZ{X[{X^{X_{X`{Xa{Xd{Xg{X!q{X$f{X&W{X'Z{X(Q{X~PMuOg&PO%f%WO!Q(iX!U(iX!W(iX$q(iX%](iX%^(iX~Ow!PO~P! yOw!PO!X&RO~PEvOPoOQ!QOSVOTVOZeO[lO^9qO_9qO`9qOa9qOd9tOsVOtVOuVOw!PO}mO!U#bO!W#cO!X:zO!Z!YO!]&UO!l9wO!q9vO!t9wO#Y!_O#r9zO#{9{O$O!]O$b!`O$d!bO$f!cO'T9oO'ZkO'^UO'gcO'q9wO(QdO~OPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdOo#qXy#qX#O#qX#P#qX#p#qX'r#qX'x#qX'y#qX'z#qX'{#qX'|#qX'}#qX(O#qX(P#qX(R#qX(T#qXX#qX!e#qX!P#qXv#qX#R#qX~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdOo#zXy#zX#O#zX#P#zX#p#zX'r#zX'x#zX'y#zX'z#zX'{#zX'|#zX'}#zX(O#zX(P#zX(R#zX(T#zXX#zX!e#zX!P#zXv#zX#R#zX~P)xO'ZkO[#}Xo#}Xy#}X}#}X!l#}X!q#}X!t#}X#O#}X#P#}X#p#}X'g#}X'q#}X'r#}X'x#}X'y#}X'z#}X'{#}X'|#}X'}#}X(O#}X(P#}X(Q#}X(R#}X(T#}XX#}X!e#}X!P#}Xv#}Xw#}X#R#}X~OPoO~OPoOQ!QOSVOTVOZeO[lO^9qO_9qO`9qOa9qOd9tOsVOtVOuVOw!PO}mO!U#bO!W#cO!X:zO!Z!YO!l9wO!q9vO!t9wO#Y!_O#r9zO#{9{O$O!]O$b!`O$d!bO$f!cO'T9oO'ZkO'^UO'gcO'q9wO(QdO~O!S&_O~Ow!PO~O!j&bO~P<cO'T&cO~PEvOZ&eO~O'T&cO~O'^UOw(^Xy(^X!Q(^X!U(^X!W(^X$q(^X%](^X%^(^X~Oa&hO~P!1iO'T&iO~O_&nO'T&cO~OQ&oOZ&pO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO!j&uO~P<cO^&wO_&wO`&wOa&wOd'POw&|O'T&vO(Q&}O~O!i'UO!j'TO'T&cO~O&}!sO'O'VO'P'XO~Or!uO']'ZO'_!uO~OQ']O^'ia_'ia`'iaa'ia'T'ia~O['cOw'dO}'bO~OQ']O~OQ!QO^#TO_#TO`#TOa'kOd#ZO'T#SO~O['lO~OZbXdlXXbXobXPbX!SbX!ebX'rbX!PbX!ObXybX!ZbX#RbXvbX~O[bXwbX}bX~P!6mOZ'SXd'XXX'SX['SXo'SXw'SX}'SX#p'SXP'SX!S'SX!e'SX'r'SX!P'SX!O'SXy'SX!Z'SX#R'SXv'SX~O^#TO_#TO`#TOa'kO'T#SO~OZ'mO~Od'oO~OZ'SXd'XX~PMuOZ'pOX(SX!e(SX!P(SXw(SX#R(SX~P*`O[#}O}#zO(O#|O(R#fOo#_ay#_a!l#_a!q#_a!t#_a#O#_a#P#_a#p#_a'g#_a'q#_a'r#_a'x#_a'y#_a'z#_a'{#_a'|#_a'}#_a(P#_a(Q#_a(T#_aX#_a!e#_a!P#_av#_aw#_a#R#_a~Ow!PO!X&RO~Oy#caX#ca!e#ca!P#cav#ca#R#ca~P2gOPoOQ!QOSVOTVOZeOd[OsVOtVOuVOw!PO!U#bO!W#cO!X!^O!Z!YO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO[#sao#say#sa}#sa!l#sa!q#sa!t#sa#O#sa#P#sa#p#sa'g#sa'q#sa'r#sa'x#sa'y#sa'z#sa'{#sa'|#sa'}#sa(O#sa(P#sa(Q#sa(R#sa(T#saX#sa!e#sa!P#sav#sa#R#sa~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q#VO'ZkO'^UO'gcO'qiO(QdO!P(UP~P)xOu(SO#w(TO'T(RO~O[#}O}#zO!q#jO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO!l#sa!t#sa#p#sa'q#sa~Oo#xO#O#xO#P#uOy#saX#sa!e#sa!P#sav#sa#R#sa~P!B}Oy(YO!e(WOX(WX~P2gOX(ZO~OPoOQ!QOSVOTVOX(ZOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q$UO'ZkO'^UO'gcO'qiO(QdO~P)xOZ#RO~O!P(_O!e(WO~P2gOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q$UO'ZkO'^UO'gcO'qiO(QdO~P)xOZbXdlXwjX}jX!tbX'qbX~OP!RX!S!RX!e!RX'p!RX'r!RX!O!RXo!RXy!RX!P!RXX!RX!Z!RX#R!RXv!RX~P!JUOZ'SXd'XXw'kX}'kX!t'SX'q'SX~OP!`X!S!`X!e!`X'r!`X!O!`Xo!`Xy!`X!P!`XX!`X!Z!`X#R!`Xv!`X~P!KgOT(aOu(aO~O!t(bO'q(bOP!^X!S!^X!e!^X'r!^X!O!^Xo!^Xy!^X!P!^XX!^X!Z!^X#R!^Xv!^X~O^9rO_9rO`9yOa9yO'T9pO~Od(eO~O'p(fOP'hX!S'hX!e'hX'r'hX!O'hXo'hXy'hX!P'hXX'hX!Z'hX#R'hXv'hX~O!j&bO!P'lP~P<cOw(kO}(jO~O!j&bOX'lP~P<cO!j(oO~P<cOZ'pO!t(bO'q(bO~O!S(qO'r(pOP$WX!e$WX~O!e(rOP(YX~OP(tO~OP!aX!S!aX!e!aX'r!aX!O!aXo!aXy!aX!P!aXX!aX!Z!aX#R!aXv!aX~P!KgOy$UaX$Ua!e$Ua!P$Uav$Ua#R$Ua~P2gO!l(|O'Q#VO'T(xOv(ZP~OQ!QO^#TO_#TO`#TOa#]Od#ZOg!nOyvO|!VO!Q!dO!U#^O!W!lO!]!pO$i!eO$m!fO$q!gO$s!hO%T!iO%V!jO%Z!kO%]!lO%^!mO%f!oO%j!qO%s!rO'Q`O'T#SO~Ov)TO~P#$iOy)VO~PEsO%^)WO~PGaOa)ZO~P!1iO%f)`O~PEvO_)aO'T&cO~O!i)fO!j)eO'T&cO~O'^UO!Q(^X!U(^X!W(^X$q(^X%](^X%^(^X~Ov%uX~P2gOv)gO~PGyOv)gO~Ov)gO~P]OQiXQ'XXZiXd'XX}iX#piX(PiX~ORiXwiX$fiX$|iX[iXoiXyiX!liX!qiX!tiX#OiX#PiX'giX'qiX'riX'xiX'yiX'ziX'{iX'|iX'}iX(OiX(QiX(RiX(TiX!PiX!eiXXiXPiXviX!SiX#RiX~P#(kOQjXQlXRjXZjXdlX}jX#pjX(PjXwjX$fjX$|jX[jXojXyjX!ljX!qjX!tjX#OjX#PjX'gjX'qjX'rjX'xjX'yjX'zjX'{jX'|jX'}jX(OjX(QjX(RjX(TjX!PjX!ejXXjX!SjXPjXvjX#RjX~O%^)jO~PGaOQ']Od)kO~O^)mO_)mO`)mOa)mO'T%dO~Od)qO~OQ']OZ)uO})sOR'UX#p'UX(P'UXw'UX$f'UX$|'UX['UXo'UXy'UX!l'UX!q'UX!t'UX#O'UX#P'UX'g'UX'q'UX'r'UX'x'UX'y'UX'z'UX'{'UX'|'UX'}'UX(O'UX(Q'UX(R'UX(T'UX!P'UX!e'UXX'UXP'UXv'UX!S'UX#R'UX~OQ!QO^:bO_:^O`TOaTOd:aO%^)jO'T:_O~PGaOQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!j)yO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaOQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!P)|O!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO(P*OO~OR*QO#p*RO(P*PO~OQhXQ'XXZhXd'XX}hX(PhX~ORhX#phXwhX$fhX$|hX[hXohXyhX!lhX!qhX!thX#OhX#PhX'ghX'qhX'rhX'xhX'yhX'zhX'{hX'|hX'}hX(OhX(QhX(RhX(ThX!PhX!ehXXhXPhXvhX!ShX#RhX~P#4kOQ*SO~O})sO~OQ!QO^%vO_%cO`TOaTOd%jO$f%wO%^%xO'T%dO~PGaO!Q*VO!j*VO~O^*YO`*YOa*YO!O*ZO~OQ&oOZ*[O[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO[#}Oo:YO}#zO!l:ZO!q#jO!t:ZO#O:YO#P:VO#p$OO'g#gO'q:ZO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO~Ow'dX~P#9vOy#qaX#qa!e#qa!P#qav#qa#R#qa~P2gOy#zaX#za!e#za!P#zav#za#R#za~P2gOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!S&_O!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdOo#zay#za#O#za#P#za#p#za'r#za'x#za'y#za'z#za'{#za'|#za'}#za(O#za(P#za(R#za(T#zaX#za!e#za!P#zav#za#R#za~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Q*eO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdO~P)xOw*fO~P#9vO$b*iO$d*jO$f*kO~O!O*lO'r(pO~O!S*nO~O'T*oO~Ow$yOy*qO~O'T*rO~OQ*uOw*vOy*yO}*wO$|*xO~OQ*uOw*vO$|*xO~OQ*uOw+QO$|*xO~OQ*uOo+VOy+XO!S+UO~OQ*uO}+ZO~OQ!QOZ%rO[%qO^%vO`TOaTOd%jOg%yO}%pO!U!lO!W!lO!q%oO$f%wO$q%[O%]!lO%^%xO&W%{O'T%dO'Z%eO(Q%zO~OR+bO_+^O!Q+cO~P#DkO_%cO!Q!lOw&UX$|&UX(P&UX~P#DkOw$yO$f+hO$|*xO(P*PO~OQ!QOZ*[O[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaOQ*uOw$yO!S+UO$|*xO~Oo+nOy+mO!S+oO'r(pO~OdlXy!RX#pbXv!RX!e!RX~Od'XXy(mX#p'SXv(mX!e(mX~Od+qO~O^#TO_#TO`#TOa'kOw&|O'T&vO(Q+vO~Ov(oP~P!3|O#p+{O~Oy+|O~O!S+}O~O&}!sO'O'VO'P,PO~Od,QO~OSVOTVO_%cOsVOtVOuVOw!PO!Q!lO'^UO~P#DkOS,^OT,^OZ,^O['cO_,YOd,^Oo,^Os,^Ou,^Ow'dOy,^O}'bO!S,^O!e,^O!l,^O!q,[O!t,^O!y,^O#O,^O#P,^O#Q,^O#R,^O'Q,^O'Z%eO'^UO'g,ZO'r,[O'v,_O'x,ZO'y,[O'z,[O'{,[O'|,]O'},]O(O,^O(P,`O(Q,`O(R,aO~O!P,dO~P#KkOX,gO~P#KkOv,iO~P#KkOo'tX#O'tX#P'tX#p'tX'r'tX'x'tX'y'tX'z'tX'{'tX'|'tX'}'tX(O'tX(P'tX(R'tX(T'tX~Oy,jO['tX}'tX!l'tX!q'tX!t'tX'g'tX'q'tX(Q'tXv'tX~P#NjOP$giQ$giS$giT$giZ$gi[$gi^$gi_$gi`$gia$gid$gig$gis$git$giu$giw$giy$gi|$gi}$gi!Q$gi!U$gi!W$gi!X$gi!Z$gi!]$gi!l$gi!q$gi!t$gi#Y$gi#r$gi#{$gi$O$gi$b$gi$d$gi$f$gi$i$gi$m$gi$q$gi$s$gi%T$gi%V$gi%Z$gi%]$gi%^$gi%f$gi%j$gi%s$gi&z$gi'Q$gi'T$gi'Z$gi'^$gi'g$gi'q$gi(Q$giv$gi~P#NjOX,kO~O['cOo,lOw'dO}'bOX]X~Oy#ciX#ci!e#ci!P#civ#ci#R#ci~P2gO[#}O}#zO'x#hO(O#|O(Q#hO(R#fO(T#hOo#eiy#ei!l#ei!q#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'y#ei'z#ei'{#ei'|#ei'}#eiX#ei!e#ei!P#eiv#ei#R#ei~O'g#ei(P#ei~P$'PO[#}O}#zO(O#|O(R#fOo#eiy#ei!l#ei!q#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'y#ei'z#ei'{#ei'|#ei'}#eiX#ei!e#ei!P#eiv#ei#R#ei~O'g#ei'x#ei(P#ei(Q#ei(T#eiw#ei~P$)QO'g#gO(P#gO~P$'PO[#}O}#zO'g#gO'x#hO'y#iO'z#iO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiy#ei!l#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'{#ei'|#ei'}#eiX#ei!e#ei!P#eiv#ei#R#ei~O!q#ei~P$+`O!q#jO~P$+`O[#}O}#zO!q#jO'g#gO'x#hO'y#iO'z#iO'{#kO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiy#ei!l#ei!t#ei#O#ei#P#ei#p#ei'q#ei'|#ei'}#eiX#ei!e#ei!P#eiv#ei#R#ei~O'r#ei~P$-hO'r#lO~P$-hO[#}O}#zO!q#jO#P#uO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiy#ei!l#ei!t#ei#O#ei#p#ei'q#ei'|#eiX#ei!e#ei!P#eiv#ei#R#ei~O'}#ei~P$/pO'}#mO~P$/pO[#}O}#zO!q#jO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO!l#ni!t#ni#p#ni'q#ni~Oo#xO#O#xO#P#uOy#niX#ni!e#ni!P#niv#ni#R#ni~P$1xO[#}O}#zO!q#jO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO!l#si!t#si#p#si'q#si~Oo#xO#O#xO#P#uOy#siX#si!e#si!P#siv#si#R#si~P$3yOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q#VO'ZkO'^UO'gcO'qiO(QdO~P)xO!e,sO!P(VX~P2gO!P,uO~OX,vO~P2gOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdOX&fX!e&fX!P&fX~P)xO!e(WOX(Wa~Oy,zO!e(WOX(WX~P2gOX,{O~O!P,|O!e(WO~O!P-OO!e(WO~P2gOSVOTVOsVOtVOuVO'^UO'g$[O~P!6POP!baZca!S!ba!e!ba!tca'qca'r!ba!O!bao!bay!ba!P!baX!ba!Z!ba#R!bav!ba~O!e-TO'r(pO!P'mXX'mX~O!P-VO~O!i-`O!j-_O!l-[O'T-XOv'nP~OX-aO~O_%cO!Q!lO~P#DkO!j-gOP&gX!e&gX~P<cO!e(rOP(Ya~O!S-iO'r(pOP$Wa!e$Wa~Ow!PO(P*PO~OvbX!S!kX!ebX~O'Q#VO'T(xO~O!S-mO~O!e-oOv([X~Ov-qO~Ov-sO~P,cOv-sO~P#$iO_-uO'T&cO~O!S-vO~Ow$yOy-wO~OQ*uOw*vOy-zO}*wO$|*xO~OQ*uOo.UO~Oy._O~O!S.`O~O!j.bO'T&cO~Ov.cO~Ov.cO~PGyOQ']O^'Wa_'Wa`'Waa'Wa'T'Wa~Od.gO~OQ'XXQ'kXR'kXZ'kXd'XX}'kX#p'kX(P'kXw'kX$f'kX$|'kX['kXo'kXy'kX!l'kX!q'kX!t'kX#O'kX#P'kX'g'kX'q'kX'r'kX'x'kX'y'kX'z'kX'{'kX'|'kX'}'kX(O'kX(Q'kX(R'kX(T'kX!P'kX!e'kXX'kXP'kXv'kX!S'kX#R'kX~OQ!QOZ%rO[%qO^.rO_%cO`TOaTOd%jOg%yO}%pO!j.sO!q.pO!t.kO#V.mO$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO!P(sP~PGaO#Q.tOR%wa#p%wa(P%waw%wa$f%wa$|%wa[%wao%way%wa}%wa!l%wa!q%wa!t%wa#O%wa#P%wa'g%wa'q%wa'r%wa'x%wa'y%wa'z%wa'{%wa'|%wa'}%wa(O%wa(Q%wa(R%wa(T%wa!P%wa!e%waX%waP%wav%wa!S%wa#R%wa~O%^.vO~PGaO(P*POR&Oa#p&Oaw&Oa$f&Oa$|&Oa[&Oao&Oay&Oa}&Oa!l&Oa!q&Oa!t&Oa#O&Oa#P&Oa'g&Oa'q&Oa'r&Oa'x&Oa'y&Oa'z&Oa'{&Oa'|&Oa'}&Oa(O&Oa(Q&Oa(R&Oa(T&Oa!P&Oa!e&OaX&OaP&Oav&Oa!S&Oa#R&Oa~O_%cO!Q!lO!j.xO(P*OO~P#DkO!e.yO(P*PO!P(uX~O!P.{O~OX.|Oy.}O(P*PO~O'Z%eOR(qP~OQ']O})sORfa#pfa(Pfawfa$ffa$|fa[faofayfa!lfa!qfa!tfa#Ofa#Pfa'gfa'qfa'rfa'xfa'yfa'zfa'{fa'|fa'}fa(Ofa(Qfa(Rfa(Tfa!Pfa!efaXfaPfavfa!Sfa#Rfa~OQ']O})sOR&Va#p&Va(P&Vaw&Va$f&Va$|&Va[&Vao&Vay&Va!l&Va!q&Va!t&Va#O&Va#P&Va'g&Va'q&Va'r&Va'x&Va'y&Va'z&Va'{&Va'|&Va'}&Va(O&Va(Q&Va(R&Va(T&Va!P&Va!e&VaX&VaP&Vav&Va!S&Va#R&Va~O!P/UO~Ow$yO$f/ZO$|*xO(P*PO~OQ!QOZ/[O[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaOo/^O'r(pO~O#W/_OP!YiQ!YiS!YiT!YiZ!Yi[!Yi^!Yi_!Yi`!Yia!Yid!Yig!Yio!Yis!Yit!Yiu!Yiw!Yiy!Yi|!Yi}!Yi!Q!Yi!U!Yi!W!Yi!X!Yi!Z!Yi!]!Yi!l!Yi!q!Yi!t!Yi#O!Yi#P!Yi#Y!Yi#p!Yi#r!Yi#{!Yi$O!Yi$b!Yi$d!Yi$f!Yi$i!Yi$m!Yi$q!Yi$s!Yi%T!Yi%V!Yi%Z!Yi%]!Yi%^!Yi%f!Yi%j!Yi%s!Yi&z!Yi'Q!Yi'T!Yi'Z!Yi'^!Yi'g!Yi'q!Yi'r!Yi'x!Yi'y!Yi'z!Yi'{!Yi'|!Yi'}!Yi(O!Yi(P!Yi(Q!Yi(R!Yi(T!YiX!Yi!e!Yi!P!Yiv!Yi!i!Yi!j!Yi#V!Yi#R!Yi~Oy#ziX#zi!e#zi!P#ziv#zi#R#zi~P2gOy$UiX$Ui!e$Ui!P$Uiv$Ui#R$Ui~P2gOv/eO!j&bO'Q`O~P<cOw/nO}/mO~Oy!RX#pbX~Oy/oO~O#p/pO~OR+bO_+dO!Q/sO'T&iO'Z%eO~Oa/zO|!VO'Q#VO'T(ROv(cP~OQ!QOZ%rO[%qO^%vO_%cO`TOa/zOd%jOg%yO|!VO}%pO!q%oO$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO!P(eP~PGaOQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f0VO%^%xO&W%{O'T%dO'Z%eO(Q%zOw(`Py(`P~PGaOw*vO~Oy-zO$|*xO~Oa/zO|!VO'Q#VO'T*oOv(gP~Ow+QO~OQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f0VO%^%xO&W%{O'T%dO'Z%eO(Q%zO(R0`O~PGaOy0dO~OQ!QOSVOTVO[$gO^0lO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!j0mO!l$lO!q0eO!t0hO'Q#VO'T$YO'Z%eO'^UO'g$[O~O#V0nO!P(jP~P%1}Ow!POy0pO#Q0rO$|*xO~OR0uO!e0sO~P#(kOR0uO!S+UO!e0sO(P*OO~OR0uOo0wO!S+UO!e0sOQ'VXZ'VX}'VX#p'VX(P'VX~OR0uOo0wO!e0sO~OR0uO!e0sO~O$f/ZO(P*PO~Ow$yO~Ow$yO$|*xO~Oo0}Oy0|O!S1OO'r(pO~O!e1POv(pX~Ov1RO~O^#TO_#TO`#TOa'kOw&|O'T&vO(Q1VO~Oo1YOQ'VXR'VXZ'VX}'VX!e'VX(P'VX~O!e1ZO(P*POR'YX~O!e1ZOR'YX~O!e1ZO(P*OOR'YX~OR1]O~O!S1^OS'wXT'wXZ'wX['wX_'wXd'wXo'wXs'wXu'wXw'wXy'wX}'wX!P'wX!e'wX!l'wX!q'wX!t'wX!y'wX#O'wX#P'wX#Q'wX#R'wX'Q'wX'Z'wX'^'wX'g'wX'r'wX'v'wX'x'wX'y'wX'z'wX'{'wX'|'wX'}'wX(O'wX(P'wX(Q'wX(R'wXX'wXv'wX~O}1_O~O!P1aO~P#KkOX1bO~P#KkOv1cO~P#KkOS,^OT,^OZ,^O['cO_1dOd,^Oo,^Os,^Ou,^Ow'dOy,^O}'bO!S,^O!e,^O!l,^O!q,[O!t,^O!y,^O#O,^O#P,^O#Q,^O#R,^O'Q,^O'Z%eO'^UO'g,ZO'r,[O'v,_O'x,ZO'y,[O'z,[O'{,[O'|,]O'},]O(O,^O(P,`O(Q,`O(R,aO~OX1fO~Oy,jO~O!e,sO!P(Va~P2gOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q#VO'ZkO'^UO'gcO'qiO(QdO!P&eX!e&eX~P)xO!e,sO!P(Va~OX&fa!e&fa!P&fa~P2gOX1kO~P2gO!P1mO!e(WO~OP!biZci!S!bi!e!bi!tci'qci'r!bi!O!bio!biy!bi!P!biX!bi!Z!bi#R!biv!bi~O'r(pOP!oi!S!oi!e!oi!O!oio!oiy!oi!P!oiX!oi!Z!oi#R!oiv!oi~O!j&bO!P&`X!e&`XX&`X~P<cO!e-TO!P'maX'ma~O!P1qO~Ov!RX!S!kX!e!RX~O!S1rO~O!e1sOv'oX~Ov1uO~O'T-XO~O!j1xO'T-XO~O(P*POP$Wi!e$Wi~O!S1yO'r(pOP$XX!e$XX~O!S1|O~Ov$_a!e$_a~P2gO!l(|O'Q#VO'T(xOv&hX!e&hX~O!e-oOv([a~Ov2QO~P,cOy2UO~O#p2VO~Oy2WO$|*xO~Ow*vOy2WO}*wO$|*xO~Oo2aO~Ow!POy2fO#Q2hO$|*xO~O!S2jO~Ov2lO~O#Q2mOR%wi#p%wi(P%wiw%wi$f%wi$|%wi[%wio%wiy%wi}%wi!l%wi!q%wi!t%wi#O%wi#P%wi'g%wi'q%wi'r%wi'x%wi'y%wi'z%wi'{%wi'|%wi'}%wi(O%wi(Q%wi(R%wi(T%wi!P%wi!e%wiX%wiP%wiv%wi!S%wi#R%wi~Od2nO~O^2qO!j.sO!q2rO'Q#VO'Z%eO~O(P*PO!P%{X!e%{X~O!e2sO!P(tX~O!P2uO~OQ!QOZ%rO[%qO^2wO_%cO`TOaTOd%jOg%yO}%pO!j2xO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO^2yO!j2xO(P*OO~O!P%aX!e%aX~P#4kO^2yO~O(P*POR&Oi#p&Oiw&Oi$f&Oi$|&Oi[&Oio&Oiy&Oi}&Oi!l&Oi!q&Oi!t&Oi#O&Oi#P&Oi'g&Oi'q&Oi'r&Oi'x&Oi'y&Oi'z&Oi'{&Oi'|&Oi'}&Oi(O&Oi(Q&Oi(R&Oi(T&Oi!P&Oi!e&OiX&OiP&Oiv&Oi!S&Oi#R&Oi~O_%cO!Q!lO!P&yX!e&yX~P#DkO!e.yO!P(ua~OR3QO(P*PO~O!e3ROR(rX~OR3TO~O(P*POR&Pi#p&Piw&Pi$f&Pi$|&Pi[&Pio&Piy&Pi}&Pi!l&Pi!q&Pi!t&Pi#O&Pi#P&Pi'g&Pi'q&Pi'r&Pi'x&Pi'y&Pi'z&Pi'{&Pi'|&Pi'}&Pi(O&Pi(Q&Pi(R&Pi(T&Pi!P&Pi!e&PiX&PiP&Piv&Pi!S&Pi#R&Pi~O!P3UO~O$f3VO(P*PO~Ow$yO$f3VO$|*xO(P*PO~Ow!PO!Z!YO~O!Z3aO#R3_O'r(pO~O!j&bO'Q#VO~P<cOv3eO~Ov3eO!j&bO'Q`O~P<cO!O3hO'r(pO~Ow!PO~P#9vOo3kOy3jO(P*PO~O!P3oO~P%;pOv3rO~P%;pOR0uO!S+UO!e0sO~OR0uOo0wO!S+UO!e0sO~Oa/zO|!VO'Q#VO'T(RO~O!S3uO~O!e3wOv(dX~Ov3yO~OQ!QOZ%rO[%qO^%vO_%cO`TOa/zOd%jOg%yO|!VO}%pO!q%oO$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO~PGaO!e3|O(P*PO!P(fX~O!P4OO~O!S4PO(P*OO~O!S+UO(P*PO~O!e4ROw(aXy(aX~OQ4TO~Oy2WO~Oa/zO|!VO'Q#VO'T*oO~Oo4WOw*vO}*wOv%XX!e%XX~O!e4ZOv(hX~Ov4]O~O(P4_Oy(_Xw(_X$|(_XR(_Xo(_X!e(_X~Oy4aO(P*PO~OQ!QOSVOTVO[$gO^4bO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!l$lO!q$hO#V$lO'T$YO'^UO'g$[O~O!j4cO'Z%eO~P&,sO!S4eO'r(pO~O#V4gO~P%1}O!e4hO!P(kX~O!P4jO~O!P%aX!S!aX!e%aX'r!aX~P!KgO!j&bO~P&,sO!e4hO!P(kX!S'eX'r'eX~O^2yO!j2xO~Ow!POy2fO~O_4pO!Q/sO'T&iO'Z%eOR&lX!e&lX~OR4rO!e0sO~O!S4tO~Ow$yO$|*xO(P*PO~Oy4uO~P2gOo4vOy4uO(P*PO~Ov&uX!e&uX~P!3|O!e1POv(pa~Oo4|Oy4{O(P*PO~OSVOTVO_%cOsVOtVOuVOw!PO!Q!lO'^UOR&vX!e&vX~P#DkO!e1ZOR'Ya~O!y5SO~O!P5TO~P#KkO!S1^OX'wX#R'wX~O!e,sO!P(Vi~O!P&ea!e&ea~P2gOX5WO~P2gOP!bqZcq!S!bq!e!bq!tcq'qcq'r!bq!O!bqo!bqy!bq!P!bqX!bq!Z!bq#R!bqv!bq~O'r(pO!P&`a!e&`aX&`a~O!i-`O!j-_O!l5YO'T-XOv&aX!e&aX~O!e1sOv'oa~O!S5[O~O!S5`O'r(pOP$Xa!e$Xa~O(P*POP$Wq!e$Wq~Ov$^i!e$^i~P2gOw!POy5bO#Q5dO$|*xO~Oo5gOy5fO(P*PO~Oy5iO~Oy5iO$|*xO~Oy5mO(P*PO~Ow!POy5bO~Oo5tOy5sO(P*PO~O!S5vO~O!e2sO!P(ta~O^2yO!j2xO'Z%eO~OQ!QOZ%rO[%qO^.rO_%cO`TOaTOd%jOg%yO}%pO!j.sO!q.pO!t5zO#V5|O$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO!P&xX!e&xX~PGaOQ!QOZ%rO[%qO^6OO_%cO`TOaTOd%jOg%yO}%pO!j6PO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(P*OO(Q%zO~PGaO!P%aa!e%aa~P#4kO^6QO~O#Q6ROR%wq#p%wq(P%wqw%wq$f%wq$|%wq[%wqo%wqy%wq}%wq!l%wq!q%wq!t%wq#O%wq#P%wq'g%wq'q%wq'r%wq'x%wq'y%wq'z%wq'{%wq'|%wq'}%wq(O%wq(Q%wq(R%wq(T%wq!P%wq!e%wqX%wqP%wqv%wq!S%wq#R%wq~O(P*POR&Oq#p&Oqw&Oq$f&Oq$|&Oq[&Oqo&Oqy&Oq}&Oq!l&Oq!q&Oq!t&Oq#O&Oq#P&Oq'g&Oq'q&Oq'r&Oq'x&Oq'y&Oq'z&Oq'{&Oq'|&Oq'}&Oq(O&Oq(Q&Oq(R&Oq(T&Oq!P&Oq!e&OqX&OqP&Oqv&Oq!S&Oq#R&Oq~O(P*PO!P&ya!e&ya~OX6SO~P2gO'Z%eOR&wX!e&wX~O!e3ROR(ra~O$f6YO(P*PO~Ow![q~P#9vO#R6]O~O!Z3aO#R6]O'r(pO~Ov6bO~O#R6fO~Oy6gO!P6hO~O!P6hO~P%;pOy6kO~Ov6kOy6gO~Ov6kO~P%;pOy6mO~O!e3wOv(da~O!S6pO~Oa/zO|!VO'Q#VO'T(ROv&oX!e&oX~O!e3|O(P*PO!P(fa~OQ!QOZ%rO[%qO^%vO_%cO`TOa/zOd%jOg%yO|!VO}%pO!q%oO$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO!P&pX!e&pX~PGaO!e3|O!P(fa~OQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f0VO%^%xO&W%{O'T%dO'Z%eO(Q%zOw&nX!e&nXy&nX~PGaO!e4ROw(aay(aa~O!e4ZOv(ha~Oo7SOv%Xa!e%Xa~Oo7SOw*vO}*wOv%Xa!e%Xa~Oa/zO|!VO'Q#VO'T*oOv&qX!e&qX~O(P*POy$xaw$xa$|$xaR$xao$xa!e$xa~O(P4_Oy(_aw(_a$|(_aR(_ao(_a!e(_a~O!P%aa!S!aX!e%aa'r!aX~P!KgOQ!QOSVOTVO[$gO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!j&bO!l$lO!q$hO#V$lO'T$YO'^UO'g$[O~O^7ZO~P&JUO^6QO!j6PO~O!e4hO!P(ka~O!e4hO!P(ka!S'eX'r'eX~OQ!QOSVOTVO[$gO^0lO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!j0mO!l$lO!q0eO!t7_O'Q#VO'T$YO'Z%eO'^UO'g$[O~O#V7aO!P&sX!e&sX~P&L]O!S7cO'r(pO~Ow!POy5bO$|*xO(P*PO~O!S+UOR&la!e&la~Oo0wO!S+UOR&la!e&la~Oo0wOR&la!e&la~O(P*POR$yi!e$yi~Oy7fO~P2gOo7gOy7fO(P*PO~O(P*PORni!eni~O(P*POR&va!e&va~O(P*OOR&va!e&va~OS,^OT,^OZ,^O_,^Od,^Oo,^Os,^Ou,^Oy,^O!S,^O!e,^O!l,^O!q,[O!t,^O!y,^O#O,^O#P,^O#Q,^O#R,^O'Q,^O'Z%eO'^UO'g,ZO'r,[O'x,ZO'y,[O'z,[O'{,[O'|,]O'},]O(O,^O~O(P7iO(Q7iO(R7iO~P'!qO!P7kO~P#KkO!P&ei!e&ei~P2gO'r(pOv!hi!e!hi~O!S7mO~O(P*POP$Xi!e$Xi~Ov$^q!e$^q~P2gOw!POy7oO~Ow!POy7oO#Q7rO$|*xO~Oy7tO~Oy7uO~Oy7vO(P*PO~Ow!POy7oO$|*xO(P*PO~Oo7{Oy7zO(P*PO~O!e2sO!P(ti~O(P*PO!P%}X!e%}X~O!P%ai!e%ai~P#4kO^8OO~O!e8TO['bXv$`i}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[OQ#[iS#[iT#[i[#[i^#[i_#[i`#[ia#[id#[is#[it#[iu#[iv$`i}#[i!i#[i!j#[i!l#[i!q#[i!t'bX#V#[i'Q#[i'T#[i'^#[i'g#[i'q'bX(Q'bX~P@[O#R#^a~P2gO#R8WO~O!Z3aO#R8XO'r(pO~Ov8[O~Oy8^O~P2gOy8`O~Oy6gO!P8aO~Ov8`Oy6gO~O!e3wOv(di~O(P*POv%Qi!e%Qi~O!e3|O!P(fi~O!e3|O(P*PO!P(fi~O(P*PO!P&pa!e&pa~O(P8hOw(bX!e(bXy(bX~O(P*PO!S$wiy$wiw$wi$|$wiR$wio$wi!e$wi~O!e4ZOv(hi~Ov%Xi!e%Xi~P2gOo8kOv%Xi!e%Xi~O!P%ai!S!aX!e%ai'r!aX~P!KgO(P*PO!P%`i!e%`i~O!e4hO!P(ki~O#V8nO~P&L]O!P&sa!S'eX!e&sa'r'eX~O(P*POR$zq!e$zq~Oy8pO~P2gOy7zO~P2gO(P8rO(Q8rO(R8rO~O(P8rO(Q8rO(R8rO~P'!qO'r(pOv!hq!e!hq~O(P*POP$Xq!e$Xq~Ow!POy8uO$|*xO(P*PO~Ow!POy8uO~Oy8xO~P2gOy8zO~P2gOo8|Oy8zO(P*PO~OQ#[qS#[qT#[q[#[q^#[q_#[q`#[qa#[qd#[qs#[qt#[qu#[qv$`q}#[q!i#[q!j#[q!l#[q!q#[q#V#[q'Q#[q'T#[q'^#[q'g#[q~O!e9PO['bXv$`q}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[Oo'bX!t'bX#O'bX#P'bX#p'bX'q'bX'r'bX'x'bX'y'bX'z'bX'{'bX'|'bX'}'bX(O'bX(P'bX(Q'bX(R'bX(T'bX~P'2fO#R9UO~O!Z3aO#R9UO'r(pO~Oy9WO~O(P*POv%Qq!e%Qq~O!e3|O!P(fq~O(P*PO!P&pi!e&pi~O(P8hOw(ba!e(bay(ba~Ov%Xq!e%Xq~P2gO!P&si!S'eX!e&si'r'eX~O(P*PO!P%`q!e%`q~Oy9]O~P2gO(P9^O(Q9^O(R9^O~O'r(pOv!hy!e!hy~Ow!POy9_O~Ow!POy9_O$|*xO(P*PO~Oy9aO~P2gOQ#[yS#[yT#[y[#[y^#[y_#[y`#[ya#[yd#[ys#[yt#[yu#[yv$`y}#[y!i#[y!j#[y!l#[y!q#[y#V#[y'Q#[y'T#[y'^#[y'g#[y~O!e9dO['bXv$`y}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[Oo'bX!t'bX#O'bX#P'bX#p'bX'q'bX'r'bX'x'bX'y'bX'z'bX'{'bX'|'bX'}'bX(O'bX(P'bX(Q'bX(R'bX(T'bX~P'9eO!e9eO['bX}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[OQ#[iS#[iT#[i[#[i^#[i_#[i`#[ia#[id#[is#[it#[iu#[i}#[i!i#[i!j#[i!l#[i!q#[i!t'bX#V#[i'Q#[i'T#[i'^#[i'g#[i'q'bX(Q'bX~P@[O#R9hO~O(P*PO!P&pq!e&pq~Ov%Xy!e%Xy~P2gOw!POy9iO~Oy9jO~P2gOQ#[!RS#[!RT#[!R[#[!R^#[!R_#[!R`#[!Ra#[!Rd#[!Rs#[!Rt#[!Ru#[!Rv$`!R}#[!R!i#[!R!j#[!R!l#[!R!q#[!R#V#[!R'Q#[!R'T#[!R'^#[!R'g#[!R~O!e9kO['bX}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[OQ#[qS#[qT#[q[#[q^#[q_#[q`#[qa#[qd#[qs#[qt#[qu#[q}#[q!i#[q!j#[q!l#[q!q#[q!t'bX#V#[q'Q#[q'T#[q'^#[q'g#[q'q'bX(Q'bX~P@[O!e9nO['bX}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[OQ#[yS#[yT#[y[#[y^#[y_#[y`#[ya#[yd#[ys#[yt#[yu#[y}#[y!i#[y!j#[y!l#[y!q#[y!t'bX#V#[y'Q#[y'T#[y'^#[y'g#[y'q'bX(Q'bX~P@[OwbX~P$|OwjX}jX!tbX'qbX~P!6mOZ'SXd'XXo'SXw'kX!t'SX'q'SX'r'SX~O['SXd'SXw'SX}'SX!l'SX!q'SX#O'SX#P'SX#p'SX'g'SX'x'SX'y'SX'z'SX'{'SX'|'SX'}'SX(O'SX(P'SX(Q'SX(R'SX(T'SX~P'GTOP'SX}'kX!S'SX!e'SX!O'SXy'SX!P'SXX'SX!Z'SX#R'SXv'SX~P'GTO^9qO_9qO`9qOa9qO'T9oO~O!j:OO~P!.cOPoOQ!QOSVOTVOZeOd9tOsVOtVOuVO!U#bO!W#cO!X:zO!Z!YO#Y!_O#r9zO#{9{O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO[#sXo#sXw#sX}#sX!l#sX!q#sX!t#sX#O#sX#P#sX#p#sX'g#sX'q#sX'r#sX'x#sX'y#sX'z#sX'{#sX'|#sX'}#sX(O#sX(P#sX(Q#sX(R#sX(T#sX~P'IxO#Q$uO~P!.cO}'kXP'SX!S'SX!e'SX!O'SXy'SX!P'SXX'SX!Z'SX#R'SXv'SX~P'GTOo#qX#O#qX#P#qX#p#qX'r#qX'x#qX'y#qX'z#qX'{#qX'|#qX'}#qX(O#qX(P#qX(R#qX(T#qX~P!.cOo#zX#O#zX#P#zX#p#zX'r#zX'x#zX'y#zX'z#zX'{#zX'|#zX'}#zX(O#zX(P#zX(R#zX(T#zX~P!.cOPoOQ!QOSVOTVOZeOd9tOsVOtVOuVO!U#bO!W#cO!X:zO!Z!YO#Y!_O#r9zO#{9{O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO[#sao#saw#sa}#sa!l#sa!q#sa!t#sa#O#sa#P#sa#p#sa'g#sa'q#sa'r#sa'x#sa'y#sa'z#sa'{#sa'|#sa'}#sa(O#sa(P#sa(Q#sa(R#sa(T#sa~P'IxOo:YO#O:YO#P:VOw#sa~P!B}Ow$Ua~P#9vOQ'XXd'XX}iX~OQlXdlX}jX~O^:sO_:sO`:sOa:sO'T:_O~OQ'XXd'XX}hX~Ow#qa~P#9vOw#za~P#9vO!S&_Oo#za#O#za#P#za#p#za'r#za'x#za'y#za'z#za'{#za'|#za'}#za(O#za(P#za(R#za(T#za~P!.cO#Q*eO~P!.cOw#ci~P#9vO[#}O}#zO'x#hO(O#|O(Q#hO(R#fO(T#hOo#eiw#ei!l#ei!q#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'y#ei'z#ei'{#ei'|#ei'}#ei~O'g#ei(P#ei~P((}O'g#gO(P#gO~P((}O[#}O}#zO'g#gO'x#hO'y#iO'z#iO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiw#ei!l#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'{#ei'|#ei'}#ei~O!q#ei~P(*yO!q#jO~P(*yO[#}O}#zO!q#jO'g#gO'x#hO'y#iO'z#iO'{#kO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiw#ei!l#ei!t#ei#O#ei#P#ei#p#ei'q#ei'|#ei'}#ei~O'r#ei~P(,rO'r#lO~P(,rO[#}O}#zO!q#jO#P:VO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiw#ei!l#ei!t#ei#O#ei#p#ei'q#ei'|#ei~O'}#ei~P(.kO'}#mO~P(.kOo:YO#O:YO#P:VOw#ni~P$1xOo:YO#O:YO#P:VOw#si~P$3yOQ'XXd'XX}'kX~Ow#zi~P#9vOw$Ui~P#9vOd9}O~Ow#ca~P#9vOd:uO~OU'x_'v'P'O'^s!y'^'T'Z~",
+  goto: "$Ku(vPPPPPPP(wPP)OPP)^PPPP)d-hP0f5aP7R7R8v7R>wD_DpPDvHQPPPPPPK`P! P! _PPPPP!!VP!$oP!$oPP!&oP!(rP!(w!)n!*f!*f!*f!(w!+]P!(w!.Q!.TPP!.ZP!(w!(w!(w!(wP!(w!(wP!(w!(w!.y!/dP!/dJ}J}J}PPPP!/d!.y!/sPP!$oP!0^!0a!0g!1h!1t!3t!3t!5r!7t!1t!1t!9p!;_!=O!>k!@U!Am!CS!De!1t!1tP!1tP!1t!1t!Et!1tP!Ge!1t!1tP!Ie!1tP!1t!7t!7t!1t!7t!1t!Kl!Mt!Mw!7t!1t!Mz!M}!M}!M}!NR!$oP!$oP!$oP! P! PP!N]! P! PP!Ni# }! PP! PP#!^##c##k#$Z#$_#$e#$e#$mP#&s#&s#&y#'o#'{! PP! PP#(]#(l! PP! PPP#(x#)W#)d#)|#)^! P! PP! P! P! PP#*S#*S#*Y#*`#*S#*S! P! PP#*m#*v#+Q#+Q#,x#.l#.x#.x#.{#.{5a5a5a5a5a5a5a5aP5a#/O#/U#/p#1{#2R#2b#6^#6d#6j#6|#7W#8w#9R#9b#9h#9n#9x#:S#:Y#:g#:m#:s#:}#;]#;g#=u#>R#>`#>f#>n#>u#?PPPPPPPP#?V#BaP#F^#Jx#Ls#Nr$&^P$&aPPP$)_$)h$)z$/U$1d$1m$3fP!(w$4`$7r$:i$>T$>^$>c$>fPPP$>i$A`$A|P$BaPPPPPPPPPP$BvP$EU$EX$E[$Eb$Ee$Eh$Ek$En$Et$HO$HR$HU$HX$H[$H_$Hb$He$Hh$Hk$Hn$Jt$Jw$Jz#*S$KW$K^$Ka$Kd$Kh$Kl$Ko$KrQ!tPT'V!s'Wi!SOlm!P!T$T$W$y%b)U*f/gQ'i#QR,n'l(OSOY[bfgilmop!O!P!T!Y!Z![!_!`!c!p!q!|!}#Q#U#Z#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$`$a$e$g$h$q$r$y%X%_%b&U&Y&[&b&u&z&|'P'a'l'n'o'}(W(Y(b(d(e(f(j(o(p(r(|)S)U)i*Z*f*i*k*l+Z+n+z,q,s,z-R-T-g-m-t.}/^/b/d/g0e0g0m0}1P1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9s9t9u9v9w9x9z9{9|9}:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f:gS(z$v-oQ*p&eQ*t&hQ-k(yQ-y)ZW0Z+Q0Y4Z7UR4Y0[&w!RObfgilmop!O!P!T!Y!Z![!_!`!c!p#Q#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$e$g$h$q$r$y%_%b&U&Y&[&b&u'l'}(W(Y(b(f(j(o(p(r(|)S)U)i*Z*f*i*k*l+Z+n,s,z-T-g-m-t.}/^/b/d/g0e0g0m0}1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f#r]Ofgilmp!O!P!T!Z![#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i+n,s,z-m.}0}1h1|3_3a3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9hb#[b#Q$y'l(b)S)U*Z-t!h$bo!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7m$b%k!Q!n$O$u%o%p%q%y%{&P&o&p&r'](q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8g!W:y!Y!_!`*i*l/^3h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fR:|%n$_%u!Q!n$O$u%o%p%q&P&o&p&r'](q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8g$e%l!Q!n$O$u%n%o%p%q%y%{&P&o&p&r'](q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8g'hZOY[fgilmop!O!P!T!Y!Z![!_!`!c!p!|!}#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$`$a$e$g$h$q$r%_%b%i%j&U&Y&[&b&u'a'}(W(Y(d(e(f(j(o(p(r(|)i)p)q*f*i*k*l+Z+n,s,z-R-T-g-m.i.}/^/b/d/g0e0g0m0}1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9s9t9u9v9w9x9z9{9|9}:O:P:Q:R:S:T:U:V:W:X:Y:Z:`:a:e:f:g:t:u:x$^%l!Q!n$O$u%n%o%p%q%y%{&P&p&r(q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8gQ&j!hQ&k!iQ&l!jQ&m!kQ&s!oQ)[%QQ)]%RQ)^%SQ)_%TQ)b%WQ+`&oS,R']1ZQ.W)`S/r*u4TR4n0s+yTOY[bfgilmop!O!P!Q!T!Y!Z![!_!`!c!n!p!q!|!}#Q#U#Z#e#o#p#q#r#s#t#u#v#w#x#y#z#}$O$T$W$`$a$e$g$h$q$r$u$y%X%_%b%i%j%n%o%p%q%y%{&P&U&Y&[&b&o&p&r&u&z&|'P']'a'l'n'o'}(W(Y(b(d(e(f(j(o(p(q(r(|)S)U)i)p)q)s)x)y*O*P*R*V*Z*[*^*e*f*i*k*l*n*w*x+U+V+Z+h+n+o+z+},q,s,z-R-T-g-i-m-t-v.U.`.i.p.t.x.y.}/Z/[/^/b/d/g/{/}0`0e0g0m0r0w0}1O1P1Y1Z1h1r1y1|2a2h2j2m2s2v3V3_3a3f3h3k3u3{3|4R4U4W4_4c4e4h4t4v4|5[5`5d5g5t5v6R6Y6]6a6p6v6x7S7^7c7g7m7r7{8W8X8g8k8|9U9h9s9t9u9v9w9x9z9{9|9}:O:P:Q:R:S:T:U:V:W:X:Y:Z:`:a:e:f:g:t:u:xQ'[!xQ'h#PQ)l%gU)r%m*T*WR.f)kQ,T']R5P1Z#t%s!Q!n$O$u%p%q&P&p&r(q)x)y*O*R*V*[*^*e*n*w+V+h+o+}-i-v.U.`.t.x.y/Z/[/{/}0`0r0w1O1Y1y2a2h2j2m2v3V3u3{3|4U4e4t5`5d5v6R6Y6p6v6x7c7r8gQ)x%oQ+_&oQ,U']n,^'b'c'd,c,f,h,l/m/n1_3n3q5T5U7kS.q)s2sQ/O*PQ/Q*SQ/q*uS0Q*x4RQ0a+U[0o+Z.j0g4h5y7^Q2v.pS4d0e2rQ4m0sQ5Q1ZQ6T3RQ6z4PQ7O4TQ7X4_R9Y8h&jVOfgilmop!O!P!T!Y!Z![!_!`!c!p#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$e$g$h$q$r%_%b&U&Y&[&b&u']'}(W(Y(b(f(j(o(p(r(|)i*f*i*k*l+Z+n,s,z-T-g-m.}/^/b/d/g0e0g0m0}1Z1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fU&g!g%P%[o,^'b'c'd,c,f,h,l/m/n1_3n3q5T5U7k$nsOfgilm!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y'}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9z9{:O:P:Q:R:S:T:U:V:W:X:Y:eS$tp9xS&O!W#bS&Q!X#cQ&`!bQ*_&RQ*a&VS*d&[:fQ*h&^Q,T']Q-j(wQ/i*jQ0p+[S2f.X0qQ3]/_Q3^/`Q3g/hQ3i/kQ5P1ZU5b2R2g4lU7o5c5e5rQ8]6dS8u7p7qS9_8v8wR9i9`i{Ob!O!P!T$y%_%b)S)U)i-thxOb!O!P!T$y%_%b)S)U)i-tW/v*v/t3w6qQ/}*wW0[+Q0Y4Z7UQ3{/{Q6x3|R8g6v!h$do!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7mQ&d!dQ&f!fQ&n!mW&x!q%X&|1PQ'S!rQ)X$}Q)Y%OQ)a%VU)d%Y'T'UQ*s&hS+s&z'PS-Y(k1sQ-u)WQ-x)ZS.a)e)fS0x+c/sQ1S+zQ1W+{S1v-_-`Q2k.bQ3s/pQ5]1xR5h2V${sOfgilmp!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f$zsOfgilmp!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fR3]/_V&T!Y!`*i!i$lo!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7m!k$^o!c!p$e$g$h$q$r&U&b&u(b(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7m!i$co!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7m&e^Ofgilmop!O!P!T!Y!Z![!_!`!c!p#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$e$g$h$q$r%_%b&U&Y&[&b&u'}(W(Y(f(j(o(p(r(|)i*f*i*k*l+Z+n,s,z-T-g-m.}/^/b/d/g0e0g0m0}1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fR(l$fQ-[(kR5Y1sQ(S#|S({$v-oS-Z(k1sQ-l(yW/u*v/t3w6qS1w-_-`Q3v/vR5^1xQ'e#Or,e'b'c'd'j'p)u,c,f,h,l/m/n1_3n3q5U6fR,o'mk,a'b'c'd,c,f,h,l/m/n1_3n3q5UQ'f#Or,e'b'c'd'j'p)u,c,f,h,l/m/n1_3n3q5U6fR,p'mR*g&]X/c*f/d/g3f!}aOb!O!P!T#z$v$y%_%b'}(y)S)U)i)s*f*v*w+Q+Z,s-o-t.j/b/d/g/t/{0Y0g1h2s3f3w3|4Z4h5y6a6q6v7U7^Q3`/aQ6_3bQ8Y6`R9V8Z${rOfgilmp!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f#nfOfglmp!O!P!T!Z![#e#o#p#q#r#s#t#u#v#w#x#z#}$T$W%_%b&Y&['}(W(Y(|)i+n,s,z-m.}0}1h1|3_3a3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h!T9u!Y!_!`*i*l/^3h9u9v9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:e:f#rfOfgilmp!O!P!T!Z![#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i+n,s,z-m.}0}1h1|3_3a3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h!X9u!Y!_!`*i*l/^3h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f$srOfglmp!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:e:f#U#oh#d$P$Q$V$s%^&W&X'q't'u'v'w'x'y'z'{'|(O(U([(`*b*c,r,w,y-n0z1i1l1}3P4w5V5a6^6e7R7e7h7s7y8j8q8{9[9b}:P&S&]/k3[6d:[:]:c:d:h:j:k:l:m:n:o:p:q:r:v:w:{#W#ph#d$P$Q$V$s%^&W&X'q'r't'u'v'w'x'y'z'{'|(O(U([(`*b*c,r,w,y-n0z1i1l1}3P4w5V5a6^6e7R7e7h7s7y8j8q8{9[9b!P:Q&S&]/k3[6d:[:]:c:d:h:i:j:k:l:m:n:o:p:q:r:v:w:{#S#qh#d$P$Q$V$s%^&W&X'q'u'v'w'x'y'z'{'|(O(U([(`*b*c,r,w,y-n0z1i1l1}3P4w5V5a6^6e7R7e7h7s7y8j8q8{9[9b{:R&S&]/k3[6d:[:]:c:d:h:k:l:m:n:o:p:q:r:v:w:{#Q#rh#d$P$Q$V$s%^&W&X'q'v'w'x'y'z'{'|(O(U([(`*b*c,r,w,y-n0z1i1l1}3P4w5V5a6^6e7R7e7h7s7y8j8q8{9[9by:S&S&]/k3[6d:[:]:c:d:h:l:m:n:o:p:q:r:v:w:{#O#sh#d$P$Q$V$s%^&W&X'q'w'x'y'z'{'|(O(U([(`*b*c,r,w,y-n0z1i1l1}3P4w5V5a6^6e7R7e7h7s7y8j8q8{9[9bw:T&S&]/k3[6d:[:]:c:d:h:m:n:o:p:q:r:v:w:{!|#th#d$P$Q$V$s%^&W&X'q'x'y'z'{'|(O(U([(`*b*c,r,w,y-n0z1i1l1}3P4w5V5a6^6e7R7e7h7s7y8j8q8{9[9bu:U&S&]/k3[6d:[:]:c:d:h:n:o:p:q:r:v:w:{!x#vh#d$P$Q$V$s%^&W&X'q'z'{'|(O(U([(`*b*c,r,w,y-n0z1i1l1}3P4w5V5a6^6e7R7e7h7s7y8j8q8{9[9bq:W&S&]/k3[6d:[:]:c:d:h:p:q:r:v:w:{!v#wh#d$P$Q$V$s%^&W&X'q'{'|(O(U([(`*b*c,r,w,y-n0z1i1l1}3P4w5V5a6^6e7R7e7h7s7y8j8q8{9[9bo:X&S&]/k3[6d:[:]:c:d:h:q:r:v:w:{$]#{h#`#d$P$Q$V$s%^&S&W&X&]'q'r's't'u'v'w'x'y'z'{'|(O(U([(`*b*c,r,w,y-n/k0z1i1l1}3P3[4w5V5a6^6d6e7R7e7h7s7y8j8q8{9[9b:[:]:c:d:h:i:j:k:l:m:n:o:p:q:r:v:w:{${jOfgilmp!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f$v!aOfgilmp!O!P!T!Y!Z!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fQ&Y![Q&Z!]R:e9{#rpOfgilmp!O!P!T!Z![#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i+n,s,z-m.}0}1h1|3_3a3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9hQ&[!^!W9x!Y!_!`*i*l/^3h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fR:f:zR$moR-f(rR$wqT(}$v-oQ/f*fS3d/d/gR6c3fQ3m/mQ3p/nQ6i3nR6l3qQ$zwQ)V${Q*q&fQ+f&qQ+i&sQ-w)YW.Z)b+j+k+lS/X*]+gW2b.W.[.].^U3W/Y/]0yU5o2c2d2eS6W3X3ZS7w5p5qS8Q6V6XQ8y7xS8}8R8SR9c9O^|O!O!P!T%_%b)iX)R$y)S)U-tQ&r!nQ*^&PQ*|&jQ+P&kQ+T&lQ+W&mQ+]&nQ+l&sQ-})[Q.Q)]Q.T)^Q.V)_Q.Y)aQ.^)bQ2S-uQ2e.WR4U0VU+a&o*u4TR4o0sQ+Y&mQ+k&sS.])b+l^0v+_+`/q/r4m4n7OS2d.W.^S4Q0R0SR5q2eS0R*x4RQ0a+UR7X4_U+d&o*u4TR4p0sQ*z&jQ+O&kQ+S&lQ+g&qQ+j&sS-{)[*|S.P)]+PS.S)^+TU.[)b+k+lQ/Y*]Q0X*{Q0q+[Q2X-|Q2Y-}Q2].QQ2_.TU2c.W.].^Q2g.XS3Z/]0yS5c2R4lQ5j2ZS5p2d2eQ6X3XS7q5e5rQ7x5qQ8R6VQ8v7pQ9O8SR9`8wQ0T*xR6|4RQ*y&jQ*}&kU-z)[*z*|U.O)]+O+PS2W-{-}S2[.P.QQ4X0ZQ5i2YQ5k2]R7T4YQ/w*vQ3t/tQ6r3wR8d6qQ*{&jS-|)[*|Q2Z-}Q4X0ZR7T4YQ+R&lU.R)^+S+TS2^.S.TR5l2_Q0]+QQ4V0YQ7V4ZR8l7UQ+[&nS.X)a+]S2R-u.YR5e2SQ0i+ZQ4f0gQ7`4hR8m7^Q.m)sQ0i+ZQ2p.jQ4f0gQ5|2sQ7`4hQ7}5yR8m7^Q0i+ZR4f0gX'O!q%X&|1PX&{!q%X&|1PW'O!q%X&|1PS+u&z'PR1U+z_|O!O!P!T%_%b)iQ%a!PS)h%_%bR.d)i$^%u!Q!n$O$u%o%p%q&P&o&p&r'](q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8gQ*U%yR*X%{$c%n!Q!n$O$u%o%p%q%y%{&P&o&p&r'](q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8gW)t%m%x*T*WQ.e)jR2{.vR.m)sR5|2sQ'W!sR,O'WQ!TOQ$TlQ$WmQ%b!P[%|!T$T$W%b)U/gQ)U$yR/g*f$b%i!Q!n$O$u%o%p%q%y%{&P&o&p&r'](q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8g[)n%i)p.i:`:t:xQ)p%jQ.i)qQ:`%nQ:t:aR:x:uQ!vUR'Y!vS!OO!TU%]!O%_)iQ%_!PR)i%b#rYOfgilmp!O!P!T!Z![#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i+n,s,z-m.}0}1h1|3_3a3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9hh!yY!|#U$`'a'n(d,q-R9s9|:gQ!|[b#Ub#Q$y'l(b)S)U*Z-t!h$`o!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7mQ'a!}Q'n#ZQ(d$aQ,q'oQ-R(e!W9s!Y!_!`*i*l/^3h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fQ9|9tR:g9}Q-U(gR1p-UQ1t-[R5Z1tQ,c'bQ,f'cQ,h'dW1`,c,f,h5UR5U1_Q/d*fS3c/d3fR3f/gfbO!O!P!T$y%_%b)S)U)i-tp#Wb'}(y.j/b/t/{0Y0g1h5y6a6q6v7U7^Q'}#zS(y$v-oQ.j)sW/b*f/d/g3fQ/t*vQ/{*wQ0Y+QQ0g+ZQ1h,sQ5y2sQ6q3wQ6v3|Q7U4ZR7^4hQ,t(OQ1g,rT1j,t1gS(X$Q([Q(^$VU,x(X(^,}R,}(`Q(s$mR-h(sQ-p)OR2P-pQ3n/mQ3q/nT6j3n3qQ)S$yS-r)S-tR-t)UQ4`0aR7Y4``0t+^+_+`+a+d/q/r7OR4q0tQ8i6zR9Z8iQ4S0TR6}4SQ3x/wQ6n3tT6s3x6nQ3}/|Q6t3zU6y3}6t8eR8e6uQ4[0]Q7Q4VT7W4[7QhzOb!O!P!T$y%_%b)S)U)i-tQ$|xW%Zz$|%f)v$b%f!Q!n$O$u%o%p%q%y%{&P&o&p&r'](q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8gR)v%nS4i0i0nS7]4f4gT7b4i7]W&z!q%X&|1PS+r&z+zR+z'PQ1Q+wR4z1QU1[,S,T,UR5R1[S3S/Q7OR6U3SQ2t.mQ5x2pT5}2t5xQ.z)zR3O.z^_O!O!P!T%_%b)iY#Xb$y)S)U-t$l#_fgilmp!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W&Y&['}(W(Y(|*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f!h$io!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7mS'j#Q'lQ-P(bR/V*Z&v!RObfgilmop!O!P!T!Y!Z![!_!`!c!p#Q#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$e$g$h$q$r$y%_%b&U&Y&[&b&u'l'}(W(Y(b(f(j(o(p(r(|)S)U)i*Z*f*i*k*l+Z+n,s,z-T-g-m-t.}/^/b/d/g0e0g0m0}1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f[!{Y[#U#Z9s9tW&{!q%X&|1P['`!|!}'n'o9|9}S(c$`$aS+t&z'PU,X'a,q:gS-Q(d(eQ1T+zR1n-RS%t!Q&oQ&q!nQ(V$OQ(w$uS)w%o.pQ)z%pQ)}%qS*]&P&rQ+e&pQ,S']Q-d(qQ.l)sU.w)x)y2vS/O*O*PQ/P*RQ/T*VQ/W*[Q/]*^Q/`*eQ/l*nQ/|*wS0S*x4RQ0a+UQ0c+VQ0y+hQ0{+oQ1X+}Q1{-iQ2T-vQ2`.UQ2i.`Q2z.tQ2|.xQ2}.yQ3X/ZQ3Y/[S3z/{/}Q4^0`Q4l0rQ4s0wQ4x1OQ4}1YQ5O1ZQ5_1yQ5n2aQ5r2hQ5u2jQ5w2mQ5{2sQ6V3VQ6o3uQ6u3{Q6w3|Q7P4UQ7X4_Q7[4eQ7d4tQ7n5`Q7p5dQ7|5vQ8P6RQ8S6YQ8c6pS8f6v6xQ8o7cQ8w7rR9X8g$^%m!Q!n$O$u%o%p%q&P&o&p&r'](q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8gQ)j%nQ*T%yR*W%{$y%h!Q!n$O$u%i%j%n%o%p%q%y%{&P&o&p&r'](q)p)q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.i.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8g:`:a:t:u:x'pWOY[bfgilmop!O!P!T!Y!Z![!_!`!c!p!|!}#Q#U#Z#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$`$a$e$g$h$q$r$y%_%b&U&Y&[&b&u'a'l'n'o'}(W(Y(b(d(e(f(j(o(p(r(|)S)U)i*Z*f*i*k*l+Z+n,q,s,z-R-T-g-m-t.}/^/b/d/g0e0g0m0}1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9s9t9u9v9w9x9z9{9|9}:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f:g$x%g!Q!n$O$u%i%j%n%o%p%q%y%{&P&o&p&r'](q)p)q)s)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.i.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8g:`:a:t:u:x_&y!q%X&z&|'P+z1PR,V']$zrOfgilmp!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f!j$]o!c!p$e$g$h$q$r&U&b&u(b(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7mQ,T']R5P1Z_}O!O!P!T%_%b)i^|O!O!P!T%_%b)iQ#YbX)R$y)S)U-tbhO!O!T3_6]8W8X9U9hS#`f9uQ#dgQ$PiQ$QlQ$VmQ$spW%^!P%_%b)iU&S!Y!`*iQ&W!ZQ&X![Q&]!_Q'q#eQ'r#oS's#p:QQ't#qQ'u#rQ'v#sQ'w#tQ'x#uQ'y#vQ'z#wQ'{#xQ'|#yQ(O#zQ(U#}Q([$TQ(`$WQ*b&YQ*c&[Q,r'}Q,w(WQ,y(YQ-n(|Q/k*lQ0z+nQ1i,sQ1l,zQ1}-mQ3P.}Q3[/^Q4w0}Q5V1hQ5a1|Q6^3aQ6d3hQ6e3kQ7R4WQ7e4vQ7h4|Q7s5gQ7y5tQ8j7SQ8q7gQ8{7{Q9[8kQ9b8|Q:[9wQ:]9xQ:c9zQ:d9{Q:h:OQ:i:PQ:j:RQ:k:SQ:l:TQ:m:UQ:n:VQ:o:WQ:p:XQ:q:YQ:r:ZQ:v:eQ:w:fR:{9v^tO!O!P!T%_%b)i$`#afgilmp!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W&Y&['}(W(Y(|*i*l+n,s,z-m.}/^0}1h1|3a3h3k4W4v4|5g5t7S7g7{8k8|9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fQ6[3_Q8V6]Q9R8WQ9T8XQ9g9UR9m9hQ&V!YQ&^!`R/h*iQ$joQ&a!cQ&t!pU(g$e$g(jS(n$h0eQ(u$qQ(v$rQ*`&UQ*m&bQ+p&uQ-S(fS-b(o4cQ-c(pQ-e(rW/a*f/d/g3fQ/j*kW0f+Z0g4h7^Q1o-TQ1z-gQ3b/bQ4k0mQ5X1rQ7l5[Q8Z6aR8t7m!h$_o!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7mR-P(b'qXOY[bfgilmop!O!P!T!Y!Z![!_!`!c!p!|!}#Q#U#Z#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$`$a$e$g$h$q$r$y%_%b&U&Y&[&b&u'a'l'n'o'}(W(Y(b(d(e(f(j(o(p(r(|)S)U)i*Z*f*i*k*l+Z+n,q,s,z-R-T-g-m-t.}/^/b/d/g0e0g0m0}1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9s9t9u9v9w9x9z9{9|9}:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f:g$zqOfgilmp!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f!i$fo!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7m&d^Ofgilmop!O!P!T!Y!Z![!_!`!c!p#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W$e$g$h$q$r%_%b&U&Y&[&b&u'}(W(Y(f(j(o(p(r(|)i*f*i*k*l+Z+n,s,z-T-g-m.}/^/b/d/g0e0g0m0}1h1r1|3_3a3f3h3k4W4c4h4v4|5[5g5t6]6a7S7^7g7m7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f[!zY[$`$a9s9t['_!|!}(d(e9|9}W)o%i%j:`:aU,W'a-R:gW.h)p)q:t:uT2o.i:xQ(i$eQ(m$gR-W(jV(h$e$g(jR-^(kR-](k$znOfgilmp!O!P!T!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W%_%b&Y&['}(W(Y(|)i*i*l+n,s,z-m.}/^0}1h1|3_3a3h3k4W4v4|5g5t6]7S7g7{8W8X8k8|9U9h9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:f!i$ko!c!p$e$g$h$q$r&U&b&u(f(j(o(p(r*f*k+Z-T-g/b/d/g0e0g0m1r3f4c4h5[6a7^7mS'g#O'pj,a'b'c'd,c,f,h,l/m/n1_3n3q5UQ,m'jQ.u)uR8_6f`,b'b'c'd,c,f,h1_5UQ1e,lX3l/m/n3n3qj,a'b'c'd,c,f,h,l/m/n1_3n3q5UQ7j5TR8s7k^uO!O!P!T%_%b)i$`#afgilmp!Y!Z![!_!`#e#o#p#q#r#s#t#u#v#w#x#y#z#}$T$W&Y&['}(W(Y(|*i*l+n,s,z-m.}/^0}1h1|3a3h3k4W4v4|5g5t7S7g7{8k8|9u9v9w9x9z9{:O:P:Q:R:S:T:U:V:W:X:Y:Z:e:fQ6Z3_Q8U6]Q9Q8WQ9S8XQ9f9UR9l9hR(Q#zR(P#zQ$SlR(]$TR$ooR$noR)Q$vR)P$vQ)O$vR2O-ohwOb!O!P!T$y%_%b)S)U)i-t$l!lz!Q!n$O$u$|%f%n%o%p%q%y%{&P&o&p&r'](q)s)v)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8gR${xR0b+UR0W*xR0U*xR6{4PR/y*vR/x*vR0P*wR0O*wR0_+QR0^+Q%XyObxz!O!P!Q!T!n$O$u$y$|%_%b%f%n%o%p%q%y%{&P&o&p&r'](q)S)U)i)s)v)x)y*O*P*R*V*[*^*e*n*w*x+U+V+h+o+}-i-t-v.U.`.p.t.x.y/Z/[/{/}0`0r0w1O1Y1Z1y2a2h2j2m2s2v3V3u3{3|4R4U4_4e4t5`5d5v6R6Y6p6v6x7c7r8gR0k+ZR0j+ZQ'R!qQ)c%XQ+w&|R4y1PX'Q!q%X&|1PR+y&|R+x&|T/S*S4TT/R*S4TR.o)sR.n)sR){%p",
+  nodeNames: "\u26A0 | < > RawString Float LineComment BlockComment SourceFile ] InnerAttribute ! [ MetaItem self Metavariable super crate Identifier ScopedIdentifier :: QualifiedScope AbstractType impl SelfType MetaType TypeIdentifier ScopedTypeIdentifier ScopeIdentifier TypeArgList TypeBinding = Lifetime String Escape Char Boolean Integer } { Block ; ConstItem Vis pub ( in ) const BoundIdentifier : UnsafeBlock unsafe AsyncBlock async move IfExpression if LetDeclaration let LiteralPattern ArithOp MetaPattern SelfPattern ScopedIdentifier TuplePattern ScopedTypeIdentifier , StructPattern FieldPatternList FieldPattern ref mut FieldIdentifier .. RefPattern SlicePattern CapturedPattern ReferencePattern & MutPattern RangePattern ... OrPattern MacroPattern ParenthesizedTokens TokenBinding Identifier TokenRepetition ArithOp BitOp LogicOp UpdateOp CompareOp -> => ArithOp BracketedTokens BracedTokens _ else MatchExpression match MatchBlock MatchArm Attribute Guard UnaryExpression ArithOp DerefOp LogicOp ReferenceExpression TryExpression BinaryExpression ArithOp ArithOp BitOp BitOp BitOp BitOp LogicOp LogicOp AssignmentExpression TypeCastExpression as ReturnExpression return RangeExpression CallExpression ArgList AwaitExpression await FieldExpression GenericFunction BreakExpression break LoopLabel ContinueExpression continue IndexExpression ArrayExpression TupleExpression MacroInvocation UnitExpression ClosureExpression ParamList Parameter Parameter ParenthesizedExpression StructExpression FieldInitializerList ShorthandFieldInitializer FieldInitializer BaseFieldInitializer MatchArm WhileExpression while LoopExpression loop ForExpression for MacroInvocation MacroDefinition macro_rules MacroRule EmptyStatement ModItem mod DeclarationList AttributeItem ForeignModItem extern StructItem struct TypeParamList ConstrainedTypeParameter TraitBounds HigherRankedTraitBound RemovedTraitBound OptionalTypeParameter ConstParameter WhereClause where LifetimeClause TypeBoundClause FieldDeclarationList FieldDeclaration OrderedFieldDeclarationList UnionItem union EnumItem enum EnumVariantList EnumVariant TypeItem type FunctionItem default fn ParamList Parameter SelfParameter VariadicParameter VariadicParameter ImplItem TraitItem trait AssociatedType LetDeclaration UseDeclaration use ScopedIdentifier UseAsClause ScopedIdentifier UseList ScopedUseList UseWildcard ExternCrateDeclaration StaticItem static ExpressionStatement ExpressionStatement GenericType FunctionType ForLifetimes ParamList VariadicParameter Parameter VariadicParameter Parameter ReferenceType PointerType TupleType UnitType ArrayType MacroInvocation EmptyType DynamicType dyn BoundedType",
+  maxTerm: 359,
+  nodeProps: [
+    ["isolate", -4, 4, 6, 7, 33, ""],
+    ["group", -42, 4, 5, 14, 15, 16, 17, 18, 19, 33, 35, 36, 37, 40, 51, 53, 56, 101, 107, 111, 112, 113, 122, 123, 125, 127, 128, 130, 132, 133, 134, 137, 139, 140, 141, 142, 143, 144, 148, 149, 155, 157, 159, "Expression", -16, 22, 24, 25, 26, 27, 222, 223, 230, 231, 232, 233, 234, 235, 236, 237, 239, "Type", -20, 42, 161, 162, 165, 166, 169, 170, 172, 188, 190, 194, 196, 204, 205, 207, 208, 209, 217, 218, 220, "Statement", -17, 49, 60, 62, 63, 64, 65, 68, 74, 75, 76, 77, 78, 80, 81, 83, 84, 99, "Pattern"],
+    ["openedBy", 9, "[", 38, "{", 47, "("],
+    ["closedBy", 12, "]", 39, "}", 45, ")"]
+  ],
+  propSources: [rustHighlighting],
+  skippedNodes: [0, 6, 7, 240],
+  repeatNodeCount: 32,
+  tokenData: "$%h_R!XOX$nXY5gYZ6iZ]$n]^5g^p$npq5gqr7Xrs9cst:Rtu;Tuv>vvwAQwxCbxy!+Tyz!,Vz{!-X{|!/_|}!0g}!O!1i!O!P!3v!P!Q!8[!Q!R!Bw!R![!Dr![!]#+q!]!^#-{!^!_#.}!_!`#1b!`!a#3o!a!b#6S!b!c#7U!c!}#8W!}#O#:T#O#P#;V#P#Q#Cb#Q#R#Dd#R#S#8W#S#T$n#T#U#8W#U#V#El#V#f#8W#f#g#Ic#g#o#8W#o#p$ S#p#q$!U#q#r$$f#r${$n${$|#8W$|4w$n4w5b#8W5b5i$n5i6S#8W6S;'S$n;'S;=`4s<%lO$nU$u]'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$nU%uV'_Q'OSOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[S&aV'OSOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[S&yVOz'`z{&v{!P'`!P!Q*y!Q;'S'`;'S;=`*m<%lO'`S'cVOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[S'{UOz'`{!P'`!P!Q(_!Q;'S'`;'S;=`*m<%lO'`S(bUOz(t{!P(t!P!Q(_!Q;'S(t;'S;=`*a<%lO(tS(wVOz)^z{)z{!P)^!P!Q(_!Q;'S)^;'S;=`*g<%lO)^S)eV'PS'OSOz)^z{)z{!P)^!P!Q(_!Q;'S)^;'S;=`*g<%lO)^S)}UOz(tz{)z{!P(t!Q;'S(t;'S;=`*a<%lO(tS*dP;=`<%l(tS*jP;=`<%l)^S*pP;=`<%l'`S*vP;=`<%l&[S+OO'PSU+T]'_QOY+|YZ-xZr+|rs'`sz+|z{+O{!P+|!P!Q4y!Q#O+|#O#P'`#P;'S+|;'S;=`4m<%lO+|U,R]'_QOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$nU-P]'_QOY+|YZ-xZr+|rs'`sz+|z{.d{!P+|!P!Q/Z!Q#O+|#O#P'`#P;'S+|;'S;=`4m<%lO+|U-}V'_QOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[Q.iV'_QOY.dYZ/OZr.ds#O.d#P;'S.d;'S;=`/T<%lO.dQ/TO'_QQ/WP;=`<%l.dU/`]'_QOY0XYZ3uZr0Xrs(tsz0Xz{.d{!P0X!P!Q/Z!Q#O0X#O#P(t#P;'S0X;'S;=`4a<%lO0XU0^]'_QOY1VYZ2XZr1Vrs)^sz1Vz{2w{!P1V!P!Q/Z!Q#O1V#O#P)^#P;'S1V;'S;=`4g<%lO1VU1`]'_Q'PS'OSOY1VYZ2XZr1Vrs)^sz1Vz{2w{!P1V!P!Q/Z!Q#O1V#O#P)^#P;'S1V;'S;=`4g<%lO1VU2bV'_Q'PS'OSOz)^z{)z{!P)^!P!Q(_!Q;'S)^;'S;=`*g<%lO)^U2|]'_QOY0XYZ3uZr0Xrs(tsz0Xz{2w{!P0X!P!Q.d!Q#O0X#O#P(t#P;'S0X;'S;=`4a<%lO0XU3zV'_QOz)^z{)z{!P)^!P!Q(_!Q;'S)^;'S;=`*g<%lO)^U4dP;=`<%l0XU4jP;=`<%l1VU4pP;=`<%l+|U4vP;=`<%l$nU5QV'_Q'PSOY.dYZ/OZr.ds#O.d#P;'S.d;'S;=`/T<%lO.d_5p]'_Q&|X'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_6rV'_Q&|X'OSOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[_7b_ZX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`8a!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_8j]#PX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_9lV']Q'OS'^XOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[_:[]'QX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_;^i'_Q'vW'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!c$n!c!}<{!}#O$n#O#P&[#P#R$n#R#S<{#S#T$n#T#o<{#o${$n${$|<{$|4w$n4w5b<{5b5i$n5i6S<{6S;'S$n;'S;=`4s<%lO$n_=Uj'_Q_X'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![<{![!c$n!c!}<{!}#O$n#O#P&[#P#R$n#R#S<{#S#T$n#T#o<{#o${$n${$|<{$|4w$n4w5b<{5b5i$n5i6S<{6S;'S$n;'S;=`4s<%lO$n_?P_(TP'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`@O!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_@X]#OX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_AZa!qX'_Q'OSOY$nYZ%nZr$nrs&[sv$nvwB`wz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`@O!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_Bi]'}X'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_Cik'_Q'OSOYE^YZGfZrE^rsHvswE^wxFdxzE^z{Ih{!PE^!P!QKl!Q!cE^!c!}Lp!}#OE^#O#P!!l#P#RE^#R#SLp#S#TE^#T#oLp#o${E^${$|Lp$|4wE^4w5bLp5b5iE^5i6SLp6S;'SE^;'S;=`!*}<%lOE^_Ee_'_Q'OSOY$nYZ%nZr$nrs&[sw$nwxFdxz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_Fm]'_Q'OSsXOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_GmX'_Q'OSOw&[wxHYxz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[]HaV'OSsXOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[]H{X'OSOw&[wxHYxz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[_Im_'_QOY+|YZ-xZr+|rs'`sw+|wxJlxz+|z{+O{!P+|!P!Q4y!Q#O+|#O#P'`#P;'S+|;'S;=`4m<%lO+|_Js]'_QsXOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_Kq_'_QOY+|YZ-xZr+|rs'`sw+|wxJlxz+|z{.d{!P+|!P!Q/Z!Q#O+|#O#P'`#P;'S+|;'S;=`4m<%lO+|_Lyl'_Q'OS'ZXOY$nYZ%nZr$nrs&[sw$nwxFdxz$nz{+O{!P$n!P!Q,z!Q![Nq![!c$n!c!}Nq!}#O$n#O#P&[#P#R$n#R#SNq#S#T$n#T#oNq#o${$n${$|Nq$|4w$n4w5bNq5b5i$n5i6SNq6S;'S$n;'S;=`4s<%lO$n_Nzj'_Q'OS'ZXOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![Nq![!c$n!c!}Nq!}#O$n#O#P&[#P#R$n#R#SNq#S#T$n#T#oNq#o${$n${$|Nq$|4w$n4w5bNq5b5i$n5i6SNq6S;'S$n;'S;=`4s<%lO$n]!!qZ'OSOzHvz{!#d{!PHv!P!Q!$n!Q#iHv#i#j!%Z#j#lHv#l#m!'V#m;'SHv;'S;=`!*w<%lOHv]!#gXOw'`wx!$Sxz'`z{&v{!P'`!P!Q*y!Q;'S'`;'S;=`*m<%lO'`]!$XVsXOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[]!$qWOw'`wx!$Sxz'`{!P'`!P!Q(_!Q;'S'`;'S;=`*m<%lO'`]!%`^'OSOz&[z{&v{!P&[!P!Q'x!Q![!&[![!c&[!c!i!&[!i#T&[#T#Z!&[#Z#o&[#o#p!({#p;'S&[;'S;=`*s<%lO&[]!&a['OSOz&[z{&v{!P&[!P!Q'x!Q![!'V![!c&[!c!i!'V!i#T&[#T#Z!'V#Z;'S&[;'S;=`*s<%lO&[]!'[['OSOz&[z{&v{!P&[!P!Q'x!Q![!(Q![!c&[!c!i!(Q!i#T&[#T#Z!(Q#Z;'S&[;'S;=`*s<%lO&[]!(V['OSOz&[z{&v{!P&[!P!Q'x!Q![Hv![!c&[!c!iHv!i#T&[#T#ZHv#Z;'S&[;'S;=`*s<%lO&[]!)Q['OSOz&[z{&v{!P&[!P!Q'x!Q![!)v![!c&[!c!i!)v!i#T&[#T#Z!)v#Z;'S&[;'S;=`*s<%lO&[]!){^'OSOz&[z{&v{!P&[!P!Q'x!Q![!)v![!c&[!c!i!)v!i#T&[#T#Z!)v#Z#q&[#q#rHv#r;'S&[;'S;=`*s<%lO&[]!*zP;=`<%lHv_!+QP;=`<%lE^_!+^]}X'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!,`]!PX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!-`_(QX'_QOY+|YZ-xZr+|rs'`sz+|z{+O{!P+|!P!Q4y!Q!_+|!_!`!._!`#O+|#O#P'`#P;'S+|;'S;=`4m<%lO+|_!.f]#OX'_QOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!/h_(PX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`@O!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!0p]!eX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!1r`'gX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`@O!`!a!2t!a#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!2}]#QX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!4P^(OX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!O$n!O!P!4{!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!5U`!lX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!O$n!O!P!6W!P!Q,z!Q!_$n!_!`!7Y!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!6a]!tX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$nV!7c]'qP'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!8c_'_Q'xXOY+|YZ-xZr+|rs'`sz+|z{!9b{!P+|!P!Q!:O!Q!_+|!_!`!._!`#O+|#O#P'`#P;'S+|;'S;=`4m<%lO+|_!9iV&}]'_QOY.dYZ/OZr.ds#O.d#P;'S.d;'S;=`/T<%lO.d_!:V]'_QUXOY!;OYZ3uZr!;Ors!>jsz!;Oz{!Aq{!P!;O!P!Q!:O!Q#O!;O#O#P!>j#P;'S!;O;'S;=`!Bk<%lO!;O_!;V]'_QUXOY!<OYZ2XZr!<Ors!=Ssz!<Oz{!@q{!P!<O!P!Q!:O!Q#O!<O#O#P!=S#P;'S!<O;'S;=`!Bq<%lO!<O_!<Z]'_QUX'PS'OSOY!<OYZ2XZr!<Ors!=Ssz!<Oz{!@q{!P!<O!P!Q!:O!Q#O!<O#O#P!=S#P;'S!<O;'S;=`!Bq<%lO!<O]!=]XUX'PS'OSOY!=SYZ)^Zz!=Sz{!=x{!P!=S!P!Q!?[!Q;'S!=S;'S;=`!@k<%lO!=S]!=}XUXOY!>jYZ(tZz!>jz{!=x{!P!>j!P!Q!?|!Q;'S!>j;'S;=`!@e<%lO!>j]!>oXUXOY!=SYZ)^Zz!=Sz{!=x{!P!=S!P!Q!?[!Q;'S!=S;'S;=`!@k<%lO!=S]!?aXUXOY!>jYZ(tZz!>jz{!?|{!P!>j!P!Q!?[!Q;'S!>j;'S;=`!@e<%lO!>jX!@RSUXOY!?|Z;'S!?|;'S;=`!@_<%lO!?|X!@bP;=`<%l!?|]!@hP;=`<%l!>j]!@nP;=`<%l!=S_!@x]'_QUXOY!;OYZ3uZr!;Ors!>jsz!;Oz{!@q{!P!;O!P!Q!Aq!Q#O!;O#O#P!>j#P;'S!;O;'S;=`!Bk<%lO!;OZ!AxX'_QUXOY!AqYZ/OZr!Aqrs!?|s#O!Aq#O#P!?|#P;'S!Aq;'S;=`!Be<%lO!AqZ!BhP;=`<%l!Aq_!BnP;=`<%l!;O_!BtP;=`<%l!<O_!CQjuX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![!Dr![#O$n#O#P&[#P#R$n#R#S!Dr#S#U$n#U#V#!}#V#]$n#]#^!FZ#^#c$n#c#d#%u#d#i$n#i#j!FZ#j#l$n#l#m#(g#m;'S$n;'S;=`4s<%lO$n_!D{duX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![!Dr![#O$n#O#P&[#P#R$n#R#S!Dr#S#]$n#]#^!FZ#^#i$n#i#j!FZ#j;'S$n;'S;=`4s<%lO$n_!Fbg'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!R$n!R!S!Gy!S!T$n!T!U!K_!U!W$n!W!X!Le!X!Y$n!Y!Z!J]!Z#O$n#O#P&[#P#g$n#g#h!Mk#h;'S$n;'S;=`4s<%lO$n_!HQa'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!S$n!S!T!IV!T!W$n!W!X!J]!X#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!I^_'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!Y$n!Y!Z!J]!Z#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!Jf]uX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!Kf_'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!S$n!S!T!J]!T#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!Ll_'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!U$n!U!V!J]!V#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_!Mr_'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P#]$n#]#^!Nq#^;'S$n;'S;=`4s<%lO$n_!Nx_'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P#n$n#n#o# w#o;'S$n;'S;=`4s<%lO$n_#!O_'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P#X$n#X#Y!J]#Y;'S$n;'S;=`4s<%lO$n_##Ua'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!R#$Z!R!S#$Z!S#O$n#O#P&[#P#R$n#R#S#$Z#S;'S$n;'S;=`4s<%lO$n_#$deuX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!R#$Z!R!S#$Z!S#O$n#O#P&[#P#R$n#R#S#$Z#S#]$n#]#^!FZ#^#i$n#i#j!FZ#j;'S$n;'S;=`4s<%lO$n_#%|`'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!Y#'O!Y#O$n#O#P&[#P#R$n#R#S#'O#S;'S$n;'S;=`4s<%lO$n_#'XduX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!Y#'O!Y#O$n#O#P&[#P#R$n#R#S#'O#S#]$n#]#^!FZ#^#i$n#i#j!FZ#j;'S$n;'S;=`4s<%lO$n_#(nd'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![#)|![!c$n!c!i#)|!i#O$n#O#P&[#P#R$n#R#S#)|#S#T$n#T#Z#)|#Z;'S$n;'S;=`4s<%lO$n_#*VhuX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![#)|![!c$n!c!i#)|!i#O$n#O#P&[#P#R$n#R#S#)|#S#T$n#T#Z#)|#Z#]$n#]#^!FZ#^#i$n#i#j!FZ#j;'S$n;'S;=`4s<%lO$n_#+z_!SX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![$n![!]#,y!]#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#-S]dX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#.U]yX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#/W`#PX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!^$n!^!_#0Y!_!`8a!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#0c_'yX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`@O!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#1k`oX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`8a!`!a#2m!a#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#2v]#RX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#3x`#PX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`8a!`!a#4z!a#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#5T_'zX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`@O!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#6]](RX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$nV#7_]'pP'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#8cj'_Q'OS!yW'TPOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![#8W![!c$n!c!}#8W!}#O$n#O#P&[#P#R$n#R#S#8W#S#T$n#T#o#8W#o${$n${$|#8W$|4w$n4w5b#8W5b5i$n5i6S#8W6S;'S$n;'S;=`4s<%lO$n_#:^][X'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$nU#;[Z'OSOz#;}z{#<k{!P#;}!P!Q#=V!Q#i#;}#i#j#=n#j#l#;}#l#m#?j#m;'S#;};'S;=`#C[<%lO#;}U#<UVrQ'OSOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[U#<pVrQOz'`z{&v{!P'`!P!Q*y!Q;'S'`;'S;=`*m<%lO'`U#=[UrQOz'`{!P'`!P!Q(_!Q;'S'`;'S;=`*m<%lO'`U#=s^'OSOz&[z{&v{!P&[!P!Q'x!Q![#>o![!c&[!c!i#>o!i#T&[#T#Z#>o#Z#o&[#o#p#A`#p;'S&[;'S;=`*s<%lO&[U#>t['OSOz&[z{&v{!P&[!P!Q'x!Q![#?j![!c&[!c!i#?j!i#T&[#T#Z#?j#Z;'S&[;'S;=`*s<%lO&[U#?o['OSOz&[z{&v{!P&[!P!Q'x!Q![#@e![!c&[!c!i#@e!i#T&[#T#Z#@e#Z;'S&[;'S;=`*s<%lO&[U#@j['OSOz&[z{&v{!P&[!P!Q'x!Q![#;}![!c&[!c!i#;}!i#T&[#T#Z#;}#Z;'S&[;'S;=`*s<%lO&[U#Ae['OSOz&[z{&v{!P&[!P!Q'x!Q![#BZ![!c&[!c!i#BZ!i#T&[#T#Z#BZ#Z;'S&[;'S;=`*s<%lO&[U#B`^'OSOz&[z{&v{!P&[!P!Q'x!Q![#BZ![!c&[!c!i#BZ!i#T&[#T#Z#BZ#Z#q&[#q#r#;}#r;'S&[;'S;=`*s<%lO&[U#C_P;=`<%l#;}_#Ck]XX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#Dm_'{X'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`@O!`#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_#Ewl'_Q'OS!yW'TPOY$nYZ%nZr$nrs#Gosw$nwx#H]xz$nz{+O{!P$n!P!Q,z!Q![#8W![!c$n!c!}#8W!}#O$n#O#P&[#P#R$n#R#S#8W#S#T$n#T#o#8W#o${$n${$|#8W$|4w$n4w5b#8W5b5i$n5i6S#8W6S;'S$n;'S;=`4s<%lO$n]#GvV'OS'^XOz&[z{&v{!P&[!P!Q'x!Q;'S&[;'S;=`*s<%lO&[_#Hd_'_Q'OSOYE^YZGfZrE^rsHvswE^wxFdxzE^z{Ih{!PE^!P!QKl!Q#OE^#O#P!!l#P;'SE^;'S;=`!*}<%lOE^_#Ink'_Q'OS!yW'TPOY$nYZ%nZr$nrs&[st#Kctz$nz{+O{!P$n!P!Q,z!Q![#8W![!c$n!c!}#8W!}#O$n#O#P&[#P#R$n#R#S#8W#S#T$n#T#o#8W#o${$n${$|#8W$|4w$n4w5b#8W5b5i$n5i6S#8W6S;'S$n;'S;=`4s<%lO$nV#Kji'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!c$n!c!}#MX!}#O$n#O#P&[#P#R$n#R#S#MX#S#T$n#T#o#MX#o${$n${$|#MX$|4w$n4w5b#MX5b5i$n5i6S#MX6S;'S$n;'S;=`4s<%lO$nV#Mbj'_Q'OS'TPOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q![#MX![!c$n!c!}#MX!}#O$n#O#P&[#P#R$n#R#S#MX#S#T$n#T#o#MX#o${$n${$|#MX$|4w$n4w5b#MX5b5i$n5i6S#MX6S;'S$n;'S;=`4s<%lO$n_$ ]]wX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_$!_a'rX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q!_$n!_!`@O!`#O$n#O#P&[#P#p$n#p#q$#d#q;'S$n;'S;=`4s<%lO$n_$#m]'|X'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n_$$o]vX'_Q'OSOY$nYZ%nZr$nrs&[sz$nz{+O{!P$n!P!Q,z!Q#O$n#O#P&[#P;'S$n;'S;=`4s<%lO$n",
+  tokenizers: [closureParam, tpDelim, literalTokens, 0, 1, 2, 3],
+  topRules: { "SourceFile": [0, 8] },
+  specialized: [{ term: 281, get: (value) => spec_identifier3[value] || -1 }],
+  tokenPrec: 15596
+});
+
+// node_modules/@codemirror/lang-rust/dist/index.js
+var rustLanguage = /* @__PURE__ */ LRLanguage.define({
+  name: "rust",
+  parser: /* @__PURE__ */ parser3.configure({
+    props: [
+      /* @__PURE__ */ indentNodeProp.add({
+        IfExpression: /* @__PURE__ */ continuedIndent({ except: /^\s*({|else\b)/ }),
+        "String BlockComment": () => null,
+        "AttributeItem": (cx) => cx.continue(),
+        "Statement MatchArm": /* @__PURE__ */ continuedIndent()
+      }),
+      /* @__PURE__ */ foldNodeProp.add((type) => {
+        if (/(Block|edTokens|List)$/.test(type.name))
+          return foldInside;
+        if (type.name == "BlockComment")
+          return (tree) => ({ from: tree.from + 2, to: tree.to - 2 });
+        return void 0;
+      })
+    ]
+  }),
+  languageData: {
+    commentTokens: { line: "//", block: { open: "/*", close: "*/" } },
+    indentOnInput: /^\s*(?:\{|\})$/,
+    closeBrackets: { stringPrefixes: ["b", "r", "br"] }
+  }
+});
+function rust() {
+  return new LanguageSupport(rustLanguage);
+}
+
+// node_modules/@lezer/json/dist/index.js
+var jsonHighlighting = styleTags({
+  String: tags.string,
+  Number: tags.number,
+  "True False": tags.bool,
+  PropertyName: tags.propertyName,
+  Null: tags.null,
+  ", :": tags.separator,
+  "[ ]": tags.squareBracket,
+  "{ }": tags.brace
+});
+var parser4 = LRParser.deserialize({
+  version: 14,
+  states: "$bOVQPOOOOQO'#Cb'#CbOnQPO'#CeOvQPO'#ClOOQO'#Cr'#CrQOQPOOOOQO'#Cg'#CgO}QPO'#CfO!SQPO'#CtOOQO,59P,59PO![QPO,59PO!aQPO'#CuOOQO,59W,59WO!iQPO,59WOVQPO,59QOqQPO'#CmO!nQPO,59`OOQO1G.k1G.kOVQPO'#CnO!vQPO,59aOOQO1G.r1G.rOOQO1G.l1G.lOOQO,59X,59XOOQO-E6k-E6kOOQO,59Y,59YOOQO-E6l-E6l",
+  stateData: "#O~OeOS~OQSORSOSSOTSOWQO_ROgPO~OVXOgUO~O^[O~PVO[^O~O]_OVhX~OVaO~O]bO^iX~O^dO~O]_OVha~O]bO^ia~O",
+  goto: "!kjPPPPPPkPPkqwPPPPk{!RPPP!XP!e!hXSOR^bQWQRf_TVQ_Q`WRg`QcZRicQTOQZRQe^RhbRYQR]R",
+  nodeNames: "\u26A0 JsonText True False Null Number String } { Object Property PropertyName : , ] [ Array",
+  maxTerm: 25,
+  nodeProps: [
+    ["isolate", -2, 6, 11, ""],
+    ["openedBy", 7, "{", 14, "["],
+    ["closedBy", 8, "}", 15, "]"]
+  ],
+  propSources: [jsonHighlighting],
+  skippedNodes: [0],
+  repeatNodeCount: 2,
+  tokenData: "(|~RaXY!WYZ!W]^!Wpq!Wrs!]|}$u}!O$z!Q!R%T!R![&c![!]&t!}#O&y#P#Q'O#Y#Z'T#b#c'r#h#i(Z#o#p(r#q#r(w~!]Oe~~!`Wpq!]qr!]rs!xs#O!]#O#P!}#P;'S!];'S;=`$o<%lO!]~!}Og~~#QXrs!]!P!Q!]#O#P!]#U#V!]#Y#Z!]#b#c!]#f#g!]#h#i!]#i#j#m~#pR!Q![#y!c!i#y#T#Z#y~#|R!Q![$V!c!i$V#T#Z$V~$YR!Q![$c!c!i$c#T#Z$c~$fR!Q![!]!c!i!]#T#Z!]~$rP;=`<%l!]~$zO]~~$}Q!Q!R%T!R![&c~%YRT~!O!P%c!g!h%w#X#Y%w~%fP!Q![%i~%nRT~!Q![%i!g!h%w#X#Y%w~%zR{|&T}!O&T!Q![&Z~&WP!Q![&Z~&`PT~!Q![&Z~&hST~!O!P%c!Q![&c!g!h%w#X#Y%w~&yO[~~'OO_~~'TO^~~'WP#T#U'Z~'^P#`#a'a~'dP#g#h'g~'jP#X#Y'm~'rOR~~'uP#i#j'x~'{P#`#a(O~(RP#`#a(U~(ZOS~~(^P#f#g(a~(dP#i#j(g~(jP#X#Y(m~(rOQ~~(wOW~~(|OV~",
+  tokenizers: [0],
+  topRules: { "JsonText": [0, 1] },
+  tokenPrec: 0
+});
+
+// node_modules/@codemirror/lang-json/dist/index.js
+var jsonLanguage = /* @__PURE__ */ LRLanguage.define({
+  name: "json",
+  parser: /* @__PURE__ */ parser4.configure({
+    props: [
+      /* @__PURE__ */ indentNodeProp.add({
+        Object: /* @__PURE__ */ continuedIndent({ except: /^\s*\}/ }),
+        Array: /* @__PURE__ */ continuedIndent({ except: /^\s*\]/ })
+      }),
+      /* @__PURE__ */ foldNodeProp.add({
+        "Object Array": foldInside
+      })
+    ]
+  }),
+  languageData: {
+    closeBrackets: { brackets: ["[", "{", '"'] },
+    indentOnInput: /^\s*[\}\]]$/
+  }
+});
+function json() {
+  return new LanguageSupport(jsonLanguage);
+}
+
+// node_modules/@lezer/html/dist/index.js
+var scriptText = 55;
+var StartCloseScriptTag = 1;
+var styleText = 56;
+var StartCloseStyleTag = 2;
+var textareaText = 57;
+var StartCloseTextareaTag = 3;
+var EndTag = 4;
+var SelfClosingEndTag = 5;
+var StartTag = 6;
+var StartScriptTag = 7;
+var StartStyleTag = 8;
+var StartTextareaTag = 9;
+var StartSelfClosingTag = 10;
+var StartCloseTag = 11;
+var NoMatchStartCloseTag = 12;
+var MismatchedStartCloseTag = 13;
+var missingCloseTag = 58;
+var IncompleteTag = 14;
+var IncompleteCloseTag = 15;
+var commentContent$1 = 59;
+var Element = 21;
+var TagName = 23;
+var Attribute = 24;
+var AttributeName = 25;
+var AttributeValue = 27;
+var UnquotedAttributeValue = 28;
+var ScriptText = 29;
+var StyleText = 32;
+var TextareaText = 35;
+var OpenTag = 37;
+var CloseTag = 38;
+var Dialect_noMatch = 0;
+var Dialect_selfClosing = 1;
+var selfClosers = {
+  area: true,
+  base: true,
+  br: true,
+  col: true,
+  command: true,
+  embed: true,
+  frame: true,
+  hr: true,
+  img: true,
+  input: true,
+  keygen: true,
+  link: true,
+  meta: true,
+  param: true,
+  source: true,
+  track: true,
+  wbr: true,
+  menuitem: true
+};
+var implicitlyClosed = {
+  dd: true,
+  li: true,
+  optgroup: true,
+  option: true,
+  p: true,
+  rp: true,
+  rt: true,
+  tbody: true,
+  td: true,
+  tfoot: true,
+  th: true,
+  tr: true
+};
+var closeOnOpen = {
+  dd: { dd: true, dt: true },
+  dt: { dd: true, dt: true },
+  li: { li: true },
+  option: { option: true, optgroup: true },
+  optgroup: { optgroup: true },
+  p: {
+    address: true,
+    article: true,
+    aside: true,
+    blockquote: true,
+    dir: true,
+    div: true,
+    dl: true,
+    fieldset: true,
+    footer: true,
+    form: true,
+    h1: true,
+    h2: true,
+    h3: true,
+    h4: true,
+    h5: true,
+    h6: true,
+    header: true,
+    hgroup: true,
+    hr: true,
+    menu: true,
+    nav: true,
+    ol: true,
+    p: true,
+    pre: true,
+    section: true,
+    table: true,
+    ul: true
+  },
+  rp: { rp: true, rt: true },
+  rt: { rp: true, rt: true },
+  tbody: { tbody: true, tfoot: true },
+  td: { td: true, th: true },
+  tfoot: { tbody: true },
+  th: { td: true, th: true },
+  thead: { tbody: true, tfoot: true },
+  tr: { tr: true }
+};
+function nameChar(ch) {
+  return ch == 45 || ch == 46 || ch == 58 || ch >= 65 && ch <= 90 || ch == 95 || ch >= 97 && ch <= 122 || ch >= 161;
+}
+var cachedName = null;
+var cachedInput = null;
+var cachedPos = 0;
+function tagNameAfter(input, offset) {
+  let pos = input.pos + offset;
+  if (cachedPos == pos && cachedInput == input) return cachedName;
+  let next = input.peek(offset), name2 = "";
+  for (; ; ) {
+    if (!nameChar(next)) break;
+    name2 += String.fromCharCode(next);
+    next = input.peek(++offset);
+  }
+  cachedInput = input;
+  cachedPos = pos;
+  return cachedName = name2 ? name2.toLowerCase() : next == question2 || next == bang ? void 0 : null;
+}
+var lessThan = 60;
+var greaterThan = 62;
+var slash2 = 47;
+var question2 = 63;
+var bang = 33;
+var dash = 45;
+function ElementContext(name2, parent) {
+  this.name = name2;
+  this.parent = parent;
+}
+var startTagTerms = [StartTag, StartSelfClosingTag, StartScriptTag, StartStyleTag, StartTextareaTag];
+var elementContext = new ContextTracker({
+  start: null,
+  shift(context, term, stack, input) {
+    return startTagTerms.indexOf(term) > -1 ? new ElementContext(tagNameAfter(input, 1) || "", context) : context;
+  },
+  reduce(context, term) {
+    return term == Element && context ? context.parent : context;
+  },
+  reuse(context, node, stack, input) {
+    let type = node.type.id;
+    return type == StartTag || type == OpenTag ? new ElementContext(tagNameAfter(input, 1) || "", context) : context;
+  },
+  strict: false
+});
+var tagStart = new ExternalTokenizer((input, stack) => {
+  if (input.next != lessThan) {
+    if (input.next < 0 && stack.context) input.acceptToken(missingCloseTag);
+    return;
+  }
+  input.advance();
+  let close = input.next == slash2;
+  if (close) input.advance();
+  let name2 = tagNameAfter(input, 0);
+  if (name2 === void 0) return;
+  if (!name2) return input.acceptToken(close ? IncompleteCloseTag : IncompleteTag);
+  let parent = stack.context ? stack.context.name : null;
+  if (close) {
+    if (name2 == parent) return input.acceptToken(StartCloseTag);
+    if (parent && implicitlyClosed[parent]) return input.acceptToken(missingCloseTag, -2);
+    if (stack.dialectEnabled(Dialect_noMatch)) return input.acceptToken(NoMatchStartCloseTag);
+    for (let cx = stack.context; cx; cx = cx.parent) if (cx.name == name2) return;
+    input.acceptToken(MismatchedStartCloseTag);
+  } else {
+    if (name2 == "script") return input.acceptToken(StartScriptTag);
+    if (name2 == "style") return input.acceptToken(StartStyleTag);
+    if (name2 == "textarea") return input.acceptToken(StartTextareaTag);
+    if (selfClosers.hasOwnProperty(name2)) return input.acceptToken(StartSelfClosingTag);
+    if (parent && closeOnOpen[parent] && closeOnOpen[parent][name2]) input.acceptToken(missingCloseTag, -1);
+    else input.acceptToken(StartTag);
+  }
+}, { contextual: true });
+var commentContent = new ExternalTokenizer((input) => {
+  for (let dashes = 0, i = 0; ; i++) {
+    if (input.next < 0) {
+      if (i) input.acceptToken(commentContent$1);
+      break;
+    }
+    if (input.next == dash) {
+      dashes++;
+    } else if (input.next == greaterThan && dashes >= 2) {
+      if (i >= 3) input.acceptToken(commentContent$1, -2);
+      break;
+    } else {
+      dashes = 0;
+    }
+    input.advance();
+  }
+});
+function inForeignElement(context) {
+  for (; context; context = context.parent)
+    if (context.name == "svg" || context.name == "math") return true;
+  return false;
+}
+var endTag = new ExternalTokenizer((input, stack) => {
+  if (input.next == slash2 && input.peek(1) == greaterThan) {
+    let selfClosing = stack.dialectEnabled(Dialect_selfClosing) || inForeignElement(stack.context);
+    input.acceptToken(selfClosing ? SelfClosingEndTag : EndTag, 2);
+  } else if (input.next == greaterThan) {
+    input.acceptToken(EndTag, 1);
+  }
+});
+function contentTokenizer(tag, textToken, endToken) {
+  let lastState = 2 + tag.length;
+  return new ExternalTokenizer((input) => {
+    for (let state = 0, matchedLen = 0, i = 0; ; i++) {
+      if (input.next < 0) {
+        if (i) input.acceptToken(textToken);
+        break;
+      }
+      if (state == 0 && input.next == lessThan || state == 1 && input.next == slash2 || state >= 2 && state < lastState && input.next == tag.charCodeAt(state - 2)) {
+        state++;
+        matchedLen++;
+      } else if (state == lastState && input.next == greaterThan) {
+        if (i > matchedLen)
+          input.acceptToken(textToken, -matchedLen);
+        else
+          input.acceptToken(endToken, -(matchedLen - 2));
+        break;
+      } else if ((input.next == 10 || input.next == 13) && i) {
+        input.acceptToken(textToken, 1);
+        break;
+      } else {
+        state = matchedLen = 0;
+      }
+      input.advance();
+    }
+  });
+}
+var scriptTokens = contentTokenizer("script", scriptText, StartCloseScriptTag);
+var styleTokens = contentTokenizer("style", styleText, StartCloseStyleTag);
+var textareaTokens = contentTokenizer("textarea", textareaText, StartCloseTextareaTag);
+var htmlHighlighting = styleTags({
+  "Text RawText IncompleteTag IncompleteCloseTag": tags.content,
+  "StartTag StartCloseTag SelfClosingEndTag EndTag": tags.angleBracket,
+  TagName: tags.tagName,
+  "MismatchedCloseTag/TagName": [tags.tagName, tags.invalid],
+  AttributeName: tags.attributeName,
+  "AttributeValue UnquotedAttributeValue": tags.attributeValue,
+  Is: tags.definitionOperator,
+  "EntityReference CharacterReference": tags.character,
+  Comment: tags.blockComment,
+  ProcessingInst: tags.processingInstruction,
+  DoctypeDecl: tags.documentMeta
+});
+var parser5 = LRParser.deserialize({
+  version: 14,
+  states: ",xOVO!rOOO!ZQ#tO'#CrO!`Q#tO'#C{O!eQ#tO'#DOO!jQ#tO'#DRO!oQ#tO'#DTO!tOaO'#CqO#PObO'#CqO#[OdO'#CqO$kO!rO'#CqOOO`'#Cq'#CqO$rO$fO'#DUO$zQ#tO'#DWO%PQ#tO'#DXOOO`'#Dl'#DlOOO`'#DZ'#DZQVO!rOOO%UQ&rO,59^O%aQ&rO,59gO%lQ&rO,59jO%wQ&rO,59mO&SQ&rO,59oOOOa'#D_'#D_O&_OaO'#CyO&jOaO,59]OOOb'#D`'#D`O&rObO'#C|O&}ObO,59]OOOd'#Da'#DaO'VOdO'#DPO'bOdO,59]OOO`'#Db'#DbO'jO!rO,59]O'qQ#tO'#DSOOO`,59],59]OOOp'#Dc'#DcO'vO$fO,59pOOO`,59p,59pO(OQ#|O,59rO(TQ#|O,59sOOO`-E7X-E7XO(YQ&rO'#CtOOQW'#D['#D[O(hQ&rO1G.xOOOa1G.x1G.xOOO`1G/Z1G/ZO(sQ&rO1G/ROOOb1G/R1G/RO)OQ&rO1G/UOOOd1G/U1G/UO)ZQ&rO1G/XOOO`1G/X1G/XO)fQ&rO1G/ZOOOa-E7]-E7]O)qQ#tO'#CzOOO`1G.w1G.wOOOb-E7^-E7^O)vQ#tO'#C}OOOd-E7_-E7_O){Q#tO'#DQOOO`-E7`-E7`O*QQ#|O,59nOOOp-E7a-E7aOOO`1G/[1G/[OOO`1G/^1G/^OOO`1G/_1G/_O*VQ,UO,59`OOQW-E7Y-E7YOOOa7+$d7+$dOOO`7+$u7+$uOOOb7+$m7+$mOOOd7+$p7+$pOOO`7+$s7+$sO*bQ#|O,59fO*gQ#|O,59iO*lQ#|O,59lOOO`1G/Y1G/YO*qO7[O'#CwO+SOMhO'#CwOOQW1G.z1G.zOOO`1G/Q1G/QOOO`1G/T1G/TOOO`1G/W1G/WOOOO'#D]'#D]O+eO7[O,59cOOQW,59c,59cOOOO'#D^'#D^O+vOMhO,59cOOOO-E7Z-E7ZOOQW1G.}1G.}OOOO-E7[-E7[",
+  stateData: ",c~O!_OS~OUSOVPOWQOXROYTO[]O][O^^O_^Oa^Ob^Oc^Od^Oy^O|_O!eZO~OgaO~OgbO~OgcO~OgdO~OgeO~O!XfOPmP![mP~O!YiOQpP![pP~O!ZlORsP![sP~OUSOVPOWQOXROYTOZqO[]O][O^^O_^Oa^Ob^Oc^Od^Oy^O!eZO~O![rO~P#gO!]sO!fuO~OgvO~OgwO~OS|OT}OiyO~OS!POT}OiyO~OS!ROT}OiyO~OS!TOT}OiyO~OS}OT}OiyO~O!XfOPmX![mX~OP!WO![!XO~O!YiOQpX![pX~OQ!ZO![!XO~O!ZlORsX![sX~OR!]O![!XO~O![!XO~P#gOg!_O~O!]sO!f!aO~OS!bO~OS!cO~Oj!dOShXThXihX~OS!fOT!gOiyO~OS!hOT!gOiyO~OS!iOT!gOiyO~OS!jOT!gOiyO~OS!gOT!gOiyO~Og!kO~Og!lO~Og!mO~OS!nO~Ol!qO!a!oO!c!pO~OS!rO~OS!sO~OS!tO~Ob!uOc!uOd!uO!a!wO!b!uO~Ob!xOc!xOd!xO!c!wO!d!xO~Ob!uOc!uOd!uO!a!{O!b!uO~Ob!xOc!xOd!xO!c!{O!d!xO~OT~cbd!ey|!e~",
+  goto: "%q!aPPPPPPPPPPPPPPPPPPPPP!b!hP!nPP!zP!}#Q#T#Z#^#a#g#j#m#s#y!bP!b!bP$P$V$m$s$y%P%V%]%cPPPPPPPP%iX^OX`pXUOX`pezabcde{!O!Q!S!UR!q!dRhUR!XhXVOX`pRkVR!XkXWOX`pRnWR!XnXXOX`pQrXR!XpXYOX`pQ`ORx`Q{aQ!ObQ!QcQ!SdQ!UeZ!e{!O!Q!S!UQ!v!oR!z!vQ!y!pR!|!yQgUR!VgQjVR!YjQmWR![mQpXR!^pQtZR!`tS_O`ToXp",
+  nodeNames: "\u26A0 StartCloseTag StartCloseTag StartCloseTag EndTag SelfClosingEndTag StartTag StartTag StartTag StartTag StartTag StartCloseTag StartCloseTag StartCloseTag IncompleteTag IncompleteCloseTag Document Text EntityReference CharacterReference InvalidEntity Element OpenTag TagName Attribute AttributeName Is AttributeValue UnquotedAttributeValue ScriptText CloseTag OpenTag StyleText CloseTag OpenTag TextareaText CloseTag OpenTag CloseTag SelfClosingTag Comment ProcessingInst MismatchedCloseTag CloseTag DoctypeDecl",
+  maxTerm: 68,
+  context: elementContext,
+  nodeProps: [
+    ["closedBy", -10, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, "EndTag", 6, "EndTag SelfClosingEndTag", -4, 22, 31, 34, 37, "CloseTag"],
+    ["openedBy", 4, "StartTag StartCloseTag", 5, "StartTag", -4, 30, 33, 36, 38, "OpenTag"],
+    ["group", -10, 14, 15, 18, 19, 20, 21, 40, 41, 42, 43, "Entity", 17, "Entity TextContent", -3, 29, 32, 35, "TextContent Entity"],
+    ["isolate", -11, 22, 30, 31, 33, 34, 36, 37, 38, 39, 42, 43, "ltr", -3, 27, 28, 40, ""]
+  ],
+  propSources: [htmlHighlighting],
+  skippedNodes: [0],
+  repeatNodeCount: 9,
+  tokenData: "!<p!aR!YOX$qXY,QYZ,QZ[$q[]&X]^,Q^p$qpq,Qqr-_rs3_sv-_vw3}wxHYx}-_}!OH{!O!P-_!P!Q$q!Q![-_![!]Mz!]!^-_!^!_!$S!_!`!;x!`!a&X!a!c-_!c!}Mz!}#R-_#R#SMz#S#T1k#T#oMz#o#s-_#s$f$q$f%W-_%W%oMz%o%p-_%p&aMz&a&b-_&b1pMz1p4U-_4U4dMz4d4e-_4e$ISMz$IS$I`-_$I`$IbMz$Ib$Kh-_$Kh%#tMz%#t&/x-_&/x&EtMz&Et&FV-_&FV;'SMz;'S;:j!#|;:j;=`3X<%l?&r-_?&r?AhMz?Ah?BY$q?BY?MnMz?MnO$q!Z$|caPlW!b`!dpOX$qXZ&XZ[$q[^&X^p$qpq&Xqr$qrs&}sv$qvw+Pwx(tx!^$q!^!_*V!_!a&X!a#S$q#S#T&X#T;'S$q;'S;=`+z<%lO$q!R&bXaP!b`!dpOr&Xrs&}sv&Xwx(tx!^&X!^!_*V!_;'S&X;'S;=`*y<%lO&Xq'UVaP!dpOv&}wx'kx!^&}!^!_(V!_;'S&};'S;=`(n<%lO&}P'pTaPOv'kw!^'k!_;'S'k;'S;=`(P<%lO'kP(SP;=`<%l'kp([S!dpOv(Vx;'S(V;'S;=`(h<%lO(Vp(kP;=`<%l(Vq(qP;=`<%l&}a({WaP!b`Or(trs'ksv(tw!^(t!^!_)e!_;'S(t;'S;=`*P<%lO(t`)jT!b`Or)esv)ew;'S)e;'S;=`)y<%lO)e`)|P;=`<%l)ea*SP;=`<%l(t!Q*^V!b`!dpOr*Vrs(Vsv*Vwx)ex;'S*V;'S;=`*s<%lO*V!Q*vP;=`<%l*V!R*|P;=`<%l&XW+UYlWOX+PZ[+P^p+Pqr+Psw+Px!^+P!a#S+P#T;'S+P;'S;=`+t<%lO+PW+wP;=`<%l+P!Z+}P;=`<%l$q!a,]`aP!b`!dp!_^OX&XXY,QYZ,QZ]&X]^,Q^p&Xpq,Qqr&Xrs&}sv&Xwx(tx!^&X!^!_*V!_;'S&X;'S;=`*y<%lO&X!_-ljiSaPlW!b`!dpOX$qXZ&XZ[$q[^&X^p$qpq&Xqr-_rs&}sv-_vw/^wx(tx!P-_!P!Q$q!Q!^-_!^!_*V!_!a&X!a#S-_#S#T1k#T#s-_#s$f$q$f;'S-_;'S;=`3X<%l?Ah-_?Ah?BY$q?BY?Mn-_?MnO$q[/ebiSlWOX+PZ[+P^p+Pqr/^sw/^x!P/^!P!Q+P!Q!^/^!a#S/^#S#T0m#T#s/^#s$f+P$f;'S/^;'S;=`1e<%l?Ah/^?Ah?BY+P?BY?Mn/^?MnO+PS0rXiSqr0msw0mx!P0m!Q!^0m!a#s0m$f;'S0m;'S;=`1_<%l?Ah0m?BY?Mn0mS1bP;=`<%l0m[1hP;=`<%l/^!V1vciSaP!b`!dpOq&Xqr1krs&}sv1kvw0mwx(tx!P1k!P!Q&X!Q!^1k!^!_*V!_!a&X!a#s1k#s$f&X$f;'S1k;'S;=`3R<%l?Ah1k?Ah?BY&X?BY?Mn1k?MnO&X!V3UP;=`<%l1k!_3[P;=`<%l-_!Z3hV!ahaP!dpOv&}wx'kx!^&}!^!_(V!_;'S&};'S;=`(n<%lO&}!_4WiiSlWd!ROX5uXZ7SZ[5u[^7S^p5uqr8trs7Sst>]tw8twx7Sx!P8t!P!Q5u!Q!]8t!]!^/^!^!a7S!a#S8t#S#T;{#T#s8t#s$f5u$f;'S8t;'S;=`>V<%l?Ah8t?Ah?BY5u?BY?Mn8t?MnO5u!Z5zblWOX5uXZ7SZ[5u[^7S^p5uqr5urs7Sst+Ptw5uwx7Sx!]5u!]!^7w!^!a7S!a#S5u#S#T7S#T;'S5u;'S;=`8n<%lO5u!R7VVOp7Sqs7St!]7S!]!^7l!^;'S7S;'S;=`7q<%lO7S!R7qOb!R!R7tP;=`<%l7S!Z8OYlWb!ROX+PZ[+P^p+Pqr+Psw+Px!^+P!a#S+P#T;'S+P;'S;=`+t<%lO+P!Z8qP;=`<%l5u!_8{iiSlWOX5uXZ7SZ[5u[^7S^p5uqr8trs7Sst/^tw8twx7Sx!P8t!P!Q5u!Q!]8t!]!^:j!^!a7S!a#S8t#S#T;{#T#s8t#s$f5u$f;'S8t;'S;=`>V<%l?Ah8t?Ah?BY5u?BY?Mn8t?MnO5u!_:sbiSlWb!ROX+PZ[+P^p+Pqr/^sw/^x!P/^!P!Q+P!Q!^/^!a#S/^#S#T0m#T#s/^#s$f+P$f;'S/^;'S;=`1e<%l?Ah/^?Ah?BY+P?BY?Mn/^?MnO+P!V<QciSOp7Sqr;{rs7Sst0mtw;{wx7Sx!P;{!P!Q7S!Q!];{!]!^=]!^!a7S!a#s;{#s$f7S$f;'S;{;'S;=`>P<%l?Ah;{?Ah?BY7S?BY?Mn;{?MnO7S!V=dXiSb!Rqr0msw0mx!P0m!Q!^0m!a#s0m$f;'S0m;'S;=`1_<%l?Ah0m?BY?Mn0m!V>SP;=`<%l;{!_>YP;=`<%l8t!_>dhiSlWOX@OXZAYZ[@O[^AY^p@OqrBwrsAYswBwwxAYx!PBw!P!Q@O!Q!]Bw!]!^/^!^!aAY!a#SBw#S#TE{#T#sBw#s$f@O$f;'SBw;'S;=`HS<%l?AhBw?Ah?BY@O?BY?MnBw?MnO@O!Z@TalWOX@OXZAYZ[@O[^AY^p@Oqr@OrsAYsw@OwxAYx!]@O!]!^Az!^!aAY!a#S@O#S#TAY#T;'S@O;'S;=`Bq<%lO@O!RA]UOpAYq!]AY!]!^Ao!^;'SAY;'S;=`At<%lOAY!RAtOc!R!RAwP;=`<%lAY!ZBRYlWc!ROX+PZ[+P^p+Pqr+Psw+Px!^+P!a#S+P#T;'S+P;'S;=`+t<%lO+P!ZBtP;=`<%l@O!_COhiSlWOX@OXZAYZ[@O[^AY^p@OqrBwrsAYswBwwxAYx!PBw!P!Q@O!Q!]Bw!]!^Dj!^!aAY!a#SBw#S#TE{#T#sBw#s$f@O$f;'SBw;'S;=`HS<%l?AhBw?Ah?BY@O?BY?MnBw?MnO@O!_DsbiSlWc!ROX+PZ[+P^p+Pqr/^sw/^x!P/^!P!Q+P!Q!^/^!a#S/^#S#T0m#T#s/^#s$f+P$f;'S/^;'S;=`1e<%l?Ah/^?Ah?BY+P?BY?Mn/^?MnO+P!VFQbiSOpAYqrE{rsAYswE{wxAYx!PE{!P!QAY!Q!]E{!]!^GY!^!aAY!a#sE{#s$fAY$f;'SE{;'S;=`G|<%l?AhE{?Ah?BYAY?BY?MnE{?MnOAY!VGaXiSc!Rqr0msw0mx!P0m!Q!^0m!a#s0m$f;'S0m;'S;=`1_<%l?Ah0m?BY?Mn0m!VHPP;=`<%lE{!_HVP;=`<%lBw!ZHcW!cxaP!b`Or(trs'ksv(tw!^(t!^!_)e!_;'S(t;'S;=`*P<%lO(t!aIYliSaPlW!b`!dpOX$qXZ&XZ[$q[^&X^p$qpq&Xqr-_rs&}sv-_vw/^wx(tx}-_}!OKQ!O!P-_!P!Q$q!Q!^-_!^!_*V!_!a&X!a#S-_#S#T1k#T#s-_#s$f$q$f;'S-_;'S;=`3X<%l?Ah-_?Ah?BY$q?BY?Mn-_?MnO$q!aK_kiSaPlW!b`!dpOX$qXZ&XZ[$q[^&X^p$qpq&Xqr-_rs&}sv-_vw/^wx(tx!P-_!P!Q$q!Q!^-_!^!_*V!_!`&X!`!aMS!a#S-_#S#T1k#T#s-_#s$f$q$f;'S-_;'S;=`3X<%l?Ah-_?Ah?BY$q?BY?Mn-_?MnO$q!TM_XaP!b`!dp!fQOr&Xrs&}sv&Xwx(tx!^&X!^!_*V!_;'S&X;'S;=`*y<%lO&X!aNZ!ZiSgQaPlW!b`!dpOX$qXZ&XZ[$q[^&X^p$qpq&Xqr-_rs&}sv-_vw/^wx(tx}-_}!OMz!O!PMz!P!Q$q!Q![Mz![!]Mz!]!^-_!^!_*V!_!a&X!a!c-_!c!}Mz!}#R-_#R#SMz#S#T1k#T#oMz#o#s-_#s$f$q$f$}-_$}%OMz%O%W-_%W%oMz%o%p-_%p&aMz&a&b-_&b1pMz1p4UMz4U4dMz4d4e-_4e$ISMz$IS$I`-_$I`$IbMz$Ib$Je-_$Je$JgMz$Jg$Kh-_$Kh%#tMz%#t&/x-_&/x&EtMz&Et&FV-_&FV;'SMz;'S;:j!#|;:j;=`3X<%l?&r-_?&r?AhMz?Ah?BY$q?BY?MnMz?MnO$q!a!$PP;=`<%lMz!R!$ZY!b`!dpOq*Vqr!$yrs(Vsv*Vwx)ex!a*V!a!b!4t!b;'S*V;'S;=`*s<%lO*V!R!%Q]!b`!dpOr*Vrs(Vsv*Vwx)ex}*V}!O!%y!O!f*V!f!g!']!g#W*V#W#X!0`#X;'S*V;'S;=`*s<%lO*V!R!&QX!b`!dpOr*Vrs(Vsv*Vwx)ex}*V}!O!&m!O;'S*V;'S;=`*s<%lO*V!R!&vV!b`!dp!ePOr*Vrs(Vsv*Vwx)ex;'S*V;'S;=`*s<%lO*V!R!'dX!b`!dpOr*Vrs(Vsv*Vwx)ex!q*V!q!r!(P!r;'S*V;'S;=`*s<%lO*V!R!(WX!b`!dpOr*Vrs(Vsv*Vwx)ex!e*V!e!f!(s!f;'S*V;'S;=`*s<%lO*V!R!(zX!b`!dpOr*Vrs(Vsv*Vwx)ex!v*V!v!w!)g!w;'S*V;'S;=`*s<%lO*V!R!)nX!b`!dpOr*Vrs(Vsv*Vwx)ex!{*V!{!|!*Z!|;'S*V;'S;=`*s<%lO*V!R!*bX!b`!dpOr*Vrs(Vsv*Vwx)ex!r*V!r!s!*}!s;'S*V;'S;=`*s<%lO*V!R!+UX!b`!dpOr*Vrs(Vsv*Vwx)ex!g*V!g!h!+q!h;'S*V;'S;=`*s<%lO*V!R!+xY!b`!dpOr!+qrs!,hsv!+qvw!-Swx!.[x!`!+q!`!a!/j!a;'S!+q;'S;=`!0Y<%lO!+qq!,mV!dpOv!,hvx!-Sx!`!,h!`!a!-q!a;'S!,h;'S;=`!.U<%lO!,hP!-VTO!`!-S!`!a!-f!a;'S!-S;'S;=`!-k<%lO!-SP!-kO|PP!-nP;=`<%l!-Sq!-xS!dp|POv(Vx;'S(V;'S;=`(h<%lO(Vq!.XP;=`<%l!,ha!.aX!b`Or!.[rs!-Ssv!.[vw!-Sw!`!.[!`!a!.|!a;'S!.[;'S;=`!/d<%lO!.[a!/TT!b`|POr)esv)ew;'S)e;'S;=`)y<%lO)ea!/gP;=`<%l!.[!R!/sV!b`!dp|POr*Vrs(Vsv*Vwx)ex;'S*V;'S;=`*s<%lO*V!R!0]P;=`<%l!+q!R!0gX!b`!dpOr*Vrs(Vsv*Vwx)ex#c*V#c#d!1S#d;'S*V;'S;=`*s<%lO*V!R!1ZX!b`!dpOr*Vrs(Vsv*Vwx)ex#V*V#V#W!1v#W;'S*V;'S;=`*s<%lO*V!R!1}X!b`!dpOr*Vrs(Vsv*Vwx)ex#h*V#h#i!2j#i;'S*V;'S;=`*s<%lO*V!R!2qX!b`!dpOr*Vrs(Vsv*Vwx)ex#m*V#m#n!3^#n;'S*V;'S;=`*s<%lO*V!R!3eX!b`!dpOr*Vrs(Vsv*Vwx)ex#d*V#d#e!4Q#e;'S*V;'S;=`*s<%lO*V!R!4XX!b`!dpOr*Vrs(Vsv*Vwx)ex#X*V#X#Y!+q#Y;'S*V;'S;=`*s<%lO*V!R!4{Y!b`!dpOr!4trs!5ksv!4tvw!6Vwx!8]x!a!4t!a!b!:]!b;'S!4t;'S;=`!;r<%lO!4tq!5pV!dpOv!5kvx!6Vx!a!5k!a!b!7W!b;'S!5k;'S;=`!8V<%lO!5kP!6YTO!a!6V!a!b!6i!b;'S!6V;'S;=`!7Q<%lO!6VP!6lTO!`!6V!`!a!6{!a;'S!6V;'S;=`!7Q<%lO!6VP!7QOyPP!7TP;=`<%l!6Vq!7]V!dpOv!5kvx!6Vx!`!5k!`!a!7r!a;'S!5k;'S;=`!8V<%lO!5kq!7yS!dpyPOv(Vx;'S(V;'S;=`(h<%lO(Vq!8YP;=`<%l!5ka!8bX!b`Or!8]rs!6Vsv!8]vw!6Vw!a!8]!a!b!8}!b;'S!8];'S;=`!:V<%lO!8]a!9SX!b`Or!8]rs!6Vsv!8]vw!6Vw!`!8]!`!a!9o!a;'S!8];'S;=`!:V<%lO!8]a!9vT!b`yPOr)esv)ew;'S)e;'S;=`)y<%lO)ea!:YP;=`<%l!8]!R!:dY!b`!dpOr!4trs!5ksv!4tvw!6Vwx!8]x!`!4t!`!a!;S!a;'S!4t;'S;=`!;r<%lO!4t!R!;]V!b`!dpyPOr*Vrs(Vsv*Vwx)ex;'S*V;'S;=`*s<%lO*V!R!;uP;=`<%l!4t!V!<TXjSaP!b`!dpOr&Xrs&}sv&Xwx(tx!^&X!^!_*V!_;'S&X;'S;=`*y<%lO&X",
+  tokenizers: [scriptTokens, styleTokens, textareaTokens, endTag, tagStart, commentContent, 0, 1, 2, 3, 4, 5],
+  topRules: { "Document": [0, 16] },
+  dialects: { noMatch: 0, selfClosing: 515 },
+  tokenPrec: 517
+});
+function getAttrs2(openTag, input) {
+  let attrs = /* @__PURE__ */ Object.create(null);
+  for (let att of openTag.getChildren(Attribute)) {
+    let name2 = att.getChild(AttributeName), value = att.getChild(AttributeValue) || att.getChild(UnquotedAttributeValue);
+    if (name2) attrs[input.read(name2.from, name2.to)] = !value ? "" : value.type.id == AttributeValue ? input.read(value.from + 1, value.to - 1) : input.read(value.from, value.to);
+  }
+  return attrs;
+}
+function findTagName(openTag, input) {
+  let tagNameNode = openTag.getChild(TagName);
+  return tagNameNode ? input.read(tagNameNode.from, tagNameNode.to) : " ";
+}
+function maybeNest(node, input, tags3) {
+  let attrs;
+  for (let tag of tags3) {
+    if (!tag.attrs || tag.attrs(attrs || (attrs = getAttrs2(node.node.parent.firstChild, input))))
+      return { parser: tag.parser, bracketed: true };
+  }
+  return null;
+}
+function configureNesting(tags3 = [], attributes = []) {
+  let script = [], style = [], textarea = [], other = [];
+  for (let tag of tags3) {
+    let array = tag.tag == "script" ? script : tag.tag == "style" ? style : tag.tag == "textarea" ? textarea : other;
+    array.push(tag);
+  }
+  let attrs = attributes.length ? /* @__PURE__ */ Object.create(null) : null;
+  for (let attr of attributes) (attrs[attr.name] || (attrs[attr.name] = [])).push(attr);
+  return parseMixed((node, input) => {
+    let id2 = node.type.id;
+    if (id2 == ScriptText) return maybeNest(node, input, script);
+    if (id2 == StyleText) return maybeNest(node, input, style);
+    if (id2 == TextareaText) return maybeNest(node, input, textarea);
+    if (id2 == Element && other.length) {
+      let n = node.node, open = n.firstChild, tagName = open && findTagName(open, input), attrs2;
+      if (tagName) for (let tag of other) {
+        if (tag.tag == tagName && (!tag.attrs || tag.attrs(attrs2 || (attrs2 = getAttrs2(open, input))))) {
+          let close = n.lastChild;
+          let to = close.type.id == CloseTag ? close.from : n.to;
+          if (to > open.to)
+            return { parser: tag.parser, overlay: [{ from: open.to, to }] };
+        }
+      }
+    }
+    if (attrs && id2 == Attribute) {
+      let n = node.node, nameNode;
+      if (nameNode = n.firstChild) {
+        let matches = attrs[input.read(nameNode.from, nameNode.to)];
+        if (matches) for (let attr of matches) {
+          if (attr.tagName && attr.tagName != findTagName(n.parent, input)) continue;
+          let value = n.lastChild;
+          if (value.type.id == AttributeValue) {
+            let from = value.from + 1;
+            let last = value.lastChild, to = value.to - (last && last.isError ? 0 : 1);
+            if (to > from) return { parser: attr.parser, overlay: [{ from, to }], bracketed: true };
+          } else if (value.type.id == UnquotedAttributeValue) {
+            return { parser: attr.parser, overlay: [{ from: value.from, to: value.to }] };
+          }
+        }
+      }
+    }
+    return null;
+  });
+}
+
+// node_modules/@lezer/css/dist/index.js
+var descendantOp = 145;
+var Unit = 1;
+var identifier = 146;
+var callee = 147;
+var VariableName = 2;
+var queryIdentifier = 148;
+var queryVariableName = 3;
+var QueryCallee = 4;
+var space3 = [
+  9,
+  10,
+  11,
+  12,
+  13,
+  32,
+  133,
+  160,
+  5760,
+  8192,
+  8193,
+  8194,
+  8195,
+  8196,
+  8197,
+  8198,
+  8199,
+  8200,
+  8201,
+  8202,
+  8232,
+  8233,
+  8239,
+  8287,
+  12288
+];
+var colon = 58;
+var parenL = 40;
+var underscore = 95;
+var bracketL2 = 91;
+var dash2 = 45;
+var period = 46;
+var hash2 = 35;
+var percent = 37;
+var ampersand = 38;
+var backslash2 = 92;
+var newline3 = 10;
+var asterisk = 42;
+function isAlpha(ch) {
+  return ch >= 65 && ch <= 90 || ch >= 97 && ch <= 122 || ch >= 161;
+}
+function isDigit(ch) {
+  return ch >= 48 && ch <= 57;
+}
+function isHex2(ch) {
+  return isDigit(ch) || ch >= 97 && ch <= 102 || ch >= 65 && ch <= 70;
+}
+var identifierTokens = (id2, varName, callee2) => (input, stack) => {
+  for (let inside = false, dashes = 0, i = 0; ; i++) {
+    let { next } = input;
+    if (isAlpha(next) || next == dash2 || next == underscore || inside && isDigit(next)) {
+      if (!inside && (next != dash2 || i > 0)) inside = true;
+      if (dashes === i && next == dash2) dashes++;
+      input.advance();
+    } else if (next == backslash2 && input.peek(1) != newline3) {
+      input.advance();
+      if (isHex2(input.next)) {
+        do {
+          input.advance();
+        } while (isHex2(input.next));
+        if (input.next == 32) input.advance();
+      } else if (input.next > -1) {
+        input.advance();
+      }
+      inside = true;
+    } else {
+      if (inside) input.acceptToken(
+        dashes == 2 && stack.canShift(VariableName) ? varName : next == parenL ? callee2 : id2
+      );
+      break;
+    }
+  }
+};
+var identifiers = new ExternalTokenizer(
+  identifierTokens(identifier, VariableName, callee),
+  { contextual: true }
+);
+var queryIdentifiers = new ExternalTokenizer(
+  identifierTokens(queryIdentifier, queryVariableName, QueryCallee),
+  { contextual: true }
+);
+var descendant = new ExternalTokenizer((input) => {
+  if (space3.includes(input.peek(-1))) {
+    let { next } = input;
+    if (isAlpha(next) || next == underscore || next == hash2 || next == period || next == asterisk || next == bracketL2 || next == colon && isAlpha(input.peek(1)) || next == dash2 || next == ampersand)
+      input.acceptToken(descendantOp);
+  }
+});
+var unitToken = new ExternalTokenizer((input) => {
+  if (!space3.includes(input.peek(-1))) {
+    let { next } = input;
+    if (next == percent) {
+      input.advance();
+      input.acceptToken(Unit);
+    }
+    if (isAlpha(next)) {
+      do {
+        input.advance();
+      } while (isAlpha(input.next) || isDigit(input.next));
+      input.acceptToken(Unit);
+    }
+  }
+});
+var cssHighlighting = styleTags({
+  "AtKeyword import charset namespace keyframes media supports font-feature-values": tags.definitionKeyword,
+  "from to selector scope MatchFlag": tags.keyword,
+  NamespaceName: tags.namespace,
+  KeyframeName: tags.labelName,
+  KeyframeRangeName: tags.operatorKeyword,
+  TagName: tags.tagName,
+  ClassName: tags.className,
+  PseudoClassName: tags.constant(tags.className),
+  IdName: tags.labelName,
+  "FeatureName PropertyName": tags.propertyName,
+  AttributeName: tags.attributeName,
+  NumberLiteral: tags.number,
+  KeywordQuery: tags.keyword,
+  UnaryQueryOp: tags.operatorKeyword,
+  "CallTag ValueName FontName": tags.atom,
+  VariableName: tags.variableName,
+  Callee: tags.operatorKeyword,
+  Unit: tags.unit,
+  "UniversalSelector NestingSelector": tags.definitionOperator,
+  "MatchOp CompareOp": tags.compareOperator,
+  "ChildOp SiblingOp, LogicOp": tags.logicOperator,
+  BinOp: tags.arithmeticOperator,
+  Important: tags.modifier,
+  Comment: tags.blockComment,
+  ColorLiteral: tags.color,
+  "ParenthesizedContent StringLiteral": tags.string,
+  ":": tags.punctuation,
+  "PseudoOp #": tags.derefOperator,
+  "; , |": tags.separator,
+  "( )": tags.paren,
+  "[ ]": tags.squareBracket,
+  "{ }": tags.brace
+});
+var spec_callee = { __proto__: null, lang: 44, "nth-child": 44, "nth-last-child": 44, "nth-of-type": 44, "nth-last-of-type": 44, dir: 44, "host-context": 44, if: 90, url: 152, "url-prefix": 152, domain: 152, regexp: 152 };
+var spec_queryIdentifier = { __proto__: null, or: 104, and: 104, not: 112, only: 112, layer: 206 };
+var spec_QueryCallee = { __proto__: null, selector: 118, style: 124, layer: 202 };
+var spec_AtKeyword = { __proto__: null, "@import": 198, "@media": 210, "@charset": 214, "@namespace": 218, "@keyframes": 224, "@supports": 236, "@scope": 240, "@font-feature-values": 246 };
+var spec_identifier4 = { __proto__: null, to: 243 };
+var parser6 = LRParser.deserialize({
+  version: 14,
+  states: "MlQYQdOOO#}QdOOP$UO`OOO%OQaO'#CfOOQP'#Ce'#CeO%VQdO'#CgO%[Q`O'#CgO%aQaO'#FnO&XQdO'#CkO&xQaO'#CcO'SQdO'#CnO'_QdO'#EOO'dQdO'#EQO'oQdO'#EXO'oQdO'#E[OOQP'#Fn'#FnO)RQhO'#E}OOQS'#Fm'#FmOOQS'#FQ'#FQQYQdOOO)YQdO'#EbO*iQhO'#EhO)YQdO'#EjO*pQdO'#ElO*{QdO'#EoO)}QhO'#EuO+TQdO'#EwO+`QdO'#EzO+eQaO'#CfO+lQ`O'#E_O+qQ`O'#F{O+|QdO'#F{QOQ`OOP,WO&jO'#CaPOOO)CA])CA]OOQP'#Ci'#CiOOQP,59R,59RO%VQdO,59ROOQP'#Cm'#CmOOQP,59V,59VO&XQdO,59VO,cQdO,59YO'_QdO,5:jO'dQdO,5:lO'oQdO,5:sO'oQdO,5:uO'oQdO,5:vO'oQdO'#FXO,nQ`O,58}O,vQdO'#E^OOQS,58},58}OOQP'#Cq'#CqOOQO'#D|'#D|OOQP,59Y,59YO,}Q`O,59YO-SQ`O,59YOOQP'#EP'#EPOOQP,5:j,5:jO-XQpO'#ERO-dQdO'#ESO-iQ`O'#ESO-nQpO,5:lO.XQaO,5:sO.oQaO,5:vOOQW'#D^'#D^O/nQhO'#DgO0RQhO,5;iO)}QhO'#DeO0`Q`O'#DnO0eQhO'#DxOOQW'#Ft'#FtOOQS,5;i,5;iO0jQ`O'#DhO0oQ`O'#DkOOQS-E9O-E9OOOQ['#Cv'#CvO0tQdO'#CwO1[QdO'#C}O1rQdO'#DQO2YQ!pO'#DSO4fQ!jO,5:|OOQO'#DX'#DXO-SQ`O'#DWO4vQ!nO'#FqO6|Q`O'#DYO7RQ`O'#DyOOQ['#Fq'#FqO7WQhO'#GOO7fQ`O,5;SO7kQ!bO,5;UOOQS'#En'#EnO7sQ`O,5;WO7xQdO,5;WOOQO'#Eq'#EqO8QQ`O,5;ZO8VQhO,5;aO'oQdO'#DjOOQS,5;c,5;cO0jQ`O,5;cO8_QdO,5;cOOQS'#F`'#F`O8gQdO'#E|O7fQ`O,5;fO8oQdO,5:yO9PQdO'#FZO9^Q`O,5<gO9^Q`O,5<gPOOO'#FP'#FPP9iO&jO,58{POOO,58{,58{OOQP1G.m1G.mOOQP1G.q1G.qOOQP1G.t1G.tO,}Q`O1G.tO-SQ`O1G.tOOQP1G0U1G0UO9tQpO1G0WO9|QaO1G0_O:dQaO1G0aO:zQaO1G0bO;bQaO,5;sOOQO-E9V-E9VOOQS1G.i1G.iO;lQ`O,5:xO;qQdO'#D}O;xQdO'#CuOOQO'#EU'#EUOOQO,5:n,5:nO-dQdO,5:nOOQP1G0W1G0WO)YQdO1G0WO<PQ!jO'#D^O<_Q!bO,59yO<gQhO,5:ROOQO'#Fu'#FuO<bQ!bO,59}O<oQhO'#FaO)}QhO,59{O)}QhO'#FaO=gQhO1G1TOOQS1G1T1G1TO=qQhO,5:PO>lQhO'#DoOOQW,5:Y,5:YOOQW,5:d,5:dOOQW,5:S,5:SO>vQhO,5:VO?bQ!fO'#FrOOQS'#Fr'#FrOOQS'#FS'#FSO@rQdO,59cOOQ[,59c,59cOAYQdO,59iOOQ[,59i,59iOApQdO,59lOOQ[,59l,59lOOQ[,59n,59nO)YQdO,59pOBWQhO'#EdOOQW'#Ed'#EdOBuQ`O1G0hO4oQhO1G0hOOQ[,59r,59rO)}QhO'#D[OOQ[,59t,59tOBzQ#tO,5:eOCVQhO'#F]OCdQ`O,5<jOOQS1G0n1G0nOOQS1G0p1G0pOOQS1G0r1G0rOCoQ`O1G0rOCtQdO'#ErOOQS1G0u1G0uOOQS1G0{1G0{ODPQaO,5:UO7fQ`O1G0}OOQS1G0}1G0}O0jQ`O1G0}OOQS-E9^-E9^OOQS1G1Q1G1QODWQ!fO1G0eODnQ`O'#EaOOQO1G0e1G0eOOQO,5;u,5;uODsQdO,5;uOOQO-E9X-E9XOEQQ`O1G2RPOOO-E8}-E8}POOO1G.g1G.gOOQP7+$`7+$`OOQP7+%r7+%rO)YQdO7+%rOOQS1G0d1G0dOE]QaO'#FzOEgQ`O,5:iOElQ!fO'#FROFjQdO'#FpOFtQ`O,59aOOQO1G0Y1G0YOFyQ!bO7+%rO)YQdO1G/eOGUQhO1G/iOOQW1G/m1G/mOOQW1G/g1G/gOGgQhO,5;{OOQW-E9_-E9_OOQS7+&o7+&oOH_QhO'#D^OHmQhO'#FxOHxQ`O'#FxOH}Q`O,5:ZOISQ!bO'#D`O>vQhO'#DmOI_QhO'#DqOIgQhO'#DsOIlQhO'#FwOOQO'#Fw'#FwOItQ!bO'#DwOOQO'#Fy'#FyOOQO'#Fv'#FvOIyQ`O1G/qOOQS-E9Q-E9QOOQ[1G.}1G.}OOQ[1G/T1G/TOOQ[1G/W1G/WOOQ[1G/[1G/[OJOQdO,5;OOOQS7+&S7+&SOJTQ`O7+&SOJYQhO'#D]OJbQ`O,59vO)}QhO,59vOOQ[1G0P1G0POJjQ`O1G0POJoQhO,5;wOOQO-E9Z-E9ZOOQS7+&^7+&^OJ}QbO'#DSOOQO'#Et'#EtOK]Q`O'#EsOOQO'#Es'#EsOKhQ`O'#F^OKpQdO,5;^OOQS,5;^,5;^OOQ[1G/p1G/pOOQS7+&i7+&iO7fQ`O7+&iOK{Q!fO'#FYO)YQdO'#FYOMSQdO7+&POOQO7+&P7+&POOQO,5:{,5:{OOQO1G1a1G1aOMgQ!bO<<I^OMrQdO'#FWOM|Q`O,5<fOOQP1G0T1G0TOOQS-E9P-E9PONUQdO'#FVON`Q`O,5<[OOQ]1G.{1G.{OOQP<<I^<<I^ONhQ`O<<I^ONmQdO7+%POOQO'#D`'#D`ONtQ!bO7+%TON|QhO'#FUO! ZQ`O,5<dO)YQdO,5<dOOQW1G/u1G/uO)YQdO,5:bO! cQ`O,5:XO>vQhO'#DrOOQO,5:],5:]O! hQhO,5:_OGUQhO,5:cOOQW7+%]7+%]OOQO'#Ef'#EfO! pQ`O1G0jOOQS<<In<<InO)YQdO,59wO!!dQhO1G/bOOQ[1G/b1G/bO!!kQ`O1G/bOOQW-E9R-E9ROOQ[7+%k7+%kOOQO,5;_,5;_OCwQdO'#F_OKhQ`O,5;xOOQS,5;x,5;xOOQS-E9[-E9[OOQS1G0x1G0xOOQS<<JT<<JTO!!sQ!fO,5;tOOQS-E9W-E9WOOQO<<Ik<<IkOOQPAN>xAN>xO!#zQ`OAN>xO!$PQaO,5;rOOQO-E9U-E9UO!$ZQdO,5;qOOQO-E9T-E9TOOQW<<Hk<<HkOOQW<<Ho<<HoO!$eQhO<<HoO!$vQhO,5;pO!%RQ`O,5;pOOQO-E9S-E9SO!%WQdO1G2OO!%bQdO1G/|O!%iQhO1G/sO!%qQ`O,5:^O>vQhO'#DuOOQO1G/y1G/yO!%vQ!bO1G/}OJOQdO'#F[O!&OQ`O7+&UOOQW7+&U7+&UO!&WQ!bO1G/cOOQ[7+$|7+$|O!&cQhO7+$|P!&jQ`O'#FTOOQO,5;y,5;yOOQO-E9]-E9]OOQS1G1d1G1dOOQPG24dG24dO!&oQ`OAN>ZO)YQdO1G1[O!&tQ`O7+'jOOQO1G/x1G/xO!&|Q`O,5:aO!$eQhO7+%iOOQO,5;v,5;vOOQO-E9Y-E9YOOQW<<Ip<<IpOOQ[<<Hh<<HhPOQW,5;o,5;oOOQWG23uG23uO!'RQdO7+&vOOQO1G/{1G/{OOQO<<IT<<IT",
+  stateData: "!'f~O$[OS$]QQ~OWVO^_O`WOcYOdYOl`OmZOp[O!|]O#P^O#VdO#]eO#_fO#agO#dhO#jiO#ljO#okO$WRO$cTO~OQmOWVO^_O`WOcYOdYOl`OmZOp[O!|]O#P^O#VdO#]eO#_fO#agO#dhO#jiO#ljO#okO$WlO$cTO~O$U$oP~P!jO$]qO~O`YXcYXdYXmYXpYXsYX!dYX!|YX#PYX$VYX$c[X~OgYX~P$ZO$WsO~O$cuO~O$cuO`$bXc$bXd$bXm$bXp$bXs$bX!d$bX!|$bX#P$bX$V$bXg$bX~O$WvO~O`xOcyOdyOmzOp{O!||O#P!OO$V}O~Os!RO!d!PO~P&^Of!XO$W!TO$X!UO~O$W!YO~OW!^O$W![O$c!]O~OWVO^_O`WOcYOdYOmZOp[O!|]O#P^O$WRO$cTO~OS!fOc!gOd!gOh!cOs!RO!Y!eO!]!jO!`!kO$Y!bO~On!iO~P(dOQ!uOh!nOp!oOs!pOu!xOw!xO}!vO!n!wO$W!mO$X!sO$g!qO~OS!fOc!gOd!gOh!cO!Y!eO!]!jO!`!kO$Y!bO~Os$rP~P)}Ow!}O!n!wO$W!|O~Ow#PO$W#PO~Oh#SOs!RO#m#UO~O$W#WO~Oc#SX~P$ZOc#ZO~On#[O$U$oXr$oX~O$U$oXr$oX~P!jO$^#_O$_#_O$`#aO~Of#fO$W!TO$X!UO~Os!RO!d!PO~Or$oP~P!jOh#pO~Oh#qO~Oo!uX!y!uX$c!wX~O$W#rO~O$c#tO~Oo#uO!y#vO~O`xOcyOdyOmzOp{O~Os!{a!d!{a!|!{a#P!{a$V!{ag!{a~P-vOs#Oa!d#Oa!|#Oa#P#Oa$V#Oag#Oa~P-vOS!fOc!gOd!gOh!cO!Y!eO!]!jO!`!kO~OR#zOu#zOw#zO$Y#wO$g!qO~P/VOn$QO!U#}O!d$OO~P(dOh$SO~O$Y$UO~Oh#SO~Oh$WO~O`$YOc$YOg$]Ol$YOm$YOn$YO~P)YO`$YOc$YOl$YOm$YOn$YOo$_O~P)YO`$YOc$YOl$YOm$YOn$YOr$aO~P)YOP$bOSvXcvXdvXhvXnvXyvX!YvX!]vX!`vX#XvX#ZvX$YvX!WvXQvX`vXgvXlvXmvXpvXsvXuvXwvX}vX!nvX$WvX$XvX$gvXovXrvX!dvX$UvX$qvX!zvX~Oy$cO#X$dO#Z$eOn$rP~P)}Oh#qOS$eXc$eXd$eXn$eXy$eX!Y$eX!]$eX!`$eX#X$eX#Z$eX$Y$eXQ$eX`$eXg$eXl$eXm$eXp$eXs$eXu$eXw$eX}$eX!n$eX$W$eX$X$eX$g$eXo$eXr$eX!d$eX$U$eX$q$eX!z$eX~Oh$iO~Oh$kO~O!U#}O!d$lOs$rXn$rX~Os!RO~On$oOy$cO~On$pO~Ow$qO!n!wO~Os$rO~Os!RO!U#}O~Os!RO#m$xO~O$W#WOs#pX~O$q$|On#Ra$U#Rar#Ra~P)YOn#}X$U#}Xr#}X~P!jOn#[O$U$oar$oa~O$^#_O$_#_O$`%TO~Oo%VO!y%WO~Os!{i!d!{i!|!{i#P!{i$V!{ig!{i~P-vOs!}i!d!}i!|!}i#P!}i$V!}ig!}i~P-vOs#Oi!d#Oi!|#Oi#P#Oi$V#Oig#Oi~P-vOs#{a!d#{a~P&^Or%XO~Og$nP~P'oOg$dP~P)YOc!SXg!QX!U!QX!W!SX~Oc%aO!W%bO~Og%cO!U#}O~O!U#}OS$TXc$TXd$TXh$TXn$TXs$TX!Y$TX!]$TX!`$TX!d$TX$Y$TX~On%gO!d$OO~P(dO!U#}OS!Xac!Xad!Xah!Xan!Xas!Xa!Y!Xa!]!Xa!`!Xa!d!Xa$Y!Xag!Xa~O$Y%hOg$lP~P/VOR#zOS!fOh%mOu#zOw#zO!Y%nO$Y%lO$g!qO~Oy$cOQ$fX`$fXc$fXg$fXh$fXl$fXm$fXn$fXp$fXs$fXu$fXw$fX}$fX!n$fX$W$fX$X$fX$g$fXo$fXr$fX~O`$YOc$YOg%wOl$YOm$YOn$YO~P)YO`$YOc$YOl$YOm$YOn$YOo%xO~P)YO`$YOc$YOl$YOm$YOn$YOr%yO~P)YOh%{OS#WXc#WXd#WXn#WX!Y#WX!]#WX!`#WX$Y#WX~On%|O~Og&ROw&SO!o&SO~Os$PX!d$PXn$PX~P)}O!d$lOs$ran$ra~On&VO~Or&^O$W&XO$g&WO~Og&_O~P&^Oy$cO!d&cO$q$|On#Ri$U#Rir#Ri~P)YO$p&fO~On#}a$U#}ar#}a~P!jOn#[O$U$oir$oi~O!d&iOg$nX~P&^Og&kO~Oy$cOQ#uXg#uXh#uXp#uXs#uXu#uXw#uX}#uX!d#uX!n#uX$W#uX$X#uX$g#uX~O!d&mOg$dX~P)YOg&oO~Oo&pOy$cO!z&qO~OR#zOu#zOw#zO$Y&sO$g!qO~O!U#}OS$Tac$Tad$Tah$Tan$Tas$Ta!Y$Ta!]$Ta!`$Ta!d$Ta$Y$Ta~Oc!SXg!QX!U!QX!d!QX~O!U#}O!d&uOg$lX~Oc&wO~Og&xO~Oc&yOg!jX!W!SX~OS!fOh&{O~O!U&}O~O!U&}Og$kX~O!W'OO~Og'PO~O$W'QO~On'SO~Oc'TO!U#}O~Og'VOn'UO~Og'YO~O!U#}Os$Pa!d$Pan$Pa~OP$bOsvX!dvXgvX~O$g&WOs#gX!d#gX~Os!RO!d'[O~Or'`O$W&XO$g&WO~Oy$cOQ#|Xh#|Xn#|Xp#|Xs#|Xu#|Xw#|X}#|X!d#|X!n#|X$U#|X$W#|X$X#|X$g#|X$q#|Xr#|X~O!d&cO$q$|On#Rq$U#Rqr#Rq~P)YOo'eOy$cO!z'fO~Og#zX!d#zX~P'oO!d&iOg$na~Og#yX!d#yX~P)YO!d&mOg$da~Oo'eO~Og'kO~P)YOg'lO!W'mO~O$Y%hOg#xX!d#xX~P/VO!d&uOg$la~Og'sO~OS!fOh'uO~O`'xOg'zO~OS#wac#wad#wah#wa!Y#wa!]#wa!`#wa$Y#wa~Og'|O~P! xOg'|On'}O~Oy$cOQ#|ah#|an#|ap#|as#|au#|aw#|a}#|a!d#|a!n#|a$U#|a$W#|a$X#|a$g#|a$q#|ar#|a~Oo(SO~Og#za!d#za~P&^Og#ya!d#ya~P)YOR#zOu#zOw#zO$Y&sO$g&WO~O!U#}Og#xa!d#xa~Oc(UO~O!d&uOg$li~P)YOg!ji~P)YOg!ai!U!hi~Og(WO~O!W(YOg!ki~O`'xOg(]O~Oy$cOg!Pin!Pi~Og(^O~P! xOn(_O~Og(`O~O!d&uOg$lq~Og(bO~Og#xq!d#xq~P)YO$[!o$]$g`$gy#P~",
+  goto: "7[$sPPPPP$tP$wP%Q%d%Q%v&YP%QP&`%QPP&fPPP&l&v&vPPPPP&vPP&vP'fP&vP&v(i&vP)X)[)b)b)t)bP)bP)bP)b)bP*a)bP*m*s+cP*m+f*m+i+`+o+o)b+uPP,k,q%Q,w%Q,},}-T-XPP%QP%Q%QP-_.Z.h.o$wP.xP.{P$wP$wP$wP/R$wP/U/X/[/c$wP$wPP$wP/h$wP/k/q0Q0l0z1Q1[1b1h1n1t2O2U2[2b2h2nPPPPPPPPPPP2t2}P3s3v4zP5S5|6c6o6u6o6x6{PP7RRrQ_aOPco!R#[%Pq_OP]^co|}!O!P!R#S#[#p%P&iqSOP]^co|}!O!P!R#S#[#p%P&iqUOP]^co|}!O!P!R#S#[#p%P&iQtTR#buQwWR#cxQ!VYR#dyQ#d!XS$h!t!uR%U#f!Z!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w&y'T'i'q'r(U(a!Y!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w&y'T'i'q'r(U(ab#z!c$W%b%m&{'O'm'u(YU&Z$r&]'[R'Z&Y!Z!tdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w&y'T'i'q'r(U(aR$j!vQ&P$iR'W&Qq!h`ei!c!d!e!r#}$O$P$S$g$i$l&Q&uQ#x!cQ%j$SW%r$W%m&{'uQ&t%bQ'o&uQ'w'OQ(T'mR(c(YQ#VjQ$V!jQ$v#UR&a$xX%q$W%m&{'up!h`ei!c!d!e!r#}$O$P$S$g$i$l&Q&uW%p$W%m&{'uQ&|%nR'v&}R$T!fR&|%nX%o$W%m&{'uX%s$W%m&{'u!Y!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w&y'T'i'q'r(U(aQ!}gR$q#OQ!WYR#eyQ#d!WR%U#eQ!ZZR#gzQ!_[R#h{T!^[{Q#s!]R%_#tQ!SXQ!i`Q#TjQ#n!QQ$Q!dQ$n!zQ$t#RQ$w#VQ$z#YQ%g$PQ&`$vQ'^&[Q'a&aR(R']SnP!RQ#^oQ%O#[R&g%PZmPo!R#[%PQ$}#ZQ&e${R'd&dR$g!rQ'R%{R(Z'xR#OgR#QhR$s#QS&[$r&]R(P'[V&Y$r&]'[R#YkQ#`qR%S#`QcOSoP!RU!lco%PR%P#[Q%]#q[&l%]&r'i'q'r(aQ&r%aQ'i&mQ'q&wQ'r&yR(a(UQ$[!nQ$^!oQ$`!pV%v$[$^$`Q&Q$iR'X&QQ&v%iS'p&v(VR(V'qQ&n%]R'j&nQ&j%YR'h&jQ!QXR#m!QQ&d${R'c&dQ#]nS%Q#]%RR%R#^Q'y'RR(['yQ$m!yR&U$mQ&]$rR'_&]Q']&[R(Q']Q#XkR$y#XQ$P!dR%f$P_bOPco!R#[%P^XOPco!R#[%PQ!`]Q!a^Q#i|Q#j}Q#k!OQ#l!PQ$u#SQ%Y#pR'g&iR%^#qQ!rdQ!{f[$X!n!o!p$[$^$`Q${#Zh%[#q%]%a&m&r&w&y'i'q'r(U(aQ%`#vQ%z$cS&b${&dQ&h%WQ'b&cR'{'T]$Z!n!o!p$[$^$`Q!d`U!ye!r$gQ#RiQ#y!cS#|!d$PQ$R!eQ%d#}Q%e$OQ%i$SS&O$i&QQ&T$lR'n&uQ#{!cW%r$W%m&{'uQ&t%bQ'w'OQ(T'mR(c(YQ%u$WQ&z%mQ't&{R(X'uX%t$W%m&{'uR%k$SR%Z#pQpPR#o!RQ!zeQ$f!rR%}$g",
+  nodeNames: "\u26A0 Unit VariableName VariableName QueryCallee Comment StyleSheet RuleSet UniversalSelector TagSelector TagName NamespacedTagSelector NamespaceName TagName NestingSelector ClassSelector . ClassName PseudoClassSelector : :: PseudoClassName PseudoClassName ) ( ArgList ValueName ParenthesizedValue AtKeyword # ; ] [ BracketedValue } { BracedValue ColorLiteral NumberLiteral StringLiteral BinaryExpression BinOp CallExpression Callee IfExpression if ArgList IfBranch KeywordQuery FeatureQuery FeatureName BinaryQuery LogicOp ComparisonQuery CompareOp UnaryQuery UnaryQueryOp ParenthesizedQuery SelectorQuery selector ParenthesizedSelector StyleQuery style ParenthesedQuery CallQuery ArgList , UnaryQuery ParenthesedQuery BinaryQuery ParenthesedQuery ParenthesedQuery StyleFeature StyleRange PseudoQuery CallLiteral CallTag ParenthesizedContent PseudoClassName ArgList IdSelector IdName AttributeSelector AttributeName NamespacedAttribute NamespaceName AttributeName MatchOp MatchFlag ChildSelector ChildOp DescendantSelector SiblingSelector SiblingOp Block Declaration PropertyName Important ImportStatement import Layer layer LayerName layer MediaStatement media CharsetStatement charset NamespaceStatement namespace NamespaceName KeyframesStatement keyframes KeyframeName KeyframeList KeyframeSelector KeyframeRangeName SupportsStatement supports ScopeStatement scope to FontFeatureStatement font-feature-values FontName AtRule Styles",
+  maxTerm: 172,
+  nodeProps: [
+    ["isolate", -2, 5, 39, ""],
+    ["openedBy", 23, "(", 31, "[", 34, "{"],
+    ["closedBy", 24, ")", 32, "]", 35, "}"]
+  ],
+  propSources: [cssHighlighting],
+  skippedNodes: [0, 5, 127],
+  repeatNodeCount: 17,
+  tokenData: "K`~R!bOX%ZX^&R^p%Zpq&Rqr)ers)vst+jtu2Xuv%Zvw3Rwx3dxy5Ryz5dz{5i{|6S|}:u}!O;W!O!P;u!P!Q<^!Q![=V![!]>Q!]!^>|!^!_?_!_!`@Z!`!a@n!a!b%Z!b!cAo!c!k%Z!k!lC|!l!u%Z!u!vC|!v!}%Z!}#OD_#O#P%Z#P#QDp#Q#R2X#R#]%Z#]#^ER#^#g%Z#g#hC|#h#o%Z#o#pIf#p#qIw#q#rJ`#r#sJq#s#y%Z#y#z&R#z$f%Z$f$g&R$g#BY%Z#BY#BZ&R#BZ$IS%Z$IS$I_&R$I_$I|%Z$I|$JO&R$JO$JT%Z$JT$JU&R$JU$KV%Z$KV$KW&R$KW&FU%Z&FU&FV&R&FV;'S%Z;'S;=`KY<%lO%Z`%^SOy%jz;'S%j;'S;=`%{<%lO%j`%oS!o`Oy%jz;'S%j;'S;=`%{<%lO%j`&OP;=`<%l%j~&Wh$[~OX%jX^'r^p%jpq'rqy%jz#y%j#y#z'r#z$f%j$f$g'r$g#BY%j#BY#BZ'r#BZ$IS%j$IS$I_'r$I_$I|%j$I|$JO'r$JO$JT%j$JT$JU'r$JU$KV%j$KV$KW'r$KW&FU%j&FU&FV'r&FV;'S%j;'S;=`%{<%lO%j~'yh$[~!o`OX%jX^'r^p%jpq'rqy%jz#y%j#y#z'r#z$f%j$f$g'r$g#BY%j#BY#BZ'r#BZ$IS%j$IS$I_'r$I_$I|%j$I|$JO'r$JO$JT%j$JT$JU'r$JU$KV%j$KV$KW'r$KW&FU%j&FU&FV'r&FV;'S%j;'S;=`%{<%lO%jj)jS$qYOy%jz;'S%j;'S;=`%{<%lO%j~)yWOY)vZr)vrs*cs#O)v#O#P*h#P;'S)v;'S;=`+d<%lO)v~*hOw~~*kRO;'S)v;'S;=`*t;=`O)v~*wXOY)vZr)vrs*cs#O)v#O#P*h#P;'S)v;'S;=`+d;=`<%l)v<%lO)v~+gP;=`<%l)vj+oYmYOy%jz!Q%j!Q![,_![!c%j!c!i,_!i#T%j#T#Z,_#Z;'S%j;'S;=`%{<%lO%jj,dY!o`Oy%jz!Q%j!Q![-S![!c%j!c!i-S!i#T%j#T#Z-S#Z;'S%j;'S;=`%{<%lO%jj-XY!o`Oy%jz!Q%j!Q![-w![!c%j!c!i-w!i#T%j#T#Z-w#Z;'S%j;'S;=`%{<%lO%jj.OYuY!o`Oy%jz!Q%j!Q![.n![!c%j!c!i.n!i#T%j#T#Z.n#Z;'S%j;'S;=`%{<%lO%jj.uYuY!o`Oy%jz!Q%j!Q![/e![!c%j!c!i/e!i#T%j#T#Z/e#Z;'S%j;'S;=`%{<%lO%jj/jY!o`Oy%jz!Q%j!Q![0Y![!c%j!c!i0Y!i#T%j#T#Z0Y#Z;'S%j;'S;=`%{<%lO%jj0aYuY!o`Oy%jz!Q%j!Q![1P![!c%j!c!i1P!i#T%j#T#Z1P#Z;'S%j;'S;=`%{<%lO%jj1UY!o`Oy%jz!Q%j!Q![1t![!c%j!c!i1t!i#T%j#T#Z1t#Z;'S%j;'S;=`%{<%lO%jj1{SuY!o`Oy%jz;'S%j;'S;=`%{<%lO%jd2[UOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jd2uS!yS!o`Oy%jz;'S%j;'S;=`%{<%lO%jb3WS^QOy%jz;'S%j;'S;=`%{<%lO%j~3gWOY3dZw3dwx*cx#O3d#O#P4P#P;'S3d;'S;=`4{<%lO3d~4SRO;'S3d;'S;=`4];=`O3d~4`XOY3dZw3dwx*cx#O3d#O#P4P#P;'S3d;'S;=`4{;=`<%l3d<%lO3d~5OP;=`<%l3dj5WShYOy%jz;'S%j;'S;=`%{<%lO%j~5iOg~n5pUWQyWOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jj6ZWyW#PQOy%jz!O%j!O!P6s!P!Q%j!Q![9x![;'S%j;'S;=`%{<%lO%jj6xU!o`Oy%jz!Q%j!Q![7[![;'S%j;'S;=`%{<%lO%jj7cY!o`$gYOy%jz!Q%j!Q![7[![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj8WY!o`Oy%jz{%j{|8v|}%j}!O8v!O!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj8{U!o`Oy%jz!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj9fU!o`$gYOy%jz!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj:P[!o`$gYOy%jz!O%j!O!P7[!P!Q%j!Q![9x![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj:zS!dYOy%jz;'S%j;'S;=`%{<%lO%jj;]WyWOy%jz!O%j!O!P6s!P!Q%j!Q![9x![;'S%j;'S;=`%{<%lO%jj;zU`YOy%jz!Q%j!Q![7[![;'S%j;'S;=`%{<%lO%j~<cTyWOy%jz{<r{;'S%j;'S;=`%{<%lO%j~<yS!o`$]~Oy%jz;'S%j;'S;=`%{<%lO%jj=[[$gYOy%jz!O%j!O!P7[!P!Q%j!Q![9x![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj>VUcYOy%jz![%j![!]>i!];'S%j;'S;=`%{<%lO%jj>pSdY!o`Oy%jz;'S%j;'S;=`%{<%lO%jj?RSnYOy%jz;'S%j;'S;=`%{<%lO%jh?dU!WWOy%jz!_%j!_!`?v!`;'S%j;'S;=`%{<%lO%jh?}S!WW!o`Oy%jz;'S%j;'S;=`%{<%lO%jl@bS!WW!ySOy%jz;'S%j;'S;=`%{<%lO%jj@uV!|Q!WWOy%jz!_%j!_!`?v!`!aA[!a;'S%j;'S;=`%{<%lO%jbAcS!|Q!o`Oy%jz;'S%j;'S;=`%{<%lO%jjArYOy%jz}%j}!OBb!O!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jjBgW!o`Oy%jz!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jjCW[lY!o`Oy%jz}%j}!OCP!O!Q%j!Q![CP![!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jhDRS!zWOy%jz;'S%j;'S;=`%{<%lO%jjDdSpYOy%jz;'S%j;'S;=`%{<%lO%jnDuSo^Oy%jz;'S%j;'S;=`%{<%lO%jjEWU!zWOy%jz#a%j#a#bEj#b;'S%j;'S;=`%{<%lO%jbEoU!o`Oy%jz#d%j#d#eFR#e;'S%j;'S;=`%{<%lO%jbFWU!o`Oy%jz#c%j#c#dFj#d;'S%j;'S;=`%{<%lO%jbFoU!o`Oy%jz#f%j#f#gGR#g;'S%j;'S;=`%{<%lO%jbGWU!o`Oy%jz#h%j#h#iGj#i;'S%j;'S;=`%{<%lO%jbGoU!o`Oy%jz#T%j#T#UHR#U;'S%j;'S;=`%{<%lO%jbHWU!o`Oy%jz#b%j#b#cHj#c;'S%j;'S;=`%{<%lO%jbHoU!o`Oy%jz#h%j#h#iIR#i;'S%j;'S;=`%{<%lO%jbIYS$pQ!o`Oy%jz;'S%j;'S;=`%{<%lO%jjIkSsYOy%jz;'S%j;'S;=`%{<%lO%jfI|U$cUOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jjJeSrYOy%jz;'S%j;'S;=`%{<%lO%jfJvU#PQOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%j`K]P;=`<%l%Z",
+  tokenizers: [descendant, unitToken, identifiers, queryIdentifiers, 1, 2, 3, 4, new LocalTokenGroup("m~RRYZ[z{a~~g~aO$_~~dP!P!Qg~lO$`~~", 28, 152)],
+  topRules: { "StyleSheet": [0, 6], "Styles": [1, 126] },
+  dynamicPrecedences: { "94": 1 },
+  specialized: [{ term: 147, get: (value) => spec_callee[value] || -1 }, { term: 148, get: (value) => spec_queryIdentifier[value] || -1 }, { term: 4, get: (value) => spec_QueryCallee[value] || -1 }, { term: 28, get: (value) => spec_AtKeyword[value] || -1 }, { term: 146, get: (value) => spec_identifier4[value] || -1 }],
+  tokenPrec: 2405
+});
+
+// node_modules/@codemirror/lang-css/dist/index.js
+var _properties = null;
+function properties() {
+  if (!_properties && typeof document == "object" && document.body) {
+    let { style } = document.body, names = [], seen = /* @__PURE__ */ new Set();
+    for (let prop in style)
+      if (prop != "cssText" && prop != "cssFloat") {
+        if (typeof style[prop] == "string") {
+          if (/[A-Z]/.test(prop))
+            prop = prop.replace(/[A-Z]/g, (ch) => "-" + ch.toLowerCase());
+          if (!seen.has(prop)) {
+            names.push(prop);
+            seen.add(prop);
+          }
+        }
+      }
+    _properties = names.sort().map((name2) => ({ type: "property", label: name2, apply: name2 + ": " }));
+  }
+  return _properties || [];
+}
+var pseudoClasses = /* @__PURE__ */ [
+  "active",
+  "after",
+  "any-link",
+  "autofill",
+  "backdrop",
+  "before",
+  "checked",
+  "cue",
+  "default",
+  "defined",
+  "disabled",
+  "empty",
+  "enabled",
+  "file-selector-button",
+  "first",
+  "first-child",
+  "first-letter",
+  "first-line",
+  "first-of-type",
+  "focus",
+  "focus-visible",
+  "focus-within",
+  "fullscreen",
+  "has",
+  "host",
+  "host-context",
+  "hover",
+  "in-range",
+  "indeterminate",
+  "invalid",
+  "is",
+  "lang",
+  "last-child",
+  "last-of-type",
+  "left",
+  "link",
+  "marker",
+  "modal",
+  "not",
+  "nth-child",
+  "nth-last-child",
+  "nth-last-of-type",
+  "nth-of-type",
+  "only-child",
+  "only-of-type",
+  "optional",
+  "out-of-range",
+  "part",
+  "placeholder",
+  "placeholder-shown",
+  "read-only",
+  "read-write",
+  "required",
+  "right",
+  "root",
+  "scope",
+  "selection",
+  "slotted",
+  "target",
+  "target-text",
+  "valid",
+  "visited",
+  "where"
+].map((name2) => ({ type: "class", label: name2 }));
+var values = /* @__PURE__ */ [
+  "above",
+  "absolute",
+  "activeborder",
+  "additive",
+  "activecaption",
+  "after-white-space",
+  "ahead",
+  "alias",
+  "all",
+  "all-scroll",
+  "alphabetic",
+  "alternate",
+  "always",
+  "antialiased",
+  "appworkspace",
+  "asterisks",
+  "attr",
+  "auto",
+  "auto-flow",
+  "avoid",
+  "avoid-column",
+  "avoid-page",
+  "avoid-region",
+  "axis-pan",
+  "background",
+  "backwards",
+  "baseline",
+  "below",
+  "bidi-override",
+  "blink",
+  "block",
+  "block-axis",
+  "bold",
+  "bolder",
+  "border",
+  "border-box",
+  "both",
+  "bottom",
+  "break",
+  "break-all",
+  "break-word",
+  "bullets",
+  "button",
+  "button-bevel",
+  "buttonface",
+  "buttonhighlight",
+  "buttonshadow",
+  "buttontext",
+  "calc",
+  "capitalize",
+  "caps-lock-indicator",
+  "caption",
+  "captiontext",
+  "caret",
+  "cell",
+  "center",
+  "checkbox",
+  "circle",
+  "cjk-decimal",
+  "clear",
+  "clip",
+  "close-quote",
+  "col-resize",
+  "collapse",
+  "color",
+  "color-burn",
+  "color-dodge",
+  "column",
+  "column-reverse",
+  "compact",
+  "condensed",
+  "contain",
+  "content",
+  "contents",
+  "content-box",
+  "context-menu",
+  "continuous",
+  "copy",
+  "counter",
+  "counters",
+  "cover",
+  "crop",
+  "cross",
+  "crosshair",
+  "currentcolor",
+  "cursive",
+  "cyclic",
+  "darken",
+  "dashed",
+  "decimal",
+  "decimal-leading-zero",
+  "default",
+  "default-button",
+  "dense",
+  "destination-atop",
+  "destination-in",
+  "destination-out",
+  "destination-over",
+  "difference",
+  "disc",
+  "discard",
+  "disclosure-closed",
+  "disclosure-open",
+  "document",
+  "dot-dash",
+  "dot-dot-dash",
+  "dotted",
+  "double",
+  "down",
+  "e-resize",
+  "ease",
+  "ease-in",
+  "ease-in-out",
+  "ease-out",
+  "element",
+  "ellipse",
+  "ellipsis",
+  "embed",
+  "end",
+  "ethiopic-abegede-gez",
+  "ethiopic-halehame-aa-er",
+  "ethiopic-halehame-gez",
+  "ew-resize",
+  "exclusion",
+  "expanded",
+  "extends",
+  "extra-condensed",
+  "extra-expanded",
+  "fantasy",
+  "fast",
+  "fill",
+  "fill-box",
+  "fixed",
+  "flat",
+  "flex",
+  "flex-end",
+  "flex-start",
+  "footnotes",
+  "forwards",
+  "from",
+  "geometricPrecision",
+  "graytext",
+  "grid",
+  "groove",
+  "hand",
+  "hard-light",
+  "help",
+  "hidden",
+  "hide",
+  "higher",
+  "highlight",
+  "highlighttext",
+  "horizontal",
+  "hsl",
+  "hsla",
+  "hue",
+  "icon",
+  "ignore",
+  "inactiveborder",
+  "inactivecaption",
+  "inactivecaptiontext",
+  "infinite",
+  "infobackground",
+  "infotext",
+  "inherit",
+  "initial",
+  "inline",
+  "inline-axis",
+  "inline-block",
+  "inline-flex",
+  "inline-grid",
+  "inline-table",
+  "inset",
+  "inside",
+  "intrinsic",
+  "invert",
+  "italic",
+  "justify",
+  "keep-all",
+  "landscape",
+  "large",
+  "larger",
+  "left",
+  "level",
+  "lighter",
+  "lighten",
+  "line-through",
+  "linear",
+  "linear-gradient",
+  "lines",
+  "list-item",
+  "listbox",
+  "listitem",
+  "local",
+  "logical",
+  "loud",
+  "lower",
+  "lower-hexadecimal",
+  "lower-latin",
+  "lower-norwegian",
+  "lowercase",
+  "ltr",
+  "luminosity",
+  "manipulation",
+  "match",
+  "matrix",
+  "matrix3d",
+  "medium",
+  "menu",
+  "menutext",
+  "message-box",
+  "middle",
+  "min-intrinsic",
+  "mix",
+  "monospace",
+  "move",
+  "multiple",
+  "multiple_mask_images",
+  "multiply",
+  "n-resize",
+  "narrower",
+  "ne-resize",
+  "nesw-resize",
+  "no-close-quote",
+  "no-drop",
+  "no-open-quote",
+  "no-repeat",
+  "none",
+  "normal",
+  "not-allowed",
+  "nowrap",
+  "ns-resize",
+  "numbers",
+  "numeric",
+  "nw-resize",
+  "nwse-resize",
+  "oblique",
+  "opacity",
+  "open-quote",
+  "optimizeLegibility",
+  "optimizeSpeed",
+  "outset",
+  "outside",
+  "outside-shape",
+  "overlay",
+  "overline",
+  "padding",
+  "padding-box",
+  "painted",
+  "page",
+  "paused",
+  "perspective",
+  "pinch-zoom",
+  "plus-darker",
+  "plus-lighter",
+  "pointer",
+  "polygon",
+  "portrait",
+  "pre",
+  "pre-line",
+  "pre-wrap",
+  "preserve-3d",
+  "progress",
+  "push-button",
+  "radial-gradient",
+  "radio",
+  "read-only",
+  "read-write",
+  "read-write-plaintext-only",
+  "rectangle",
+  "region",
+  "relative",
+  "repeat",
+  "repeating-linear-gradient",
+  "repeating-radial-gradient",
+  "repeat-x",
+  "repeat-y",
+  "reset",
+  "reverse",
+  "rgb",
+  "rgba",
+  "ridge",
+  "right",
+  "rotate",
+  "rotate3d",
+  "rotateX",
+  "rotateY",
+  "rotateZ",
+  "round",
+  "row",
+  "row-resize",
+  "row-reverse",
+  "rtl",
+  "run-in",
+  "running",
+  "s-resize",
+  "sans-serif",
+  "saturation",
+  "scale",
+  "scale3d",
+  "scaleX",
+  "scaleY",
+  "scaleZ",
+  "screen",
+  "scroll",
+  "scrollbar",
+  "scroll-position",
+  "se-resize",
+  "self-start",
+  "self-end",
+  "semi-condensed",
+  "semi-expanded",
+  "separate",
+  "serif",
+  "show",
+  "single",
+  "skew",
+  "skewX",
+  "skewY",
+  "skip-white-space",
+  "slide",
+  "slider-horizontal",
+  "slider-vertical",
+  "sliderthumb-horizontal",
+  "sliderthumb-vertical",
+  "slow",
+  "small",
+  "small-caps",
+  "small-caption",
+  "smaller",
+  "soft-light",
+  "solid",
+  "source-atop",
+  "source-in",
+  "source-out",
+  "source-over",
+  "space",
+  "space-around",
+  "space-between",
+  "space-evenly",
+  "spell-out",
+  "square",
+  "start",
+  "static",
+  "status-bar",
+  "stretch",
+  "stroke",
+  "stroke-box",
+  "sub",
+  "subpixel-antialiased",
+  "svg_masks",
+  "super",
+  "sw-resize",
+  "symbolic",
+  "symbols",
+  "system-ui",
+  "table",
+  "table-caption",
+  "table-cell",
+  "table-column",
+  "table-column-group",
+  "table-footer-group",
+  "table-header-group",
+  "table-row",
+  "table-row-group",
+  "text",
+  "text-bottom",
+  "text-top",
+  "textarea",
+  "textfield",
+  "thick",
+  "thin",
+  "threeddarkshadow",
+  "threedface",
+  "threedhighlight",
+  "threedlightshadow",
+  "threedshadow",
+  "to",
+  "top",
+  "transform",
+  "translate",
+  "translate3d",
+  "translateX",
+  "translateY",
+  "translateZ",
+  "transparent",
+  "ultra-condensed",
+  "ultra-expanded",
+  "underline",
+  "unidirectional-pan",
+  "unset",
+  "up",
+  "upper-latin",
+  "uppercase",
+  "url",
+  "var",
+  "vertical",
+  "vertical-text",
+  "view-box",
+  "visible",
+  "visibleFill",
+  "visiblePainted",
+  "visibleStroke",
+  "visual",
+  "w-resize",
+  "wait",
+  "wave",
+  "wider",
+  "window",
+  "windowframe",
+  "windowtext",
+  "words",
+  "wrap",
+  "wrap-reverse",
+  "x-large",
+  "x-small",
+  "xor",
+  "xx-large",
+  "xx-small"
+].map((name2) => ({ type: "keyword", label: name2 })).concat(/* @__PURE__ */ [
+  "aliceblue",
+  "antiquewhite",
+  "aqua",
+  "aquamarine",
+  "azure",
+  "beige",
+  "bisque",
+  "black",
+  "blanchedalmond",
+  "blue",
+  "blueviolet",
+  "brown",
+  "burlywood",
+  "cadetblue",
+  "chartreuse",
+  "chocolate",
+  "coral",
+  "cornflowerblue",
+  "cornsilk",
+  "crimson",
+  "cyan",
+  "darkblue",
+  "darkcyan",
+  "darkgoldenrod",
+  "darkgray",
+  "darkgreen",
+  "darkkhaki",
+  "darkmagenta",
+  "darkolivegreen",
+  "darkorange",
+  "darkorchid",
+  "darkred",
+  "darksalmon",
+  "darkseagreen",
+  "darkslateblue",
+  "darkslategray",
+  "darkturquoise",
+  "darkviolet",
+  "deeppink",
+  "deepskyblue",
+  "dimgray",
+  "dodgerblue",
+  "firebrick",
+  "floralwhite",
+  "forestgreen",
+  "fuchsia",
+  "gainsboro",
+  "ghostwhite",
+  "gold",
+  "goldenrod",
+  "gray",
+  "grey",
+  "green",
+  "greenyellow",
+  "honeydew",
+  "hotpink",
+  "indianred",
+  "indigo",
+  "ivory",
+  "khaki",
+  "lavender",
+  "lavenderblush",
+  "lawngreen",
+  "lemonchiffon",
+  "lightblue",
+  "lightcoral",
+  "lightcyan",
+  "lightgoldenrodyellow",
+  "lightgray",
+  "lightgreen",
+  "lightpink",
+  "lightsalmon",
+  "lightseagreen",
+  "lightskyblue",
+  "lightslategray",
+  "lightsteelblue",
+  "lightyellow",
+  "lime",
+  "limegreen",
+  "linen",
+  "magenta",
+  "maroon",
+  "mediumaquamarine",
+  "mediumblue",
+  "mediumorchid",
+  "mediumpurple",
+  "mediumseagreen",
+  "mediumslateblue",
+  "mediumspringgreen",
+  "mediumturquoise",
+  "mediumvioletred",
+  "midnightblue",
+  "mintcream",
+  "mistyrose",
+  "moccasin",
+  "navajowhite",
+  "navy",
+  "oldlace",
+  "olive",
+  "olivedrab",
+  "orange",
+  "orangered",
+  "orchid",
+  "palegoldenrod",
+  "palegreen",
+  "paleturquoise",
+  "palevioletred",
+  "papayawhip",
+  "peachpuff",
+  "peru",
+  "pink",
+  "plum",
+  "powderblue",
+  "purple",
+  "rebeccapurple",
+  "red",
+  "rosybrown",
+  "royalblue",
+  "saddlebrown",
+  "salmon",
+  "sandybrown",
+  "seagreen",
+  "seashell",
+  "sienna",
+  "silver",
+  "skyblue",
+  "slateblue",
+  "slategray",
+  "snow",
+  "springgreen",
+  "steelblue",
+  "tan",
+  "teal",
+  "thistle",
+  "tomato",
+  "turquoise",
+  "violet",
+  "wheat",
+  "white",
+  "whitesmoke",
+  "yellow",
+  "yellowgreen"
+].map((name2) => ({ type: "constant", label: name2 })));
+var tags2 = /* @__PURE__ */ [
+  "a",
+  "abbr",
+  "address",
+  "article",
+  "aside",
+  "b",
+  "bdi",
+  "bdo",
+  "blockquote",
+  "body",
+  "br",
+  "button",
+  "canvas",
+  "caption",
+  "cite",
+  "code",
+  "col",
+  "colgroup",
+  "dd",
+  "del",
+  "details",
+  "dfn",
+  "dialog",
+  "div",
+  "dl",
+  "dt",
+  "em",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "header",
+  "hgroup",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "html",
+  "i",
+  "iframe",
+  "img",
+  "input",
+  "ins",
+  "kbd",
+  "label",
+  "legend",
+  "li",
+  "main",
+  "meter",
+  "nav",
+  "ol",
+  "output",
+  "p",
+  "pre",
+  "ruby",
+  "section",
+  "select",
+  "small",
+  "source",
+  "span",
+  "strong",
+  "sub",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "template",
+  "textarea",
+  "tfoot",
+  "th",
+  "thead",
+  "tr",
+  "u",
+  "ul"
+].map((name2) => ({ type: "type", label: name2 }));
+var atRules = /* @__PURE__ */ [
+  "@charset",
+  "@color-profile",
+  "@container",
+  "@counter-style",
+  "@font-face",
+  "@font-feature-values",
+  "@font-palette-values",
+  "@import",
+  "@keyframes",
+  "@layer",
+  "@media",
+  "@namespace",
+  "@page",
+  "@position-try",
+  "@property",
+  "@scope",
+  "@starting-style",
+  "@supports",
+  "@view-transition"
+].map((label) => ({ type: "keyword", label }));
+var identifier2 = /^(\w[\w-]*|-\w[\w-]*|)$/;
+var variable = /^-(-[\w-]*)?$/;
+function isVarArg(node, doc2) {
+  var _a2;
+  if (node.name == "(" || node.type.isError)
+    node = node.parent || node;
+  if (node.name != "ArgList")
+    return false;
+  let callee2 = (_a2 = node.parent) === null || _a2 === void 0 ? void 0 : _a2.firstChild;
+  if ((callee2 === null || callee2 === void 0 ? void 0 : callee2.name) != "Callee")
+    return false;
+  return doc2.sliceString(callee2.from, callee2.to) == "var";
+}
+var VariablesByNode = /* @__PURE__ */ new NodeWeakMap();
+var declSelector = ["Declaration"];
+function astTop(node) {
+  for (let cur2 = node; ; ) {
+    if (cur2.type.isTop)
+      return cur2;
+    if (!(cur2 = cur2.parent))
+      return node;
+  }
+}
+function variableNames(doc2, node, isVariable) {
+  if (node.to - node.from > 4096) {
+    let known = VariablesByNode.get(node);
+    if (known)
+      return known;
+    let result = [], seen = /* @__PURE__ */ new Set(), cursor2 = node.cursor(IterMode.IncludeAnonymous);
+    if (cursor2.firstChild())
+      do {
+        for (let option of variableNames(doc2, cursor2.node, isVariable))
+          if (!seen.has(option.label)) {
+            seen.add(option.label);
+            result.push(option);
+          }
+      } while (cursor2.nextSibling());
+    VariablesByNode.set(node, result);
+    return result;
+  } else {
+    let result = [], seen = /* @__PURE__ */ new Set();
+    node.cursor().iterate((node2) => {
+      var _a2;
+      if (isVariable(node2) && node2.matchContext(declSelector) && ((_a2 = node2.node.nextSibling) === null || _a2 === void 0 ? void 0 : _a2.name) == ":") {
+        let name2 = doc2.sliceString(node2.from, node2.to);
+        if (!seen.has(name2)) {
+          seen.add(name2);
+          result.push({ label: name2, type: "variable" });
+        }
+      }
+    });
+    return result;
+  }
+}
+var defineCSSCompletionSource = (isVariable) => (context) => {
+  let { state, pos } = context, node = syntaxTree(state).resolveInner(pos, -1);
+  let isDash = node.type.isError && node.from == node.to - 1 && state.doc.sliceString(node.from, node.to) == "-";
+  if (node.name == "PropertyName" || (isDash || node.name == "TagName") && /^(Block|Styles)$/.test(node.resolve(node.to).name))
+    return { from: node.from, options: properties(), validFor: identifier2 };
+  if (node.name == "ValueName")
+    return { from: node.from, options: values, validFor: identifier2 };
+  if (node.name == "PseudoClassName")
+    return { from: node.from, options: pseudoClasses, validFor: identifier2 };
+  if (isVariable(node) || (context.explicit || isDash) && isVarArg(node, state.doc))
+    return {
+      from: isVariable(node) || isDash ? node.from : pos,
+      options: variableNames(state.doc, astTop(node), isVariable),
+      validFor: variable
+    };
+  if (node.name == "TagName") {
+    for (let { parent } = node; parent; parent = parent.parent)
+      if (parent.name == "Block")
+        return { from: node.from, options: properties(), validFor: identifier2 };
+    return { from: node.from, options: tags2, validFor: identifier2 };
+  }
+  if (node.name == "AtKeyword")
+    return { from: node.from, options: atRules, validFor: identifier2 };
+  if (!context.explicit)
+    return null;
+  let above = node.resolve(pos), before = above.childBefore(pos);
+  if (before && before.name == ":" && above.name == "PseudoClassSelector")
+    return { from: pos, options: pseudoClasses, validFor: identifier2 };
+  if (before && before.name == ":" && above.name == "Declaration" || above.name == "ArgList")
+    return { from: pos, options: values, validFor: identifier2 };
+  if (above.name == "Block" || above.name == "Styles")
+    return { from: pos, options: properties(), validFor: identifier2 };
+  return null;
+};
+var cssCompletionSource = /* @__PURE__ */ defineCSSCompletionSource((n) => n.name == "VariableName");
+var cssLanguage = /* @__PURE__ */ LRLanguage.define({
+  name: "css",
+  parser: /* @__PURE__ */ parser6.configure({
+    props: [
+      /* @__PURE__ */ indentNodeProp.add({
+        Declaration: /* @__PURE__ */ continuedIndent()
+      }),
+      /* @__PURE__ */ foldNodeProp.add({
+        "Block KeyframeList": foldInside
+      })
+    ]
+  }),
+  languageData: {
+    commentTokens: { block: { open: "/*", close: "*/" } },
+    indentOnInput: /^\s*\}$/,
+    wordChars: "-"
+  }
+});
+function css() {
+  return new LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
+}
+
+// node_modules/@codemirror/lang-html/dist/index.js
+var Targets = ["_blank", "_self", "_top", "_parent"];
+var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
+var Methods = ["get", "post", "put", "delete"];
+var Encs = ["application/x-www-form-urlencoded", "multipart/form-data", "text/plain"];
+var Bool = ["true", "false"];
+var S = {};
+var Tags = {
+  a: {
+    attrs: {
+      href: null,
+      ping: null,
+      type: null,
+      media: null,
+      target: Targets,
+      hreflang: null
+    }
+  },
+  abbr: S,
+  address: S,
+  area: {
+    attrs: {
+      alt: null,
+      coords: null,
+      href: null,
+      target: null,
+      ping: null,
+      media: null,
+      hreflang: null,
+      type: null,
+      shape: ["default", "rect", "circle", "poly"]
+    }
+  },
+  article: S,
+  aside: S,
+  audio: {
+    attrs: {
+      src: null,
+      mediagroup: null,
+      crossorigin: ["anonymous", "use-credentials"],
+      preload: ["none", "metadata", "auto"],
+      autoplay: ["autoplay"],
+      loop: ["loop"],
+      controls: ["controls"]
+    }
+  },
+  b: S,
+  base: { attrs: { href: null, target: Targets } },
+  bdi: S,
+  bdo: S,
+  blockquote: { attrs: { cite: null } },
+  body: S,
+  br: S,
+  button: {
+    attrs: {
+      form: null,
+      formaction: null,
+      name: null,
+      value: null,
+      autofocus: ["autofocus"],
+      disabled: ["autofocus"],
+      formenctype: Encs,
+      formmethod: Methods,
+      formnovalidate: ["novalidate"],
+      formtarget: Targets,
+      type: ["submit", "reset", "button"]
+    }
+  },
+  canvas: { attrs: { width: null, height: null } },
+  caption: S,
+  center: S,
+  cite: S,
+  code: S,
+  col: { attrs: { span: null } },
+  colgroup: { attrs: { span: null } },
+  command: {
+    attrs: {
+      type: ["command", "checkbox", "radio"],
+      label: null,
+      icon: null,
+      radiogroup: null,
+      command: null,
+      title: null,
+      disabled: ["disabled"],
+      checked: ["checked"]
+    }
+  },
+  data: { attrs: { value: null } },
+  datagrid: { attrs: { disabled: ["disabled"], multiple: ["multiple"] } },
+  datalist: { attrs: { data: null } },
+  dd: S,
+  del: { attrs: { cite: null, datetime: null } },
+  details: { attrs: { open: ["open"] } },
+  dfn: S,
+  div: S,
+  dl: S,
+  dt: S,
+  em: S,
+  embed: { attrs: { src: null, type: null, width: null, height: null } },
+  eventsource: { attrs: { src: null } },
+  fieldset: { attrs: { disabled: ["disabled"], form: null, name: null } },
+  figcaption: S,
+  figure: S,
+  footer: S,
+  form: {
+    attrs: {
+      action: null,
+      name: null,
+      "accept-charset": Charsets,
+      autocomplete: ["on", "off"],
+      enctype: Encs,
+      method: Methods,
+      novalidate: ["novalidate"],
+      target: Targets
+    }
+  },
+  h1: S,
+  h2: S,
+  h3: S,
+  h4: S,
+  h5: S,
+  h6: S,
+  head: {
+    children: ["title", "base", "link", "style", "meta", "script", "noscript", "command"]
+  },
+  header: S,
+  hgroup: S,
+  hr: S,
+  html: {
+    attrs: { manifest: null }
+  },
+  i: S,
+  iframe: {
+    attrs: {
+      src: null,
+      srcdoc: null,
+      name: null,
+      width: null,
+      height: null,
+      sandbox: ["allow-top-navigation", "allow-same-origin", "allow-forms", "allow-scripts"],
+      seamless: ["seamless"]
+    }
+  },
+  img: {
+    attrs: {
+      alt: null,
+      src: null,
+      ismap: null,
+      usemap: null,
+      width: null,
+      height: null,
+      crossorigin: ["anonymous", "use-credentials"]
+    }
+  },
+  input: {
+    attrs: {
+      alt: null,
+      dirname: null,
+      form: null,
+      formaction: null,
+      height: null,
+      list: null,
+      max: null,
+      maxlength: null,
+      min: null,
+      name: null,
+      pattern: null,
+      placeholder: null,
+      size: null,
+      src: null,
+      step: null,
+      value: null,
+      width: null,
+      accept: ["audio/*", "video/*", "image/*"],
+      autocomplete: ["on", "off"],
+      autofocus: ["autofocus"],
+      checked: ["checked"],
+      disabled: ["disabled"],
+      formenctype: Encs,
+      formmethod: Methods,
+      formnovalidate: ["novalidate"],
+      formtarget: Targets,
+      multiple: ["multiple"],
+      readonly: ["readonly"],
+      required: ["required"],
+      type: [
+        "hidden",
+        "text",
+        "search",
+        "tel",
+        "url",
+        "email",
+        "password",
+        "datetime",
+        "date",
+        "month",
+        "week",
+        "time",
+        "datetime-local",
+        "number",
+        "range",
+        "color",
+        "checkbox",
+        "radio",
+        "file",
+        "submit",
+        "image",
+        "reset",
+        "button"
+      ]
+    }
+  },
+  ins: { attrs: { cite: null, datetime: null } },
+  kbd: S,
+  keygen: {
+    attrs: {
+      challenge: null,
+      form: null,
+      name: null,
+      autofocus: ["autofocus"],
+      disabled: ["disabled"],
+      keytype: ["RSA"]
+    }
+  },
+  label: { attrs: { for: null, form: null } },
+  legend: S,
+  li: { attrs: { value: null } },
+  link: {
+    attrs: {
+      href: null,
+      type: null,
+      hreflang: null,
+      media: null,
+      sizes: ["all", "16x16", "16x16 32x32", "16x16 32x32 64x64"]
+    }
+  },
+  map: { attrs: { name: null } },
+  mark: S,
+  menu: { attrs: { label: null, type: ["list", "context", "toolbar"] } },
+  meta: {
+    attrs: {
+      content: null,
+      charset: Charsets,
+      name: ["viewport", "application-name", "author", "description", "generator", "keywords"],
+      "http-equiv": ["content-language", "content-type", "default-style", "refresh"]
+    }
+  },
+  meter: { attrs: { value: null, min: null, low: null, high: null, max: null, optimum: null } },
+  nav: S,
+  noscript: S,
+  object: {
+    attrs: {
+      data: null,
+      type: null,
+      name: null,
+      usemap: null,
+      form: null,
+      width: null,
+      height: null,
+      typemustmatch: ["typemustmatch"]
+    }
+  },
+  ol: {
+    attrs: { reversed: ["reversed"], start: null, type: ["1", "a", "A", "i", "I"] },
+    children: ["li", "script", "template", "ul", "ol"]
+  },
+  optgroup: { attrs: { disabled: ["disabled"], label: null } },
+  option: { attrs: { disabled: ["disabled"], label: null, selected: ["selected"], value: null } },
+  output: { attrs: { for: null, form: null, name: null } },
+  p: S,
+  param: { attrs: { name: null, value: null } },
+  pre: S,
+  progress: { attrs: { value: null, max: null } },
+  q: { attrs: { cite: null } },
+  rp: S,
+  rt: S,
+  ruby: S,
+  samp: S,
+  script: {
+    attrs: {
+      type: ["text/javascript"],
+      src: null,
+      async: ["async"],
+      defer: ["defer"],
+      charset: Charsets
+    }
+  },
+  section: S,
+  select: {
+    attrs: {
+      form: null,
+      name: null,
+      size: null,
+      autofocus: ["autofocus"],
+      disabled: ["disabled"],
+      multiple: ["multiple"]
+    }
+  },
+  slot: { attrs: { name: null } },
+  small: S,
+  source: { attrs: { src: null, type: null, media: null } },
+  span: S,
+  strong: S,
+  style: {
+    attrs: {
+      type: ["text/css"],
+      media: null,
+      scoped: null
+    }
+  },
+  sub: S,
+  summary: S,
+  sup: S,
+  table: S,
+  tbody: S,
+  td: { attrs: { colspan: null, rowspan: null, headers: null } },
+  template: S,
+  textarea: {
+    attrs: {
+      dirname: null,
+      form: null,
+      maxlength: null,
+      name: null,
+      placeholder: null,
+      rows: null,
+      cols: null,
+      autofocus: ["autofocus"],
+      disabled: ["disabled"],
+      readonly: ["readonly"],
+      required: ["required"],
+      wrap: ["soft", "hard"]
+    }
+  },
+  tfoot: S,
+  th: { attrs: { colspan: null, rowspan: null, headers: null, scope: ["row", "col", "rowgroup", "colgroup"] } },
+  thead: S,
+  time: { attrs: { datetime: null } },
+  title: S,
+  tr: S,
+  track: {
+    attrs: {
+      src: null,
+      label: null,
+      default: null,
+      kind: ["subtitles", "captions", "descriptions", "chapters", "metadata"],
+      srclang: null
+    }
+  },
+  ul: { children: ["li", "script", "template", "ul", "ol"] },
+  var: S,
+  video: {
+    attrs: {
+      src: null,
+      poster: null,
+      width: null,
+      height: null,
+      crossorigin: ["anonymous", "use-credentials"],
+      preload: ["auto", "metadata", "none"],
+      autoplay: ["autoplay"],
+      mediagroup: ["movie"],
+      muted: ["muted"],
+      controls: ["controls"]
+    }
+  },
+  wbr: S
+};
+var GlobalAttrs = {
+  accesskey: null,
+  class: null,
+  contenteditable: Bool,
+  contextmenu: null,
+  dir: ["ltr", "rtl", "auto"],
+  draggable: ["true", "false", "auto"],
+  dropzone: ["copy", "move", "link", "string:", "file:"],
+  hidden: ["hidden"],
+  id: null,
+  inert: ["inert"],
+  itemid: null,
+  itemprop: null,
+  itemref: null,
+  itemscope: ["itemscope"],
+  itemtype: null,
+  lang: ["ar", "bn", "de", "en-GB", "en-US", "es", "fr", "hi", "id", "ja", "pa", "pt", "ru", "tr", "zh"],
+  spellcheck: Bool,
+  autocorrect: Bool,
+  autocapitalize: Bool,
+  style: null,
+  tabindex: null,
+  title: null,
+  translate: ["yes", "no"],
+  rel: ["stylesheet", "alternate", "author", "bookmark", "help", "license", "next", "nofollow", "noreferrer", "prefetch", "prev", "search", "tag"],
+  role: /* @__PURE__ */ "alert application article banner button cell checkbox complementary contentinfo dialog document feed figure form grid gridcell heading img list listbox listitem main navigation region row rowgroup search switch tab table tabpanel textbox timer".split(" "),
+  "aria-activedescendant": null,
+  "aria-atomic": Bool,
+  "aria-autocomplete": ["inline", "list", "both", "none"],
+  "aria-busy": Bool,
+  "aria-checked": ["true", "false", "mixed", "undefined"],
+  "aria-controls": null,
+  "aria-describedby": null,
+  "aria-disabled": Bool,
+  "aria-dropeffect": null,
+  "aria-expanded": ["true", "false", "undefined"],
+  "aria-flowto": null,
+  "aria-grabbed": ["true", "false", "undefined"],
+  "aria-haspopup": Bool,
+  "aria-hidden": Bool,
+  "aria-invalid": ["true", "false", "grammar", "spelling"],
+  "aria-label": null,
+  "aria-labelledby": null,
+  "aria-level": null,
+  "aria-live": ["off", "polite", "assertive"],
+  "aria-multiline": Bool,
+  "aria-multiselectable": Bool,
+  "aria-owns": null,
+  "aria-posinset": null,
+  "aria-pressed": ["true", "false", "mixed", "undefined"],
+  "aria-readonly": Bool,
+  "aria-relevant": null,
+  "aria-required": Bool,
+  "aria-selected": ["true", "false", "undefined"],
+  "aria-setsize": null,
+  "aria-sort": ["ascending", "descending", "none", "other"],
+  "aria-valuemax": null,
+  "aria-valuemin": null,
+  "aria-valuenow": null,
+  "aria-valuetext": null
+};
+var eventAttributes = /* @__PURE__ */ "beforeunload copy cut dragstart dragover dragleave dragenter dragend drag paste focus blur change click load mousedown mouseenter mouseleave mouseup keydown keyup resize scroll unload".split(" ").map((n) => "on" + n);
+for (let a of eventAttributes)
+  GlobalAttrs[a] = null;
+var Schema = class {
+  constructor(extraTags, extraAttrs) {
+    this.tags = { ...Tags, ...extraTags };
+    this.globalAttrs = { ...GlobalAttrs, ...extraAttrs };
+    this.allTags = Object.keys(this.tags);
+    this.globalAttrNames = Object.keys(this.globalAttrs);
+  }
+};
+Schema.default = /* @__PURE__ */ new Schema();
+function elementName2(doc2, tree, max = doc2.length) {
+  if (!tree)
+    return "";
+  let tag = tree.firstChild;
+  let name2 = tag && tag.getChild("TagName");
+  return name2 ? doc2.sliceString(name2.from, Math.min(name2.to, max)) : "";
+}
+function findParentElement(tree, skip = false) {
+  for (; tree; tree = tree.parent)
+    if (tree.name == "Element") {
+      if (skip)
+        skip = false;
+      else
+        return tree;
+    }
+  return null;
+}
+function allowedChildren(doc2, tree, schema) {
+  let parentInfo = schema.tags[elementName2(doc2, findParentElement(tree))];
+  return (parentInfo === null || parentInfo === void 0 ? void 0 : parentInfo.children) || schema.allTags;
+}
+function openTags(doc2, tree) {
+  let open = [];
+  for (let parent = findParentElement(tree); parent && !parent.type.isTop; parent = findParentElement(parent.parent)) {
+    let tagName = elementName2(doc2, parent);
+    if (tagName && parent.lastChild.name == "CloseTag")
+      break;
+    if (tagName && open.indexOf(tagName) < 0 && (tree.name == "EndTag" || tree.from >= parent.firstChild.to))
+      open.push(tagName);
+  }
+  return open;
+}
+var identifier3 = /^[:\-\.\w\u00b7-\uffff]*$/;
+function completeTag(state, schema, tree, from, to) {
+  let end = /\s*>/.test(state.sliceDoc(to, to + 5)) ? "" : ">";
+  let parent = findParentElement(tree, tree.name == "StartTag" || tree.name == "TagName");
+  return {
+    from,
+    to,
+    options: allowedChildren(state.doc, parent, schema).map((tagName) => ({ label: tagName, type: "type" })).concat(openTags(state.doc, tree).map((tag, i) => ({
+      label: "/" + tag,
+      apply: "/" + tag + end,
+      type: "type",
+      boost: 99 - i
+    }))),
+    validFor: /^\/?[:\-\.\w\u00b7-\uffff]*$/
+  };
+}
+function completeCloseTag(state, tree, from, to) {
+  let end = /\s*>/.test(state.sliceDoc(to, to + 5)) ? "" : ">";
+  return {
+    from,
+    to,
+    options: openTags(state.doc, tree).map((tag, i) => ({ label: tag, apply: tag + end, type: "type", boost: 99 - i })),
+    validFor: identifier3
+  };
+}
+function completeStartTag(state, schema, tree, pos) {
+  let options = [], level = 0;
+  for (let tagName of allowedChildren(state.doc, tree, schema))
+    options.push({ label: "<" + tagName, type: "type" });
+  for (let open of openTags(state.doc, tree))
+    options.push({ label: "</" + open + ">", type: "type", boost: 99 - level++ });
+  return { from: pos, to: pos, options, validFor: /^<\/?[:\-\.\w\u00b7-\uffff]*$/ };
+}
+function completeAttrName(state, schema, tree, from, to) {
+  let elt2 = findParentElement(tree), info = elt2 ? schema.tags[elementName2(state.doc, elt2)] : null;
+  let localAttrs = info && info.attrs ? Object.keys(info.attrs) : [];
+  let names = info && info.globalAttrs === false ? localAttrs : localAttrs.length ? localAttrs.concat(schema.globalAttrNames) : schema.globalAttrNames;
+  return {
+    from,
+    to,
+    options: names.map((attrName) => ({ label: attrName, type: "property" })),
+    validFor: identifier3
+  };
+}
+function completeAttrValue(state, schema, tree, from, to) {
+  var _a2;
+  let nameNode = (_a2 = tree.parent) === null || _a2 === void 0 ? void 0 : _a2.getChild("AttributeName");
+  let options = [], token = void 0;
+  if (nameNode) {
+    let attrName = state.sliceDoc(nameNode.from, nameNode.to);
+    let attrs = schema.globalAttrs[attrName];
+    if (!attrs) {
+      let elt2 = findParentElement(tree), info = elt2 ? schema.tags[elementName2(state.doc, elt2)] : null;
+      attrs = (info === null || info === void 0 ? void 0 : info.attrs) && info.attrs[attrName];
+    }
+    if (attrs) {
+      let base2 = state.sliceDoc(from, to).toLowerCase(), quoteStart = '"', quoteEnd = '"';
+      if (/^['"]/.test(base2)) {
+        token = base2[0] == '"' ? /^[^"]*$/ : /^[^']*$/;
+        quoteStart = "";
+        quoteEnd = state.sliceDoc(to, to + 1) == base2[0] ? "" : base2[0];
+        base2 = base2.slice(1);
+        from++;
+      } else {
+        token = /^[^\s<>='"]*$/;
+      }
+      for (let value of attrs)
+        options.push({ label: value, apply: quoteStart + value + quoteEnd, type: "constant" });
+    }
+  }
+  return { from, to, options, validFor: token };
+}
+function htmlCompletionFor(schema, context) {
+  let { state, pos } = context, tree = syntaxTree(state).resolveInner(pos, -1), around = tree.resolve(pos);
+  for (let scan = pos, before; around == tree && (before = tree.childBefore(scan)); ) {
+    let last = before.lastChild;
+    if (!last || !last.type.isError || last.from < last.to)
+      break;
+    around = tree = before;
+    scan = last.from;
+  }
+  if (tree.name == "TagName") {
+    return tree.parent && /CloseTag$/.test(tree.parent.name) ? completeCloseTag(state, tree, tree.from, pos) : completeTag(state, schema, tree, tree.from, pos);
+  } else if (tree.name == "StartTag" || tree.name == "IncompleteTag") {
+    return completeTag(state, schema, tree, pos, pos);
+  } else if (tree.name == "StartCloseTag" || tree.name == "IncompleteCloseTag") {
+    return completeCloseTag(state, tree, pos, pos);
+  } else if (tree.name == "OpenTag" || tree.name == "SelfClosingTag" || tree.name == "AttributeName") {
+    return completeAttrName(state, schema, tree, tree.name == "AttributeName" ? tree.from : pos, pos);
+  } else if (tree.name == "Is" || tree.name == "AttributeValue" || tree.name == "UnquotedAttributeValue") {
+    return completeAttrValue(state, schema, tree, tree.name == "Is" ? pos : tree.from, pos);
+  } else if (context.explicit && (around.name == "Element" || around.name == "Text" || around.name == "Document")) {
+    return completeStartTag(state, schema, tree, pos);
+  } else {
+    return null;
+  }
+}
+function htmlCompletionSource(context) {
+  return htmlCompletionFor(Schema.default, context);
+}
+function htmlCompletionSourceWith(config2) {
+  let { extraTags, extraGlobalAttributes: extraAttrs } = config2;
+  let schema = extraAttrs || extraTags ? new Schema(extraTags, extraAttrs) : Schema.default;
+  return (context) => htmlCompletionFor(schema, context);
+}
+var jsonParser = /* @__PURE__ */ javascriptLanguage.parser.configure({ top: "SingleExpression" });
+var defaultNesting = [
+  {
+    tag: "script",
+    attrs: (attrs) => attrs.type == "text/typescript" || attrs.lang == "ts",
+    parser: typescriptLanguage.parser
+  },
+  {
+    tag: "script",
+    attrs: (attrs) => attrs.type == "text/babel" || attrs.type == "text/jsx",
+    parser: jsxLanguage.parser
+  },
+  {
+    tag: "script",
+    attrs: (attrs) => attrs.type == "text/typescript-jsx",
+    parser: tsxLanguage.parser
+  },
+  {
+    tag: "script",
+    attrs(attrs) {
+      return /^(importmap|speculationrules|application\/(.+\+)?json)$/i.test(attrs.type);
+    },
+    parser: jsonParser
+  },
+  {
+    tag: "script",
+    attrs(attrs) {
+      return !attrs.type || /^(?:text|application)\/(?:x-)?(?:java|ecma)script$|^module$|^$/i.test(attrs.type);
+    },
+    parser: javascriptLanguage.parser
+  },
+  {
+    tag: "style",
+    attrs(attrs) {
+      return (!attrs.lang || attrs.lang == "css") && (!attrs.type || /^(text\/)?(x-)?(stylesheet|css)$/i.test(attrs.type));
+    },
+    parser: cssLanguage.parser
+  }
+];
+var defaultAttrs = /* @__PURE__ */ [
+  {
+    name: "style",
+    parser: /* @__PURE__ */ cssLanguage.parser.configure({ top: "Styles" })
+  }
+].concat(/* @__PURE__ */ eventAttributes.map((name2) => ({ name: name2, parser: javascriptLanguage.parser })));
+var htmlPlain = /* @__PURE__ */ LRLanguage.define({
+  name: "html",
+  parser: /* @__PURE__ */ parser5.configure({
+    props: [
+      /* @__PURE__ */ indentNodeProp.add({
+        Element(context) {
+          let after = /^(\s*)(<\/)?/.exec(context.textAfter);
+          if (context.node.to <= context.pos + after[0].length)
+            return context.continue();
+          return context.lineIndent(context.node.from) + (after[2] ? 0 : context.unit);
+        },
+        "OpenTag CloseTag SelfClosingTag"(context) {
+          return context.column(context.node.from) + context.unit;
+        },
+        Document(context) {
+          if (context.pos + /\s*/.exec(context.textAfter)[0].length < context.node.to)
+            return context.continue();
+          let endElt = null, close;
+          for (let cur2 = context.node; ; ) {
+            let last = cur2.lastChild;
+            if (!last || last.name != "Element" || last.to != cur2.to)
+              break;
+            endElt = cur2 = last;
+          }
+          if (endElt && !((close = endElt.lastChild) && (close.name == "CloseTag" || close.name == "SelfClosingTag")))
+            return context.lineIndent(endElt.from) + context.unit;
+          return null;
+        }
+      }),
+      /* @__PURE__ */ foldNodeProp.add({
+        Element(node) {
+          let first = node.firstChild, last = node.lastChild;
+          if (!first || first.name != "OpenTag")
+            return null;
+          return { from: first.to, to: last.name == "CloseTag" ? last.from : node.to };
+        }
+      }),
+      /* @__PURE__ */ bracketMatchingHandle.add({
+        "OpenTag CloseTag": (node) => node.getChild("TagName")
+      })
+    ]
+  }),
+  languageData: {
+    commentTokens: { block: { open: "<!--", close: "-->" } },
+    indentOnInput: /^\s*<\/\w+\W$/,
+    wordChars: "-_"
+  }
+});
+var htmlLanguage = /* @__PURE__ */ htmlPlain.configure({
+  wrap: /* @__PURE__ */ configureNesting(defaultNesting, defaultAttrs)
+});
+function html(config2 = {}) {
+  let dialect = "", wrap;
+  if (config2.matchClosingTags === false)
+    dialect = "noMatch";
+  if (config2.selfClosingTags === true)
+    dialect = (dialect ? dialect + " " : "") + "selfClosing";
+  if (config2.nestedLanguages && config2.nestedLanguages.length || config2.nestedAttributes && config2.nestedAttributes.length)
+    wrap = configureNesting((config2.nestedLanguages || []).concat(defaultNesting), (config2.nestedAttributes || []).concat(defaultAttrs));
+  let lang = wrap ? htmlPlain.configure({ wrap, dialect }) : dialect ? htmlLanguage.configure({ dialect }) : htmlLanguage;
+  return new LanguageSupport(lang, [
+    htmlLanguage.data.of({ autocomplete: htmlCompletionSourceWith(config2) }),
+    config2.autoCloseTags !== false ? autoCloseTags2 : [],
+    javascript().support,
+    css().support
+  ]);
+}
+var selfClosers2 = /* @__PURE__ */ new Set(/* @__PURE__ */ "area base br col command embed frame hr img input keygen link meta param source track wbr menuitem".split(" "));
+var autoCloseTags2 = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to, text, insertTransaction) => {
+  if (view.composing || view.state.readOnly || from != to || text != ">" && text != "/" || !htmlLanguage.isActiveAt(view.state, from, -1))
+    return false;
+  let base2 = insertTransaction(), { state } = base2;
+  let closeTags = state.changeByRange((range) => {
+    var _a2, _b2, _c;
+    let didType = state.doc.sliceString(range.from - 1, range.to) == text;
+    let { head } = range, after = syntaxTree(state).resolveInner(head, -1), name2;
+    if (didType && text == ">" && after.name == "EndTag") {
+      let tag = after.parent;
+      if (((_b2 = (_a2 = tag.parent) === null || _a2 === void 0 ? void 0 : _a2.lastChild) === null || _b2 === void 0 ? void 0 : _b2.name) != "CloseTag" && (name2 = elementName2(state.doc, tag.parent, head)) && !selfClosers2.has(name2)) {
+        let to2 = head + (state.doc.sliceString(head, head + 1) === ">" ? 1 : 0);
+        let insert2 = `</${name2}>`;
+        return { range, changes: { from: head, to: to2, insert: insert2 } };
+      }
+    } else if (didType && text == "/" && after.name == "IncompleteCloseTag") {
+      let tag = after.parent;
+      if (after.from == head - 2 && ((_c = tag.lastChild) === null || _c === void 0 ? void 0 : _c.name) != "CloseTag" && (name2 = elementName2(state.doc, tag, head)) && !selfClosers2.has(name2)) {
+        let to2 = head + (state.doc.sliceString(head, head + 1) === ">" ? 1 : 0);
+        let insert2 = `${name2}>`;
+        return {
+          range: EditorSelection.cursor(head + insert2.length, -1),
+          changes: { from: head, to: to2, insert: insert2 }
+        };
+      }
+    }
+    return { range };
+  });
+  if (closeTags.changes.empty)
+    return false;
+  view.dispatch([
+    base2,
+    state.update(closeTags, {
+      userEvent: "input.complete",
+      scrollIntoView: true
+    })
+  ]);
+  return true;
+});
+
+// node_modules/@lezer/markdown/dist/index.js
+var CompositeBlock = class _CompositeBlock {
+  static create(type, value, from, parentHash, end) {
+    let hash3 = parentHash + (parentHash << 8) + type + (value << 4) | 0;
+    return new _CompositeBlock(type, value, from, hash3, end, [], []);
+  }
+  constructor(type, value, from, hash3, end, children, positions) {
+    this.type = type;
+    this.value = value;
+    this.from = from;
+    this.hash = hash3;
+    this.end = end;
+    this.children = children;
+    this.positions = positions;
+    this.hashProp = [[NodeProp.contextHash, hash3]];
+  }
+  addChild(child, pos) {
+    if (child.prop(NodeProp.contextHash) != this.hash)
+      child = new Tree(child.type, child.children, child.positions, child.length, this.hashProp);
+    this.children.push(child);
+    this.positions.push(pos);
+  }
+  toTree(nodeSet, end = this.end) {
+    let last = this.children.length - 1;
+    if (last >= 0)
+      end = Math.max(end, this.positions[last] + this.children[last].length + this.from);
+    return new Tree(nodeSet.types[this.type], this.children, this.positions, end - this.from).balance({
+      makeTree: (children, positions, length) => new Tree(NodeType.none, children, positions, length, this.hashProp)
+    });
+  }
+};
+var Type;
+(function(Type2) {
+  Type2[Type2["Document"] = 1] = "Document";
+  Type2[Type2["CodeBlock"] = 2] = "CodeBlock";
+  Type2[Type2["FencedCode"] = 3] = "FencedCode";
+  Type2[Type2["Blockquote"] = 4] = "Blockquote";
+  Type2[Type2["HorizontalRule"] = 5] = "HorizontalRule";
+  Type2[Type2["BulletList"] = 6] = "BulletList";
+  Type2[Type2["OrderedList"] = 7] = "OrderedList";
+  Type2[Type2["ListItem"] = 8] = "ListItem";
+  Type2[Type2["ATXHeading1"] = 9] = "ATXHeading1";
+  Type2[Type2["ATXHeading2"] = 10] = "ATXHeading2";
+  Type2[Type2["ATXHeading3"] = 11] = "ATXHeading3";
+  Type2[Type2["ATXHeading4"] = 12] = "ATXHeading4";
+  Type2[Type2["ATXHeading5"] = 13] = "ATXHeading5";
+  Type2[Type2["ATXHeading6"] = 14] = "ATXHeading6";
+  Type2[Type2["SetextHeading1"] = 15] = "SetextHeading1";
+  Type2[Type2["SetextHeading2"] = 16] = "SetextHeading2";
+  Type2[Type2["HTMLBlock"] = 17] = "HTMLBlock";
+  Type2[Type2["LinkReference"] = 18] = "LinkReference";
+  Type2[Type2["Paragraph"] = 19] = "Paragraph";
+  Type2[Type2["CommentBlock"] = 20] = "CommentBlock";
+  Type2[Type2["ProcessingInstructionBlock"] = 21] = "ProcessingInstructionBlock";
+  Type2[Type2["Escape"] = 22] = "Escape";
+  Type2[Type2["Entity"] = 23] = "Entity";
+  Type2[Type2["HardBreak"] = 24] = "HardBreak";
+  Type2[Type2["Emphasis"] = 25] = "Emphasis";
+  Type2[Type2["StrongEmphasis"] = 26] = "StrongEmphasis";
+  Type2[Type2["Link"] = 27] = "Link";
+  Type2[Type2["Image"] = 28] = "Image";
+  Type2[Type2["InlineCode"] = 29] = "InlineCode";
+  Type2[Type2["HTMLTag"] = 30] = "HTMLTag";
+  Type2[Type2["Comment"] = 31] = "Comment";
+  Type2[Type2["ProcessingInstruction"] = 32] = "ProcessingInstruction";
+  Type2[Type2["Autolink"] = 33] = "Autolink";
+  Type2[Type2["HeaderMark"] = 34] = "HeaderMark";
+  Type2[Type2["QuoteMark"] = 35] = "QuoteMark";
+  Type2[Type2["ListMark"] = 36] = "ListMark";
+  Type2[Type2["LinkMark"] = 37] = "LinkMark";
+  Type2[Type2["EmphasisMark"] = 38] = "EmphasisMark";
+  Type2[Type2["CodeMark"] = 39] = "CodeMark";
+  Type2[Type2["CodeText"] = 40] = "CodeText";
+  Type2[Type2["CodeInfo"] = 41] = "CodeInfo";
+  Type2[Type2["LinkTitle"] = 42] = "LinkTitle";
+  Type2[Type2["LinkLabel"] = 43] = "LinkLabel";
+  Type2[Type2["URL"] = 44] = "URL";
+})(Type || (Type = {}));
+var LeafBlock = class {
+  /**
+  @internal
+  */
+  constructor(start, content2) {
+    this.start = start;
+    this.content = content2;
+    this.marks = [];
+    this.parsers = [];
+  }
+};
+var Line2 = class {
+  constructor() {
+    this.text = "";
+    this.baseIndent = 0;
+    this.basePos = 0;
+    this.depth = 0;
+    this.markers = [];
+    this.pos = 0;
+    this.indent = 0;
+    this.next = -1;
+  }
+  /**
+  @internal
+  */
+  forward() {
+    if (this.basePos > this.pos)
+      this.forwardInner();
+  }
+  /**
+  @internal
+  */
+  forwardInner() {
+    let newPos = this.skipSpace(this.basePos);
+    this.indent = this.countIndent(newPos, this.pos, this.indent);
+    this.pos = newPos;
+    this.next = newPos == this.text.length ? -1 : this.text.charCodeAt(newPos);
+  }
+  /**
+  Skip whitespace after the given position, return the position of
+  the next non-space character or the end of the line if there's
+  only space after `from`.
+  */
+  skipSpace(from) {
+    return skipSpace(this.text, from);
+  }
+  /**
+  @internal
+  */
+  reset(text) {
+    this.text = text;
+    this.baseIndent = this.basePos = this.pos = this.indent = 0;
+    this.forwardInner();
+    this.depth = 1;
+    while (this.markers.length)
+      this.markers.pop();
+  }
+  /**
+  Move the line's base position forward to the given position.
+  This should only be called by composite [block
+  parsers](#BlockParser.parse) or [markup skipping
+  functions](#NodeSpec.composite).
+  */
+  moveBase(to) {
+    this.basePos = to;
+    this.baseIndent = this.countIndent(to, this.pos, this.indent);
+  }
+  /**
+  Move the line's base position forward to the given _column_.
+  */
+  moveBaseColumn(indent2) {
+    this.baseIndent = indent2;
+    this.basePos = this.findColumn(indent2);
+  }
+  /**
+  Store a composite-block-level marker. Should be called from
+  [markup skipping functions](#NodeSpec.composite) when they
+  consume any non-whitespace characters.
+  */
+  addMarker(elt2) {
+    this.markers.push(elt2);
+  }
+  /**
+  Find the column position at `to`, optionally starting at a given
+  position and column.
+  */
+  countIndent(to, from = 0, indent2 = 0) {
+    for (let i = from; i < to; i++)
+      indent2 += this.text.charCodeAt(i) == 9 ? 4 - indent2 % 4 : 1;
+    return indent2;
+  }
+  /**
+  Find the position corresponding to the given column.
+  */
+  findColumn(goal) {
+    let i = 0;
+    for (let indent2 = 0; i < this.text.length && indent2 < goal; i++)
+      indent2 += this.text.charCodeAt(i) == 9 ? 4 - indent2 % 4 : 1;
+    return i;
+  }
+  /**
+  @internal
+  */
+  scrub() {
+    if (!this.baseIndent)
+      return this.text;
+    let result = "";
+    for (let i = 0; i < this.basePos; i++)
+      result += " ";
+    return result + this.text.slice(this.basePos);
+  }
+};
+function skipForList(bl, cx, line) {
+  if (line.pos == line.text.length || bl != cx.block && line.indent >= cx.stack[line.depth + 1].value + line.baseIndent)
+    return true;
+  if (line.indent >= line.baseIndent + 4)
+    return false;
+  let size = (bl.type == Type.OrderedList ? isOrderedList : isBulletList)(line, cx, false);
+  return size > 0 && (bl.type != Type.BulletList || isHorizontalRule(line, cx, false) < 0) && line.text.charCodeAt(line.pos + size - 1) == bl.value;
+}
+var DefaultSkipMarkup = {
+  [Type.Blockquote](bl, cx, line) {
+    if (line.next != 62)
+      return false;
+    line.markers.push(elt(Type.QuoteMark, cx.lineStart + line.pos, cx.lineStart + line.pos + 1));
+    line.moveBase(line.pos + (space4(line.text.charCodeAt(line.pos + 1)) ? 2 : 1));
+    bl.end = cx.lineStart + line.text.length;
+    return true;
+  },
+  [Type.ListItem](bl, _cx, line) {
+    if (line.indent < line.baseIndent + bl.value && line.next > -1)
+      return false;
+    line.moveBaseColumn(line.baseIndent + bl.value);
+    return true;
+  },
+  [Type.OrderedList]: skipForList,
+  [Type.BulletList]: skipForList,
+  [Type.Document]() {
+    return true;
+  }
+};
+function space4(ch) {
+  return ch == 32 || ch == 9 || ch == 10 || ch == 13;
+}
+function skipSpace(line, i = 0) {
+  while (i < line.length && space4(line.charCodeAt(i)))
+    i++;
+  return i;
+}
+function skipSpaceBack(line, i, to) {
+  while (i > to && space4(line.charCodeAt(i - 1)))
+    i--;
+  return i;
+}
+function isFencedCode(line) {
+  if (line.next != 96 && line.next != 126)
+    return -1;
+  let pos = line.pos + 1;
+  while (pos < line.text.length && line.text.charCodeAt(pos) == line.next)
+    pos++;
+  if (pos < line.pos + 3)
+    return -1;
+  if (line.next == 96) {
+    for (let i = pos; i < line.text.length; i++)
+      if (line.text.charCodeAt(i) == 96)
+        return -1;
+  }
+  return pos;
+}
+function isBlockquote(line) {
+  return line.next != 62 ? -1 : line.text.charCodeAt(line.pos + 1) == 32 ? 2 : 1;
+}
+function isHorizontalRule(line, cx, breaking) {
+  if (line.next != 42 && line.next != 45 && line.next != 95)
+    return -1;
+  let count2 = 1;
+  for (let pos = line.pos + 1; pos < line.text.length; pos++) {
+    let ch = line.text.charCodeAt(pos);
+    if (ch == line.next)
+      count2++;
+    else if (!space4(ch))
+      return -1;
+  }
+  if (breaking && line.next == 45 && isSetextUnderline(line) > -1 && line.depth == cx.stack.length && cx.parser.leafBlockParsers.indexOf(DefaultLeafBlocks.SetextHeading) > -1)
+    return -1;
+  return count2 < 3 ? -1 : 1;
+}
+function inList(cx, type) {
+  for (let i = cx.stack.length - 1; i >= 0; i--)
+    if (cx.stack[i].type == type)
+      return true;
+  return false;
+}
+function isBulletList(line, cx, breaking) {
+  return (line.next == 45 || line.next == 43 || line.next == 42) && (line.pos == line.text.length - 1 || space4(line.text.charCodeAt(line.pos + 1))) && (!breaking || inList(cx, Type.BulletList) || line.skipSpace(line.pos + 2) < line.text.length) ? 1 : -1;
+}
+function isOrderedList(line, cx, breaking) {
+  let pos = line.pos, next = line.next;
+  for (; ; ) {
+    if (next >= 48 && next <= 57)
+      pos++;
+    else
+      break;
+    if (pos == line.text.length)
+      return -1;
+    next = line.text.charCodeAt(pos);
+  }
+  if (pos == line.pos || pos > line.pos + 9 || next != 46 && next != 41 || pos < line.text.length - 1 && !space4(line.text.charCodeAt(pos + 1)) || breaking && !inList(cx, Type.OrderedList) && (line.skipSpace(pos + 1) == line.text.length || pos > line.pos + 1 || line.next != 49))
+    return -1;
+  return pos + 1 - line.pos;
+}
+function isAtxHeading(line) {
+  if (line.next != 35)
+    return -1;
+  let pos = line.pos + 1;
+  while (pos < line.text.length && line.text.charCodeAt(pos) == 35)
+    pos++;
+  if (pos < line.text.length && line.text.charCodeAt(pos) != 32)
+    return -1;
+  let size = pos - line.pos;
+  return size > 6 ? -1 : size;
+}
+function isSetextUnderline(line) {
+  if (line.next != 45 && line.next != 61 || line.indent >= line.baseIndent + 4)
+    return -1;
+  let pos = line.pos + 1;
+  while (pos < line.text.length && line.text.charCodeAt(pos) == line.next)
+    pos++;
+  let end = pos;
+  while (pos < line.text.length && space4(line.text.charCodeAt(pos)))
+    pos++;
+  return pos == line.text.length ? end : -1;
+}
+var EmptyLine = /^[ \t]*$/;
+var CommentEnd = /-->/;
+var ProcessingEnd = /\?>/;
+var HTMLBlockStyle = [
+  [/^<(?:script|pre|style)(?:\s|>|$)/i, /<\/(?:script|pre|style)>/i],
+  [/^\s*<!--/, CommentEnd],
+  [/^\s*<\?/, ProcessingEnd],
+  [/^\s*<![A-Z]/, />/],
+  [/^\s*<!\[CDATA\[/, /\]\]>/],
+  [/^\s*<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:\s|\/?>|$)/i, EmptyLine],
+  [/^\s*(?:<\/[a-z][\w-]*\s*>|<[a-z][\w-]*(\s+[a-z:_][\w-.]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*>)\s*$/i, EmptyLine]
+];
+function isHTMLBlock(line, _cx, breaking) {
+  if (line.next != 60)
+    return -1;
+  let rest = line.text.slice(line.pos);
+  for (let i = 0, e = HTMLBlockStyle.length - (breaking ? 1 : 0); i < e; i++)
+    if (HTMLBlockStyle[i][0].test(rest))
+      return i;
+  return -1;
+}
+function getListIndent(line, pos) {
+  let indentAfter = line.countIndent(pos, line.pos, line.indent);
+  let indented = line.countIndent(line.skipSpace(pos), pos, indentAfter);
+  return indented >= indentAfter + 5 ? indentAfter + 1 : indented;
+}
+function addCodeText(marks2, from, to) {
+  let last = marks2.length - 1;
+  if (last >= 0 && marks2[last].to == from && marks2[last].type == Type.CodeText)
+    marks2[last].to = to;
+  else
+    marks2.push(elt(Type.CodeText, from, to));
+}
+var DefaultBlockParsers = {
+  LinkReference: void 0,
+  IndentedCode(cx, line) {
+    let base2 = line.baseIndent + 4;
+    if (line.indent < base2)
+      return false;
+    let start = line.findColumn(base2);
+    let from = cx.lineStart + start, to = cx.lineStart + line.text.length;
+    let marks2 = [], pendingMarks = [];
+    addCodeText(marks2, from, to);
+    while (cx.nextLine() && line.depth >= cx.stack.length) {
+      if (line.pos == line.text.length) {
+        addCodeText(pendingMarks, cx.lineStart - 1, cx.lineStart);
+        for (let m of line.markers)
+          pendingMarks.push(m);
+      } else if (line.indent < base2) {
+        break;
+      } else {
+        if (pendingMarks.length) {
+          for (let m of pendingMarks) {
+            if (m.type == Type.CodeText)
+              addCodeText(marks2, m.from, m.to);
+            else
+              marks2.push(m);
+          }
+          pendingMarks = [];
+        }
+        addCodeText(marks2, cx.lineStart - 1, cx.lineStart);
+        for (let m of line.markers)
+          marks2.push(m);
+        to = cx.lineStart + line.text.length;
+        let codeStart = cx.lineStart + line.findColumn(line.baseIndent + 4);
+        if (codeStart < to)
+          addCodeText(marks2, codeStart, to);
+      }
+    }
+    if (pendingMarks.length) {
+      pendingMarks = pendingMarks.filter((m) => m.type != Type.CodeText);
+      if (pendingMarks.length)
+        line.markers = pendingMarks.concat(line.markers);
+    }
+    cx.addNode(cx.buffer.writeElements(marks2, -from).finish(Type.CodeBlock, to - from), from);
+    return true;
+  },
+  FencedCode(cx, line) {
+    let fenceEnd = isFencedCode(line);
+    if (fenceEnd < 0)
+      return false;
+    let from = cx.lineStart + line.pos, ch = line.next, len = fenceEnd - line.pos;
+    let infoFrom = line.skipSpace(fenceEnd), infoTo = skipSpaceBack(line.text, line.text.length, infoFrom);
+    let marks2 = [elt(Type.CodeMark, from, from + len)];
+    if (infoFrom < infoTo)
+      marks2.push(elt(Type.CodeInfo, cx.lineStart + infoFrom, cx.lineStart + infoTo));
+    for (let first = true, empty2 = true, hasLine = false; cx.nextLine() && line.depth >= cx.stack.length; first = false) {
+      let i = line.pos;
+      if (line.indent - line.baseIndent < 4)
+        while (i < line.text.length && line.text.charCodeAt(i) == ch)
+          i++;
+      if (i - line.pos >= len && line.skipSpace(i) == line.text.length) {
+        for (let m of line.markers)
+          marks2.push(m);
+        if (empty2 && hasLine)
+          addCodeText(marks2, cx.lineStart - 1, cx.lineStart);
+        marks2.push(elt(Type.CodeMark, cx.lineStart + line.pos, cx.lineStart + i));
+        cx.nextLine();
+        break;
+      } else {
+        hasLine = true;
+        if (!first) {
+          addCodeText(marks2, cx.lineStart - 1, cx.lineStart);
+          empty2 = false;
+        }
+        for (let m of line.markers)
+          marks2.push(m);
+        let textStart = cx.lineStart + line.basePos, textEnd = cx.lineStart + line.text.length;
+        if (textStart < textEnd) {
+          addCodeText(marks2, textStart, textEnd);
+          empty2 = false;
+        }
+      }
+    }
+    cx.addNode(cx.buffer.writeElements(marks2, -from).finish(Type.FencedCode, cx.prevLineEnd() - from), from);
+    return true;
+  },
+  Blockquote(cx, line) {
+    let size = isBlockquote(line);
+    if (size < 0)
+      return false;
+    cx.startContext(Type.Blockquote, line.pos);
+    cx.addNode(Type.QuoteMark, cx.lineStart + line.pos, cx.lineStart + line.pos + 1);
+    line.moveBase(line.pos + size);
+    return null;
+  },
+  HorizontalRule(cx, line) {
+    if (isHorizontalRule(line, cx, false) < 0)
+      return false;
+    let from = cx.lineStart + line.pos;
+    cx.nextLine();
+    cx.addNode(Type.HorizontalRule, from);
+    return true;
+  },
+  BulletList(cx, line) {
+    let size = isBulletList(line, cx, false);
+    if (size < 0)
+      return false;
+    if (cx.block.type != Type.BulletList)
+      cx.startContext(Type.BulletList, line.basePos, line.next);
+    let newBase = getListIndent(line, line.pos + 1);
+    cx.startContext(Type.ListItem, line.basePos, newBase - line.baseIndent);
+    cx.addNode(Type.ListMark, cx.lineStart + line.pos, cx.lineStart + line.pos + size);
+    line.moveBaseColumn(newBase);
+    return null;
+  },
+  OrderedList(cx, line) {
+    let size = isOrderedList(line, cx, false);
+    if (size < 0)
+      return false;
+    if (cx.block.type != Type.OrderedList)
+      cx.startContext(Type.OrderedList, line.basePos, line.text.charCodeAt(line.pos + size - 1));
+    let newBase = getListIndent(line, line.pos + size);
+    cx.startContext(Type.ListItem, line.basePos, newBase - line.baseIndent);
+    cx.addNode(Type.ListMark, cx.lineStart + line.pos, cx.lineStart + line.pos + size);
+    line.moveBaseColumn(newBase);
+    return null;
+  },
+  ATXHeading(cx, line) {
+    let size = isAtxHeading(line);
+    if (size < 0)
+      return false;
+    let off = line.pos, from = cx.lineStart + off;
+    let endOfSpace = skipSpaceBack(line.text, line.text.length, off), after = endOfSpace;
+    while (after > off && line.text.charCodeAt(after - 1) == line.next)
+      after--;
+    if (after == endOfSpace || after == off || !space4(line.text.charCodeAt(after - 1)))
+      after = line.text.length;
+    let buf = cx.buffer.write(Type.HeaderMark, 0, size).writeElements(cx.parser.parseInline(line.text.slice(off + size + 1, after), from + size + 1), -from);
+    if (after < line.text.length)
+      buf.write(Type.HeaderMark, after - off, endOfSpace - off);
+    let node = buf.finish(Type.ATXHeading1 - 1 + size, line.text.length - off);
+    cx.nextLine();
+    cx.addNode(node, from);
+    return true;
+  },
+  HTMLBlock(cx, line) {
+    let type = isHTMLBlock(line, cx, false);
+    if (type < 0)
+      return false;
+    let from = cx.lineStart + line.pos, end = HTMLBlockStyle[type][1];
+    let marks2 = [], trailing = end != EmptyLine;
+    while (!end.test(line.text) && cx.nextLine()) {
+      if (line.depth < cx.stack.length) {
+        trailing = false;
+        break;
+      }
+      for (let m of line.markers)
+        marks2.push(m);
+    }
+    if (trailing)
+      cx.nextLine();
+    let nodeType = end == CommentEnd ? Type.CommentBlock : end == ProcessingEnd ? Type.ProcessingInstructionBlock : Type.HTMLBlock;
+    let to = cx.prevLineEnd();
+    cx.addNode(cx.buffer.writeElements(marks2, -from).finish(nodeType, to - from), from);
+    return true;
+  },
+  SetextHeading: void 0
+  // Specifies relative precedence for block-continue function
+};
+var LinkReferenceParser = class {
+  constructor(leaf) {
+    this.stage = 0;
+    this.elts = [];
+    this.pos = 0;
+    this.start = leaf.start;
+    this.advance(leaf.content);
+  }
+  nextLine(cx, line, leaf) {
+    if (this.stage == -1)
+      return false;
+    let content2 = leaf.content + "\n" + line.scrub();
+    let finish = this.advance(content2);
+    if (finish > -1 && finish < content2.length)
+      return this.complete(cx, leaf, finish);
+    return false;
+  }
+  finish(cx, leaf) {
+    if ((this.stage == 2 || this.stage == 3) && skipSpace(leaf.content, this.pos) == leaf.content.length)
+      return this.complete(cx, leaf, leaf.content.length);
+    return false;
+  }
+  complete(cx, leaf, len) {
+    cx.addLeafElement(leaf, elt(Type.LinkReference, this.start, this.start + len, this.elts));
+    return true;
+  }
+  nextStage(elt2) {
+    if (elt2) {
+      this.pos = elt2.to - this.start;
+      this.elts.push(elt2);
+      this.stage++;
+      return true;
+    }
+    if (elt2 === false)
+      this.stage = -1;
+    return false;
+  }
+  advance(content2) {
+    for (; ; ) {
+      if (this.stage == -1) {
+        return -1;
+      } else if (this.stage == 0) {
+        if (!this.nextStage(parseLinkLabel(content2, this.pos, this.start, true)))
+          return -1;
+        if (content2.charCodeAt(this.pos) != 58)
+          return this.stage = -1;
+        this.elts.push(elt(Type.LinkMark, this.pos + this.start, this.pos + this.start + 1));
+        this.pos++;
+      } else if (this.stage == 1) {
+        if (!this.nextStage(parseURL(content2, skipSpace(content2, this.pos), this.start)))
+          return -1;
+      } else if (this.stage == 2) {
+        let skip = skipSpace(content2, this.pos), end = 0;
+        if (skip > this.pos) {
+          let title = parseLinkTitle(content2, skip, this.start);
+          if (title) {
+            let titleEnd = lineEnd(content2, title.to - this.start);
+            if (titleEnd > 0) {
+              this.nextStage(title);
+              end = titleEnd;
+            }
+          }
+        }
+        if (!end)
+          end = lineEnd(content2, this.pos);
+        return end > 0 && end < content2.length ? end : -1;
+      } else {
+        return lineEnd(content2, this.pos);
+      }
+    }
+  }
+};
+function lineEnd(text, pos) {
+  for (; pos < text.length; pos++) {
+    let next = text.charCodeAt(pos);
+    if (next == 10)
+      break;
+    if (!space4(next))
+      return -1;
+  }
+  return pos;
+}
+var SetextHeadingParser = class {
+  nextLine(cx, line, leaf) {
+    let underline2 = line.depth < cx.stack.length ? -1 : isSetextUnderline(line);
+    let next = line.next;
+    if (underline2 < 0)
+      return false;
+    let underlineMark = elt(Type.HeaderMark, cx.lineStart + line.pos, cx.lineStart + underline2);
+    cx.nextLine();
+    cx.addLeafElement(leaf, elt(next == 61 ? Type.SetextHeading1 : Type.SetextHeading2, leaf.start, cx.prevLineEnd(), [
+      ...cx.parser.parseInline(leaf.content, leaf.start),
+      underlineMark
+    ]));
+    return true;
+  }
+  finish() {
+    return false;
+  }
+};
+var DefaultLeafBlocks = {
+  LinkReference(_, leaf) {
+    return leaf.content.charCodeAt(0) == 91 ? new LinkReferenceParser(leaf) : null;
+  },
+  SetextHeading() {
+    return new SetextHeadingParser();
+  }
+};
+var DefaultEndLeaf = [
+  (_, line) => isAtxHeading(line) >= 0,
+  (_, line) => isFencedCode(line) >= 0,
+  (_, line) => isBlockquote(line) >= 0,
+  (p, line) => isBulletList(line, p, true) >= 0,
+  (p, line) => isOrderedList(line, p, true) >= 0,
+  (p, line) => isHorizontalRule(line, p, true) >= 0,
+  (p, line) => isHTMLBlock(line, p, true) >= 0
+];
+var scanLineResult = { text: "", end: 0 };
+var BlockContext = class {
+  /**
+  @internal
+  */
+  constructor(parser8, input, fragments, ranges) {
+    this.parser = parser8;
+    this.input = input;
+    this.ranges = ranges;
+    this.line = new Line2();
+    this.atEnd = false;
+    this.reusePlaceholders = /* @__PURE__ */ new Map();
+    this.stoppedAt = null;
+    this.rangeI = 0;
+    this.to = ranges[ranges.length - 1].to;
+    this.lineStart = this.absoluteLineStart = this.absoluteLineEnd = ranges[0].from;
+    this.block = CompositeBlock.create(Type.Document, 0, this.lineStart, 0, 0);
+    this.stack = [this.block];
+    this.fragments = fragments.length ? new FragmentCursor3(fragments, input) : null;
+    this.readLine();
+  }
+  get parsedPos() {
+    return this.absoluteLineStart;
+  }
+  advance() {
+    if (this.stoppedAt != null && this.absoluteLineStart > this.stoppedAt)
+      return this.finish();
+    let { line } = this;
+    for (; ; ) {
+      for (let markI = 0; ; ) {
+        let next = line.depth < this.stack.length ? this.stack[this.stack.length - 1] : null;
+        while (markI < line.markers.length && (!next || line.markers[markI].from < next.end)) {
+          let mark = line.markers[markI++];
+          this.addNode(mark.type, mark.from, mark.to);
+        }
+        if (!next)
+          break;
+        this.finishContext();
+      }
+      if (line.pos < line.text.length)
+        break;
+      if (!this.nextLine())
+        return this.finish();
+    }
+    if (this.fragments && this.reuseFragment(line.basePos))
+      return null;
+    start: for (; ; ) {
+      for (let type of this.parser.blockParsers)
+        if (type) {
+          let result = type(this, line);
+          if (result != false) {
+            if (result == true)
+              return null;
+            line.forward();
+            continue start;
+          }
+        }
+      break;
+    }
+    let leaf = new LeafBlock(this.lineStart + line.pos, line.text.slice(line.pos));
+    for (let parse of this.parser.leafBlockParsers)
+      if (parse) {
+        let parser8 = parse(this, leaf);
+        if (parser8)
+          leaf.parsers.push(parser8);
+      }
+    lines: while (this.nextLine()) {
+      if (line.pos == line.text.length)
+        break;
+      if (line.indent < line.baseIndent + 4) {
+        for (let stop of this.parser.endLeafBlock)
+          if (stop(this, line, leaf))
+            break lines;
+      }
+      for (let parser8 of leaf.parsers)
+        if (parser8.nextLine(this, line, leaf))
+          return null;
+      leaf.content += "\n" + line.scrub();
+      for (let m of line.markers)
+        leaf.marks.push(m);
+    }
+    this.finishLeaf(leaf);
+    return null;
+  }
+  stopAt(pos) {
+    if (this.stoppedAt != null && this.stoppedAt < pos)
+      throw new RangeError("Can't move stoppedAt forward");
+    this.stoppedAt = pos;
+  }
+  reuseFragment(start) {
+    if (!this.fragments.moveTo(this.absoluteLineStart + start, this.absoluteLineStart) || !this.fragments.matches(this.block.hash))
+      return false;
+    let taken = this.fragments.takeNodes(this);
+    if (!taken)
+      return false;
+    this.absoluteLineStart += taken;
+    this.lineStart = toRelative(this.absoluteLineStart, this.ranges);
+    this.moveRangeI();
+    if (this.absoluteLineStart < this.to) {
+      this.lineStart++;
+      this.absoluteLineStart++;
+      this.readLine();
+    } else {
+      this.atEnd = true;
+      this.readLine();
+    }
+    return true;
+  }
+  /**
+  The number of parent blocks surrounding the current block.
+  */
+  get depth() {
+    return this.stack.length;
+  }
+  /**
+  Get the type of the parent block at the given depth. When no
+  depth is passed, return the type of the innermost parent.
+  */
+  parentType(depth = this.depth - 1) {
+    return this.parser.nodeSet.types[this.stack[depth].type];
+  }
+  /**
+  Move to the next input line. This should only be called by
+  (non-composite) [block parsers](#BlockParser.parse) that consume
+  the line directly, or leaf block parser
+  [`nextLine`](#LeafBlockParser.nextLine) methods when they
+  consume the current line (and return true).
+  */
+  nextLine() {
+    this.lineStart += this.line.text.length;
+    if (this.absoluteLineEnd >= this.to) {
+      this.absoluteLineStart = this.absoluteLineEnd;
+      this.atEnd = true;
+      this.readLine();
+      return false;
+    } else {
+      this.lineStart++;
+      this.absoluteLineStart = this.absoluteLineEnd + 1;
+      this.moveRangeI();
+      this.readLine();
+      return true;
+    }
+  }
+  /**
+  Retrieve the text of the line after the current one, without
+  actually moving the context's current line forward.
+  */
+  peekLine() {
+    return this.scanLine(this.absoluteLineEnd + 1).text;
+  }
+  moveRangeI() {
+    while (this.rangeI < this.ranges.length - 1 && this.absoluteLineStart >= this.ranges[this.rangeI].to) {
+      this.rangeI++;
+      this.absoluteLineStart = Math.max(this.absoluteLineStart, this.ranges[this.rangeI].from);
+    }
+  }
+  /**
+  @internal
+  Collect the text for the next line.
+  */
+  scanLine(start) {
+    let r = scanLineResult;
+    r.end = start;
+    if (start >= this.to) {
+      r.text = "";
+    } else {
+      r.text = this.lineChunkAt(start);
+      r.end += r.text.length;
+      if (this.ranges.length > 1) {
+        let textOffset = this.absoluteLineStart, rangeI = this.rangeI;
+        while (this.ranges[rangeI].to < r.end) {
+          rangeI++;
+          let nextFrom = this.ranges[rangeI].from;
+          let after = this.lineChunkAt(nextFrom);
+          r.end = nextFrom + after.length;
+          r.text = r.text.slice(0, this.ranges[rangeI - 1].to - textOffset) + after;
+          textOffset = r.end - r.text.length;
+        }
+      }
+    }
+    return r;
+  }
+  /**
+  @internal
+  Populate this.line with the content of the next line. Skip
+  leading characters covered by composite blocks.
+  */
+  readLine() {
+    let { line } = this, { text, end } = this.scanLine(this.absoluteLineStart);
+    this.absoluteLineEnd = end;
+    line.reset(text);
+    for (; line.depth < this.stack.length; line.depth++) {
+      let cx = this.stack[line.depth], handler = this.parser.skipContextMarkup[cx.type];
+      if (!handler)
+        throw new Error("Unhandled block context " + Type[cx.type]);
+      let marks2 = this.line.markers.length;
+      if (!handler(cx, this, line)) {
+        if (this.line.markers.length > marks2)
+          cx.end = this.line.markers[this.line.markers.length - 1].to;
+        line.forward();
+        break;
+      }
+      line.forward();
+    }
+  }
+  lineChunkAt(pos) {
+    let next = this.input.chunk(pos), text;
+    if (!this.input.lineChunks) {
+      let eol = next.indexOf("\n");
+      text = eol < 0 ? next : next.slice(0, eol);
+    } else {
+      text = next == "\n" ? "" : next;
+    }
+    return pos + text.length > this.to ? text.slice(0, this.to - pos) : text;
+  }
+  /**
+  The end position of the previous line.
+  */
+  prevLineEnd() {
+    return this.atEnd ? this.lineStart : this.lineStart - 1;
+  }
+  /**
+  @internal
+  */
+  startContext(type, start, value = 0) {
+    this.block = CompositeBlock.create(type, value, this.lineStart + start, this.block.hash, this.lineStart + this.line.text.length);
+    this.stack.push(this.block);
+  }
+  /**
+  Start a composite block. Should only be called from [block
+  parser functions](#BlockParser.parse) that return null.
+  */
+  startComposite(type, start, value = 0) {
+    this.startContext(this.parser.getNodeType(type), start, value);
+  }
+  /**
+  @internal
+  */
+  addNode(block, from, to) {
+    if (typeof block == "number")
+      block = new Tree(this.parser.nodeSet.types[block], none4, none4, (to !== null && to !== void 0 ? to : this.prevLineEnd()) - from);
+    this.block.addChild(block, from - this.block.from);
+  }
+  /**
+  Add a block element. Can be called by [block
+  parsers](#BlockParser.parse).
+  */
+  addElement(elt2) {
+    this.block.addChild(elt2.toTree(this.parser.nodeSet), elt2.from - this.block.from);
+  }
+  /**
+  Add a block element from a [leaf parser](#LeafBlockParser). This
+  makes sure any extra composite block markup (such as blockquote
+  markers) inside the block are also added to the syntax tree.
+  */
+  addLeafElement(leaf, elt2) {
+    this.addNode(this.buffer.writeElements(injectMarks(elt2.children, leaf.marks), -elt2.from).finish(elt2.type, elt2.to - elt2.from), elt2.from);
+  }
+  /**
+  @internal
+  */
+  finishContext() {
+    let cx = this.stack.pop();
+    let top2 = this.stack[this.stack.length - 1];
+    top2.addChild(cx.toTree(this.parser.nodeSet), cx.from - top2.from);
+    this.block = top2;
+  }
+  finish() {
+    while (this.stack.length > 1)
+      this.finishContext();
+    return this.addGaps(this.block.toTree(this.parser.nodeSet, this.lineStart));
+  }
+  addGaps(tree) {
+    return this.ranges.length > 1 ? injectGaps(this.ranges, 0, tree.topNode, this.ranges[0].from, this.reusePlaceholders) : tree;
+  }
+  /**
+  @internal
+  */
+  finishLeaf(leaf) {
+    for (let parser8 of leaf.parsers)
+      if (parser8.finish(this, leaf))
+        return;
+    let inline = injectMarks(this.parser.parseInline(leaf.content, leaf.start), leaf.marks);
+    this.addNode(this.buffer.writeElements(inline, -leaf.start).finish(Type.Paragraph, leaf.content.length), leaf.start);
+  }
+  elt(type, from, to, children) {
+    if (typeof type == "string")
+      return elt(this.parser.getNodeType(type), from, to, children);
+    return new TreeElement(type, from);
+  }
+  /**
+  @internal
+  */
+  get buffer() {
+    return new Buffer(this.parser.nodeSet);
+  }
+};
+function injectGaps(ranges, rangeI, tree, offset, dummies) {
+  let rangeEnd2 = ranges[rangeI].to;
+  let children = [], positions = [], start = tree.from + offset;
+  function movePastNext(upto, inclusive) {
+    while (inclusive ? upto >= rangeEnd2 : upto > rangeEnd2) {
+      let size = ranges[rangeI + 1].from - rangeEnd2;
+      offset += size;
+      upto += size;
+      rangeI++;
+      rangeEnd2 = ranges[rangeI].to;
+    }
+  }
+  for (let ch = tree.firstChild; ch; ch = ch.nextSibling) {
+    movePastNext(ch.from + offset, true);
+    let from = ch.from + offset, node, reuse = dummies.get(ch.tree);
+    if (reuse) {
+      node = reuse;
+    } else if (ch.to + offset > rangeEnd2) {
+      node = injectGaps(ranges, rangeI, ch, offset, dummies);
+      movePastNext(ch.to + offset, false);
+    } else {
+      node = ch.toTree();
+    }
+    children.push(node);
+    positions.push(from - start);
+  }
+  movePastNext(tree.to + offset, false);
+  return new Tree(tree.type, children, positions, tree.to + offset - start, tree.tree ? tree.tree.propValues : void 0);
+}
+var MarkdownParser = class _MarkdownParser extends Parser {
+  /**
+  @internal
+  */
+  constructor(nodeSet, blockParsers, leafBlockParsers, blockNames, endLeafBlock, skipContextMarkup, inlineParsers, inlineNames, wrappers) {
+    super();
+    this.nodeSet = nodeSet;
+    this.blockParsers = blockParsers;
+    this.leafBlockParsers = leafBlockParsers;
+    this.blockNames = blockNames;
+    this.endLeafBlock = endLeafBlock;
+    this.skipContextMarkup = skipContextMarkup;
+    this.inlineParsers = inlineParsers;
+    this.inlineNames = inlineNames;
+    this.wrappers = wrappers;
+    this.nodeTypes = /* @__PURE__ */ Object.create(null);
+    for (let t2 of nodeSet.types)
+      this.nodeTypes[t2.name] = t2.id;
+  }
+  createParse(input, fragments, ranges) {
+    let parse = new BlockContext(this, input, fragments, ranges);
+    for (let w of this.wrappers)
+      parse = w(parse, input, fragments, ranges);
+    return parse;
+  }
+  /**
+  Reconfigure the parser.
+  */
+  configure(spec) {
+    let config2 = resolveConfig(spec);
+    if (!config2)
+      return this;
+    let { nodeSet, skipContextMarkup } = this;
+    let blockParsers = this.blockParsers.slice(), leafBlockParsers = this.leafBlockParsers.slice(), blockNames = this.blockNames.slice(), inlineParsers = this.inlineParsers.slice(), inlineNames = this.inlineNames.slice(), endLeafBlock = this.endLeafBlock.slice(), wrappers = this.wrappers;
+    if (nonEmpty(config2.defineNodes)) {
+      skipContextMarkup = Object.assign({}, skipContextMarkup);
+      let nodeTypes2 = nodeSet.types.slice(), styles;
+      for (let s of config2.defineNodes) {
+        let { name: name2, block, composite, style } = typeof s == "string" ? { name: s } : s;
+        if (nodeTypes2.some((t2) => t2.name == name2))
+          continue;
+        if (composite)
+          skipContextMarkup[nodeTypes2.length] = (bl, cx, line) => composite(cx, line, bl.value);
+        let id2 = nodeTypes2.length;
+        let group = composite ? ["Block", "BlockContext"] : !block ? void 0 : id2 >= Type.ATXHeading1 && id2 <= Type.SetextHeading2 ? ["Block", "LeafBlock", "Heading"] : ["Block", "LeafBlock"];
+        nodeTypes2.push(NodeType.define({
+          id: id2,
+          name: name2,
+          props: group && [[NodeProp.group, group]]
+        }));
+        if (style) {
+          if (!styles)
+            styles = {};
+          if (Array.isArray(style) || style instanceof Tag)
+            styles[name2] = style;
+          else
+            Object.assign(styles, style);
+        }
+      }
+      nodeSet = new NodeSet(nodeTypes2);
+      if (styles)
+        nodeSet = nodeSet.extend(styleTags(styles));
+    }
+    if (nonEmpty(config2.props))
+      nodeSet = nodeSet.extend(...config2.props);
+    if (nonEmpty(config2.remove)) {
+      for (let rm2 of config2.remove) {
+        let block = this.blockNames.indexOf(rm2), inline = this.inlineNames.indexOf(rm2);
+        if (block > -1)
+          blockParsers[block] = leafBlockParsers[block] = void 0;
+        if (inline > -1)
+          inlineParsers[inline] = void 0;
+      }
+    }
+    if (nonEmpty(config2.parseBlock)) {
+      for (let spec2 of config2.parseBlock) {
+        let found = blockNames.indexOf(spec2.name);
+        if (found > -1) {
+          blockParsers[found] = spec2.parse;
+          leafBlockParsers[found] = spec2.leaf;
+        } else {
+          let pos = spec2.before ? findName(blockNames, spec2.before) : spec2.after ? findName(blockNames, spec2.after) + 1 : blockNames.length - 1;
+          blockParsers.splice(pos, 0, spec2.parse);
+          leafBlockParsers.splice(pos, 0, spec2.leaf);
+          blockNames.splice(pos, 0, spec2.name);
+        }
+        if (spec2.endLeaf)
+          endLeafBlock.push(spec2.endLeaf);
+      }
+    }
+    if (nonEmpty(config2.parseInline)) {
+      for (let spec2 of config2.parseInline) {
+        let found = inlineNames.indexOf(spec2.name);
+        if (found > -1) {
+          inlineParsers[found] = spec2.parse;
+        } else {
+          let pos = spec2.before ? findName(inlineNames, spec2.before) : spec2.after ? findName(inlineNames, spec2.after) + 1 : inlineNames.length - 1;
+          inlineParsers.splice(pos, 0, spec2.parse);
+          inlineNames.splice(pos, 0, spec2.name);
+        }
+      }
+    }
+    if (config2.wrap)
+      wrappers = wrappers.concat(config2.wrap);
+    return new _MarkdownParser(nodeSet, blockParsers, leafBlockParsers, blockNames, endLeafBlock, skipContextMarkup, inlineParsers, inlineNames, wrappers);
+  }
+  /**
+  @internal
+  */
+  getNodeType(name2) {
+    let found = this.nodeTypes[name2];
+    if (found == null)
+      throw new RangeError(`Unknown node type '${name2}'`);
+    return found;
+  }
+  /**
+  Parse the given piece of inline text at the given offset,
+  returning an array of [`Element`](#Element) objects representing
+  the inline content.
+  */
+  parseInline(text, offset) {
+    let cx = new InlineContext(this, text, offset);
+    outer: for (let pos = offset; pos < cx.end; ) {
+      let next = cx.char(pos);
+      for (let token of this.inlineParsers)
+        if (token) {
+          let result = token(cx, next, pos);
+          if (result >= 0) {
+            pos = result;
+            continue outer;
+          }
+        }
+      pos++;
+    }
+    return cx.resolveMarkers(0);
+  }
+};
+function nonEmpty(a) {
+  return a != null && a.length > 0;
+}
+function resolveConfig(spec) {
+  if (!Array.isArray(spec))
+    return spec;
+  if (spec.length == 0)
+    return null;
+  let conf = resolveConfig(spec[0]);
+  if (spec.length == 1)
+    return conf;
+  let rest = resolveConfig(spec.slice(1));
+  if (!rest || !conf)
+    return conf || rest;
+  let conc2 = (a, b) => (a || none4).concat(b || none4);
+  let wrapA = conf.wrap, wrapB = rest.wrap;
+  return {
+    props: conc2(conf.props, rest.props),
+    defineNodes: conc2(conf.defineNodes, rest.defineNodes),
+    parseBlock: conc2(conf.parseBlock, rest.parseBlock),
+    parseInline: conc2(conf.parseInline, rest.parseInline),
+    remove: conc2(conf.remove, rest.remove),
+    wrap: !wrapA ? wrapB : !wrapB ? wrapA : (inner, input, fragments, ranges) => wrapA(wrapB(inner, input, fragments, ranges), input, fragments, ranges)
+  };
+}
+function findName(names, name2) {
+  let found = names.indexOf(name2);
+  if (found < 0)
+    throw new RangeError(`Position specified relative to unknown parser ${name2}`);
+  return found;
+}
+var nodeTypes = [NodeType.none];
+for (let i = 1, name2; name2 = Type[i]; i++) {
+  nodeTypes[i] = NodeType.define({
+    id: i,
+    name: name2,
+    props: i >= Type.Escape ? [] : [[NodeProp.group, i in DefaultSkipMarkup ? ["Block", "BlockContext"] : ["Block", "LeafBlock"]]],
+    top: name2 == "Document"
+  });
+}
+var none4 = [];
+var Buffer = class {
+  constructor(nodeSet) {
+    this.nodeSet = nodeSet;
+    this.content = [];
+    this.nodes = [];
+  }
+  write(type, from, to, children = 0) {
+    this.content.push(type, from, to, 4 + children * 4);
+    return this;
+  }
+  writeElements(elts, offset = 0) {
+    for (let e of elts)
+      e.writeTo(this, offset);
+    return this;
+  }
+  finish(type, length) {
+    return Tree.build({
+      buffer: this.content,
+      nodeSet: this.nodeSet,
+      reused: this.nodes,
+      topID: type,
+      length
+    });
+  }
+};
+var Element2 = class {
+  /**
+  @internal
+  */
+  constructor(type, from, to, children = none4) {
+    this.type = type;
+    this.from = from;
+    this.to = to;
+    this.children = children;
+  }
+  /**
+  @internal
+  */
+  writeTo(buf, offset) {
+    let startOff = buf.content.length;
+    buf.writeElements(this.children, offset);
+    buf.content.push(this.type, this.from + offset, this.to + offset, buf.content.length + 4 - startOff);
+  }
+  /**
+  @internal
+  */
+  toTree(nodeSet) {
+    return new Buffer(nodeSet).writeElements(this.children, -this.from).finish(this.type, this.to - this.from);
+  }
+};
+var TreeElement = class {
+  constructor(tree, from) {
+    this.tree = tree;
+    this.from = from;
+  }
+  get to() {
+    return this.from + this.tree.length;
+  }
+  get type() {
+    return this.tree.type.id;
+  }
+  get children() {
+    return none4;
+  }
+  writeTo(buf, offset) {
+    buf.nodes.push(this.tree);
+    buf.content.push(buf.nodes.length - 1, this.from + offset, this.to + offset, -1);
+  }
+  toTree() {
+    return this.tree;
+  }
+};
+function elt(type, from, to, children) {
+  return new Element2(type, from, to, children);
+}
+var EmphasisUnderscore = { resolve: "Emphasis", mark: "EmphasisMark" };
+var EmphasisAsterisk = { resolve: "Emphasis", mark: "EmphasisMark" };
+var LinkStart = {};
+var ImageStart = {};
+var InlineDelimiter = class {
+  constructor(type, from, to, side) {
+    this.type = type;
+    this.from = from;
+    this.to = to;
+    this.side = side;
+  }
+};
+var Escapable = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+var Punctuation = /[!"#$%&'()*+,\-.\/:;<=>?@\[\\\]^_`{|}~\xA1\u2010-\u2027]/;
+try {
+  Punctuation = new RegExp("[\\p{S}|\\p{P}]", "u");
+} catch (_) {
+}
+var DefaultInline = {
+  Escape(cx, next, start) {
+    if (next != 92 || start == cx.end - 1)
+      return -1;
+    let escaped = cx.char(start + 1);
+    for (let i = 0; i < Escapable.length; i++)
+      if (Escapable.charCodeAt(i) == escaped)
+        return cx.append(elt(Type.Escape, start, start + 2));
+    return -1;
+  },
+  Entity(cx, next, start) {
+    if (next != 38)
+      return -1;
+    let m = /^(?:#\d+|#x[a-f\d]+|\w+);/i.exec(cx.slice(start + 1, start + 31));
+    return m ? cx.append(elt(Type.Entity, start, start + 1 + m[0].length)) : -1;
+  },
+  InlineCode(cx, next, start) {
+    if (next != 96 || start && cx.char(start - 1) == 96)
+      return -1;
+    let pos = start + 1;
+    while (pos < cx.end && cx.char(pos) == 96)
+      pos++;
+    let size = pos - start, curSize = 0;
+    for (; pos < cx.end; pos++) {
+      if (cx.char(pos) == 96) {
+        curSize++;
+        if (curSize == size && cx.char(pos + 1) != 96)
+          return cx.append(elt(Type.InlineCode, start, pos + 1, [
+            elt(Type.CodeMark, start, start + size),
+            elt(Type.CodeMark, pos + 1 - size, pos + 1)
+          ]));
+      } else {
+        curSize = 0;
+      }
+    }
+    return -1;
+  },
+  HTMLTag(cx, next, start) {
+    if (next != 60 || start == cx.end - 1)
+      return -1;
+    let after = cx.slice(start + 1, cx.end);
+    let url = /^(?:[a-z][-\w+.]+:[^\s>]+|[a-z\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)*)>/i.exec(after);
+    if (url) {
+      return cx.append(elt(Type.Autolink, start, start + 1 + url[0].length, [
+        elt(Type.LinkMark, start, start + 1),
+        // url[0] includes the closing bracket, so exclude it from this slice
+        elt(Type.URL, start + 1, start + url[0].length),
+        elt(Type.LinkMark, start + url[0].length, start + 1 + url[0].length)
+      ]));
+    }
+    let comment2 = /^!--[^>](?:-[^-]|[^-])*?-->/i.exec(after);
+    if (comment2)
+      return cx.append(elt(Type.Comment, start, start + 1 + comment2[0].length));
+    let procInst = /^\?[^]*?\?>/.exec(after);
+    if (procInst)
+      return cx.append(elt(Type.ProcessingInstruction, start, start + 1 + procInst[0].length));
+    let m = /^(?:![A-Z][^]*?>|!\[CDATA\[[^]*?\]\]>|\/\s*[a-zA-Z][\w-]*\s*>|\s*[a-zA-Z][\w-]*(\s+[a-zA-Z:_][\w-.:]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*(\/\s*)?>)/.exec(after);
+    if (!m)
+      return -1;
+    return cx.append(elt(Type.HTMLTag, start, start + 1 + m[0].length));
+  },
+  Emphasis(cx, next, start) {
+    if (next != 95 && next != 42)
+      return -1;
+    let pos = start + 1;
+    while (cx.char(pos) == next)
+      pos++;
+    let before = cx.slice(start - 1, start), after = cx.slice(pos, pos + 1);
+    let pBefore = Punctuation.test(before), pAfter = Punctuation.test(after);
+    let sBefore = /\s|^$/.test(before), sAfter = /\s|^$/.test(after);
+    let leftFlanking = !sAfter && (!pAfter || sBefore || pBefore);
+    let rightFlanking = !sBefore && (!pBefore || sAfter || pAfter);
+    let canOpen = leftFlanking && (next == 42 || !rightFlanking || pBefore);
+    let canClose = rightFlanking && (next == 42 || !leftFlanking || pAfter);
+    return cx.append(new InlineDelimiter(next == 95 ? EmphasisUnderscore : EmphasisAsterisk, start, pos, (canOpen ? 1 : 0) | (canClose ? 2 : 0)));
+  },
+  HardBreak(cx, next, start) {
+    if (next == 92 && cx.char(start + 1) == 10)
+      return cx.append(elt(Type.HardBreak, start, start + 2));
+    if (next == 32) {
+      let pos = start + 1;
+      while (cx.char(pos) == 32)
+        pos++;
+      if (cx.char(pos) == 10 && pos >= start + 2)
+        return cx.append(elt(Type.HardBreak, start, pos + 1));
+    }
+    return -1;
+  },
+  Link(cx, next, start) {
+    return next == 91 ? cx.append(new InlineDelimiter(
+      LinkStart,
+      start,
+      start + 1,
+      1
+      /* Mark.Open */
+    )) : -1;
+  },
+  Image(cx, next, start) {
+    return next == 33 && cx.char(start + 1) == 91 ? cx.append(new InlineDelimiter(
+      ImageStart,
+      start,
+      start + 2,
+      1
+      /* Mark.Open */
+    )) : -1;
+  },
+  LinkEnd(cx, next, start) {
+    if (next != 93)
+      return -1;
+    for (let i = cx.parts.length - 1; i >= 0; i--) {
+      let part = cx.parts[i];
+      if (part instanceof InlineDelimiter && (part.type == LinkStart || part.type == ImageStart)) {
+        if (!part.side || cx.skipSpace(part.to) == start && !/[(\[]/.test(cx.slice(start + 1, start + 2))) {
+          cx.parts[i] = null;
+          return -1;
+        }
+        let content2 = cx.takeContent(i);
+        let link = cx.parts[i] = finishLink(cx, content2, part.type == LinkStart ? Type.Link : Type.Image, part.from, start + 1);
+        if (part.type == LinkStart)
+          for (let j = 0; j < i; j++) {
+            let p = cx.parts[j];
+            if (p instanceof InlineDelimiter && p.type == LinkStart)
+              p.side = 0;
+          }
+        return link.to;
+      }
+    }
+    return -1;
+  }
+};
+function finishLink(cx, content2, type, start, startPos) {
+  let { text } = cx, next = cx.char(startPos), endPos = startPos;
+  content2.unshift(elt(Type.LinkMark, start, start + (type == Type.Image ? 2 : 1)));
+  content2.push(elt(Type.LinkMark, startPos - 1, startPos));
+  if (next == 40) {
+    let pos = cx.skipSpace(startPos + 1);
+    let dest = parseURL(text, pos - cx.offset, cx.offset), title;
+    if (dest) {
+      pos = cx.skipSpace(dest.to);
+      if (pos != dest.to) {
+        title = parseLinkTitle(text, pos - cx.offset, cx.offset);
+        if (title)
+          pos = cx.skipSpace(title.to);
+      }
+    }
+    if (cx.char(pos) == 41) {
+      content2.push(elt(Type.LinkMark, startPos, startPos + 1));
+      endPos = pos + 1;
+      if (dest)
+        content2.push(dest);
+      if (title)
+        content2.push(title);
+      content2.push(elt(Type.LinkMark, pos, endPos));
+    }
+  } else if (next == 91) {
+    let label = parseLinkLabel(text, startPos - cx.offset, cx.offset, false);
+    if (label) {
+      content2.push(label);
+      endPos = label.to;
+    }
+  }
+  return elt(type, start, endPos, content2);
+}
+function parseURL(text, start, offset) {
+  let next = text.charCodeAt(start);
+  if (next == 60) {
+    for (let pos = start + 1; pos < text.length; pos++) {
+      let ch = text.charCodeAt(pos);
+      if (ch == 62)
+        return elt(Type.URL, start + offset, pos + 1 + offset);
+      if (ch == 60 || ch == 10)
+        return false;
+    }
+    return null;
+  } else {
+    let depth = 0, pos = start;
+    for (let escaped = false; pos < text.length; pos++) {
+      let ch = text.charCodeAt(pos);
+      if (space4(ch)) {
+        break;
+      } else if (escaped) {
+        escaped = false;
+      } else if (ch == 40) {
+        depth++;
+      } else if (ch == 41) {
+        if (!depth)
+          break;
+        depth--;
+      } else if (ch == 92) {
+        escaped = true;
+      }
+    }
+    return pos > start ? elt(Type.URL, start + offset, pos + offset) : pos == text.length ? null : false;
+  }
+}
+function parseLinkTitle(text, start, offset) {
+  let next = text.charCodeAt(start);
+  if (next != 39 && next != 34 && next != 40)
+    return false;
+  let end = next == 40 ? 41 : next;
+  for (let pos = start + 1, escaped = false; pos < text.length; pos++) {
+    let ch = text.charCodeAt(pos);
+    if (escaped)
+      escaped = false;
+    else if (ch == end)
+      return elt(Type.LinkTitle, start + offset, pos + 1 + offset);
+    else if (ch == 92)
+      escaped = true;
+  }
+  return null;
+}
+function parseLinkLabel(text, start, offset, requireNonWS) {
+  for (let escaped = false, pos = start + 1, end = Math.min(text.length, pos + 999); pos < end; pos++) {
+    let ch = text.charCodeAt(pos);
+    if (escaped)
+      escaped = false;
+    else if (ch == 93)
+      return requireNonWS ? false : elt(Type.LinkLabel, start + offset, pos + 1 + offset);
+    else {
+      if (requireNonWS && !space4(ch))
+        requireNonWS = false;
+      if (ch == 91)
+        return false;
+      else if (ch == 92)
+        escaped = true;
+    }
+  }
+  return null;
+}
+var InlineContext = class {
+  /**
+  @internal
+  */
+  constructor(parser8, text, offset) {
+    this.parser = parser8;
+    this.text = text;
+    this.offset = offset;
+    this.parts = [];
+  }
+  /**
+  Get the character code at the given (document-relative)
+  position.
+  */
+  char(pos) {
+    return pos >= this.end ? -1 : this.text.charCodeAt(pos - this.offset);
+  }
+  /**
+  The position of the end of this inline section.
+  */
+  get end() {
+    return this.offset + this.text.length;
+  }
+  /**
+  Get a substring of this inline section. Again uses
+  document-relative positions.
+  */
+  slice(from, to) {
+    return this.text.slice(from - this.offset, to - this.offset);
+  }
+  /**
+  @internal
+  */
+  append(elt2) {
+    this.parts.push(elt2);
+    return elt2.to;
+  }
+  /**
+  Add a [delimiter](#DelimiterType) at this given position. `open`
+  and `close` indicate whether this delimiter is opening, closing,
+  or both. Returns the end of the delimiter, for convenient
+  returning from [parse functions](#InlineParser.parse).
+  */
+  addDelimiter(type, from, to, open, close) {
+    return this.append(new InlineDelimiter(type, from, to, (open ? 1 : 0) | (close ? 2 : 0)));
+  }
+  /**
+  Returns true when there is an unmatched link or image opening
+  token before the current position.
+  */
+  get hasOpenLink() {
+    for (let i = this.parts.length - 1; i >= 0; i--) {
+      let part = this.parts[i];
+      if (part instanceof InlineDelimiter && (part.type == LinkStart || part.type == ImageStart))
+        return true;
+    }
+    return false;
+  }
+  /**
+  Add an inline element. Returns the end of the element.
+  */
+  addElement(elt2) {
+    return this.append(elt2);
+  }
+  /**
+  Resolve markers between this.parts.length and from, wrapping matched markers in the
+  appropriate node and updating the content of this.parts. @internal
+  */
+  resolveMarkers(from) {
+    for (let i = from; i < this.parts.length; i++) {
+      let close = this.parts[i];
+      if (!(close instanceof InlineDelimiter && close.type.resolve && close.side & 2))
+        continue;
+      let emp = close.type == EmphasisUnderscore || close.type == EmphasisAsterisk;
+      let closeSize = close.to - close.from;
+      let open, j = i - 1;
+      for (; j >= from; j--) {
+        let part = this.parts[j];
+        if (part instanceof InlineDelimiter && part.side & 1 && part.type == close.type && // Ignore emphasis delimiters where the character count doesn't match
+        !(emp && (close.side & 1 || part.side & 2) && (part.to - part.from + closeSize) % 3 == 0 && ((part.to - part.from) % 3 || closeSize % 3))) {
+          open = part;
+          break;
+        }
+      }
+      if (!open)
+        continue;
+      let type = close.type.resolve, content2 = [];
+      let start = open.from, end = close.to;
+      if (emp) {
+        let size = Math.min(2, open.to - open.from, closeSize);
+        start = open.to - size;
+        end = close.from + size;
+        type = size == 1 ? "Emphasis" : "StrongEmphasis";
+      }
+      if (open.type.mark)
+        content2.push(this.elt(open.type.mark, start, open.to));
+      for (let k = j + 1; k < i; k++) {
+        if (this.parts[k] instanceof Element2)
+          content2.push(this.parts[k]);
+        this.parts[k] = null;
+      }
+      if (close.type.mark)
+        content2.push(this.elt(close.type.mark, close.from, end));
+      let element = this.elt(type, start, end, content2);
+      this.parts[j] = emp && open.from != start ? new InlineDelimiter(open.type, open.from, start, open.side) : null;
+      let keep = this.parts[i] = emp && close.to != end ? new InlineDelimiter(close.type, end, close.to, close.side) : null;
+      if (keep)
+        this.parts.splice(i, 0, element);
+      else
+        this.parts[i] = element;
+    }
+    let result = [];
+    for (let i = from; i < this.parts.length; i++) {
+      let part = this.parts[i];
+      if (part instanceof Element2)
+        result.push(part);
+    }
+    return result;
+  }
+  /**
+  Find an opening delimiter of the given type. Returns `null` if
+  no delimiter is found, or an index that can be passed to
+  [`takeContent`](#InlineContext.takeContent) otherwise.
+  */
+  findOpeningDelimiter(type) {
+    for (let i = this.parts.length - 1; i >= 0; i--) {
+      let part = this.parts[i];
+      if (part instanceof InlineDelimiter && part.type == type && part.side & 1)
+        return i;
+    }
+    return null;
+  }
+  /**
+  Remove all inline elements and delimiters starting from the
+  given index (which you should get from
+  [`findOpeningDelimiter`](#InlineContext.findOpeningDelimiter),
+  resolve delimiters inside of them, and return them as an array
+  of elements.
+  */
+  takeContent(startIndex) {
+    let content2 = this.resolveMarkers(startIndex);
+    this.parts.length = startIndex;
+    return content2;
+  }
+  /**
+  Return the delimiter at the given index. Mostly useful to get
+  additional info out of a delimiter index returned by
+  [`findOpeningDelimiter`](#InlineContext.findOpeningDelimiter).
+  Returns null if there is no delimiter at this index.
+  */
+  getDelimiterAt(index) {
+    let part = this.parts[index];
+    return part instanceof InlineDelimiter ? part : null;
+  }
+  /**
+  Skip space after the given (document) position, returning either
+  the position of the next non-space character or the end of the
+  section.
+  */
+  skipSpace(from) {
+    return skipSpace(this.text, from - this.offset) + this.offset;
+  }
+  elt(type, from, to, children) {
+    if (typeof type == "string")
+      return elt(this.parser.getNodeType(type), from, to, children);
+    return new TreeElement(type, from);
+  }
+};
+InlineContext.linkStart = LinkStart;
+InlineContext.imageStart = ImageStart;
+function injectMarks(elements, marks2) {
+  if (!marks2.length)
+    return elements;
+  if (!elements.length)
+    return marks2;
+  let elts = elements.slice(), eI = 0;
+  for (let mark of marks2) {
+    while (eI < elts.length && elts[eI].to < mark.to)
+      eI++;
+    if (eI < elts.length && elts[eI].from < mark.from) {
+      let e = elts[eI];
+      if (e instanceof Element2)
+        elts[eI] = new Element2(e.type, e.from, e.to, injectMarks(e.children, [mark]));
+    } else {
+      elts.splice(eI++, 0, mark);
+    }
+  }
+  return elts;
+}
+var NotLast = [Type.CodeBlock, Type.ListItem, Type.OrderedList, Type.BulletList];
+var FragmentCursor3 = class {
+  constructor(fragments, input) {
+    this.fragments = fragments;
+    this.input = input;
+    this.i = 0;
+    this.fragment = null;
+    this.fragmentEnd = -1;
+    this.cursor = null;
+    if (fragments.length)
+      this.fragment = fragments[this.i++];
+  }
+  nextFragment() {
+    this.fragment = this.i < this.fragments.length ? this.fragments[this.i++] : null;
+    this.cursor = null;
+    this.fragmentEnd = -1;
+  }
+  moveTo(pos, lineStart) {
+    while (this.fragment && this.fragment.to <= pos)
+      this.nextFragment();
+    if (!this.fragment || this.fragment.from > (pos ? pos - 1 : 0))
+      return false;
+    if (this.fragmentEnd < 0) {
+      let end = this.fragment.to;
+      while (end > 0 && this.input.read(end - 1, end) != "\n")
+        end--;
+      this.fragmentEnd = end ? end - 1 : 0;
+    }
+    let c = this.cursor;
+    if (!c) {
+      c = this.cursor = this.fragment.tree.cursor();
+      c.firstChild();
+    }
+    let rPos = pos + this.fragment.offset;
+    while (c.to <= rPos)
+      if (!c.parent())
+        return false;
+    for (; ; ) {
+      if (c.from >= rPos)
+        return this.fragment.from <= lineStart;
+      if (!c.childAfter(rPos))
+        return false;
+    }
+  }
+  matches(hash3) {
+    let tree = this.cursor.tree;
+    return tree && tree.prop(NodeProp.contextHash) == hash3;
+  }
+  takeNodes(cx) {
+    let cur2 = this.cursor, off = this.fragment.offset, fragEnd = this.fragmentEnd - (this.fragment.openEnd ? 1 : 0);
+    let start = cx.absoluteLineStart, end = start, blockI = cx.block.children.length;
+    let prevEnd = end, prevI = blockI;
+    for (; ; ) {
+      if (cur2.to - off > fragEnd) {
+        if (cur2.type.isAnonymous && cur2.firstChild())
+          continue;
+        break;
+      }
+      let pos = toRelative(cur2.from - off, cx.ranges);
+      if (cur2.to - off <= cx.ranges[cx.rangeI].to) {
+        cx.addNode(cur2.tree, pos);
+      } else {
+        let dummy = new Tree(cx.parser.nodeSet.types[Type.Paragraph], [], [], 0, cx.block.hashProp);
+        cx.reusePlaceholders.set(dummy, cur2.tree);
+        cx.addNode(dummy, pos);
+      }
+      if (cur2.type.is("Block")) {
+        if (NotLast.indexOf(cur2.type.id) < 0) {
+          end = cur2.to - off;
+          blockI = cx.block.children.length;
+        } else {
+          end = prevEnd;
+          blockI = prevI;
+        }
+        prevEnd = cur2.to - off;
+        prevI = cx.block.children.length;
+      }
+      if (!cur2.nextSibling())
+        break;
+    }
+    while (cx.block.children.length > blockI) {
+      cx.block.children.pop();
+      cx.block.positions.pop();
+    }
+    return end - start;
+  }
+};
+function toRelative(abs, ranges) {
+  let pos = abs;
+  for (let i = 1; i < ranges.length; i++) {
+    let gapFrom = ranges[i - 1].to, gapTo = ranges[i].from;
+    if (gapFrom < abs)
+      pos -= gapTo - gapFrom;
+  }
+  return pos;
+}
+var markdownHighlighting = styleTags({
+  "Blockquote/...": tags.quote,
+  HorizontalRule: tags.contentSeparator,
+  "ATXHeading1/... SetextHeading1/...": tags.heading1,
+  "ATXHeading2/... SetextHeading2/...": tags.heading2,
+  "ATXHeading3/...": tags.heading3,
+  "ATXHeading4/...": tags.heading4,
+  "ATXHeading5/...": tags.heading5,
+  "ATXHeading6/...": tags.heading6,
+  "Comment CommentBlock": tags.comment,
+  Escape: tags.escape,
+  Entity: tags.character,
+  "Emphasis/...": tags.emphasis,
+  "StrongEmphasis/...": tags.strong,
+  "Link/... Image/...": tags.link,
+  "OrderedList/... BulletList/...": tags.list,
+  "BlockQuote/...": tags.quote,
+  "InlineCode CodeText": tags.monospace,
+  "URL Autolink": tags.url,
+  "HeaderMark HardBreak QuoteMark ListMark LinkMark EmphasisMark CodeMark": tags.processingInstruction,
+  "CodeInfo LinkLabel": tags.labelName,
+  LinkTitle: tags.string,
+  Paragraph: tags.content
+});
+var parser7 = new MarkdownParser(new NodeSet(nodeTypes).extend(markdownHighlighting), Object.keys(DefaultBlockParsers).map((n) => DefaultBlockParsers[n]), Object.keys(DefaultBlockParsers).map((n) => DefaultLeafBlocks[n]), Object.keys(DefaultBlockParsers), DefaultEndLeaf, DefaultSkipMarkup, Object.keys(DefaultInline).map((n) => DefaultInline[n]), Object.keys(DefaultInline), []);
+function leftOverSpace(node, from, to) {
+  let ranges = [];
+  for (let n = node.firstChild, pos = from; ; n = n.nextSibling) {
+    let nextPos = n ? n.from : to;
+    if (nextPos > pos)
+      ranges.push({ from: pos, to: nextPos });
+    if (!n)
+      break;
+    pos = n.to;
+  }
+  return ranges;
+}
+function parseCode(config2) {
+  let { codeParser, htmlParser } = config2;
+  let wrap = parseMixed((node, input) => {
+    let id2 = node.type.id;
+    if (codeParser && (id2 == Type.CodeBlock || id2 == Type.FencedCode)) {
+      let info = "";
+      if (id2 == Type.FencedCode) {
+        let infoNode = node.node.getChild(Type.CodeInfo);
+        if (infoNode)
+          info = input.read(infoNode.from, infoNode.to);
+      }
+      let parser8 = codeParser(info);
+      if (parser8)
+        return { parser: parser8, overlay: (node2) => node2.type.id == Type.CodeText, bracketed: id2 == Type.FencedCode };
+    } else if (htmlParser && (id2 == Type.HTMLBlock || id2 == Type.HTMLTag || id2 == Type.CommentBlock)) {
+      return { parser: htmlParser, overlay: leftOverSpace(node.node, node.from, node.to) };
+    }
+    return null;
+  });
+  return { wrap };
+}
+var StrikethroughDelim = { resolve: "Strikethrough", mark: "StrikethroughMark" };
+var Strikethrough = {
+  defineNodes: [{
+    name: "Strikethrough",
+    style: { "Strikethrough/...": tags.strikethrough }
+  }, {
+    name: "StrikethroughMark",
+    style: tags.processingInstruction
+  }],
+  parseInline: [{
+    name: "Strikethrough",
+    parse(cx, next, pos) {
+      if (next != 126 || cx.char(pos + 1) != 126 || cx.char(pos + 2) == 126)
+        return -1;
+      let before = cx.slice(pos - 1, pos), after = cx.slice(pos + 2, pos + 3);
+      let sBefore = /\s|^$/.test(before), sAfter = /\s|^$/.test(after);
+      let pBefore = Punctuation.test(before), pAfter = Punctuation.test(after);
+      return cx.addDelimiter(StrikethroughDelim, pos, pos + 2, !sAfter && (!pAfter || sBefore || pBefore), !sBefore && (!pBefore || sAfter || pAfter));
+    },
+    after: "Emphasis"
+  }]
+};
+function parseRow(cx, line, startI = 0, elts, offset = 0) {
+  let count2 = 0, first = true, cellStart = -1, cellEnd = -1, esc = false;
+  let parseCell = () => {
+    elts.push(cx.elt("TableCell", offset + cellStart, offset + cellEnd, cx.parser.parseInline(line.slice(cellStart, cellEnd), offset + cellStart)));
+  };
+  for (let i = startI; i < line.length; i++) {
+    let next = line.charCodeAt(i);
+    if (next == 124 && !esc) {
+      if (!first || cellStart > -1)
+        count2++;
+      first = false;
+      if (elts) {
+        if (cellStart > -1)
+          parseCell();
+        elts.push(cx.elt("TableDelimiter", i + offset, i + offset + 1));
+      }
+      cellStart = cellEnd = -1;
+    } else if (esc || next != 32 && next != 9) {
+      if (cellStart < 0)
+        cellStart = i;
+      cellEnd = i + 1;
+    }
+    esc = !esc && next == 92;
+  }
+  if (cellStart > -1) {
+    count2++;
+    if (elts)
+      parseCell();
+  }
+  return count2;
+}
+function hasPipe(str, start) {
+  for (let i = start; i < str.length; i++) {
+    let next = str.charCodeAt(i);
+    if (next == 124)
+      return true;
+    if (next == 92)
+      i++;
+  }
+  return false;
+}
+var delimiterLine = /^\|?(\s*:?-+:?\s*\|)+(\s*:?-+:?\s*)?$/;
+var TableParser = class {
+  constructor() {
+    this.rows = null;
+  }
+  nextLine(cx, line, leaf) {
+    if (this.rows == null) {
+      this.rows = false;
+      let lineText;
+      if ((line.next == 45 || line.next == 58 || line.next == 124) && delimiterLine.test(lineText = line.text.slice(line.pos))) {
+        let firstRow = [], firstCount = parseRow(cx, leaf.content, 0, firstRow, leaf.start);
+        if (firstCount == parseRow(cx, lineText, 0))
+          this.rows = [
+            cx.elt("TableHeader", leaf.start, leaf.start + leaf.content.length, firstRow),
+            cx.elt("TableDelimiter", cx.lineStart + line.pos, cx.lineStart + line.text.length)
+          ];
+      }
+    } else if (this.rows) {
+      let content2 = [];
+      parseRow(cx, line.text, line.pos, content2, cx.lineStart);
+      this.rows.push(cx.elt("TableRow", cx.lineStart + line.pos, cx.lineStart + line.text.length, content2));
+    }
+    return false;
+  }
+  finish(cx, leaf) {
+    if (!this.rows)
+      return false;
+    cx.addLeafElement(leaf, cx.elt("Table", leaf.start, leaf.start + leaf.content.length, this.rows));
+    return true;
+  }
+};
+var Table = {
+  defineNodes: [
+    { name: "Table", block: true },
+    { name: "TableHeader", style: { "TableHeader/...": tags.heading } },
+    "TableRow",
+    { name: "TableCell", style: tags.content },
+    { name: "TableDelimiter", style: tags.processingInstruction }
+  ],
+  parseBlock: [{
+    name: "Table",
+    leaf(_, leaf) {
+      return hasPipe(leaf.content, 0) ? new TableParser() : null;
+    },
+    endLeaf(cx, line, leaf) {
+      if (leaf.parsers.some((p) => p instanceof TableParser) || !hasPipe(line.text, line.basePos))
+        return false;
+      let next = cx.peekLine();
+      return delimiterLine.test(next) && parseRow(cx, line.text, line.basePos) == parseRow(cx, next, line.basePos);
+    },
+    before: "SetextHeading"
+  }]
+};
+var TaskParser = class {
+  nextLine() {
+    return false;
+  }
+  finish(cx, leaf) {
+    cx.addLeafElement(leaf, cx.elt("Task", leaf.start, leaf.start + leaf.content.length, [
+      cx.elt("TaskMarker", leaf.start, leaf.start + 3),
+      ...cx.parser.parseInline(leaf.content.slice(3), leaf.start + 3)
+    ]));
+    return true;
+  }
+};
+var TaskList = {
+  defineNodes: [
+    { name: "Task", block: true, style: tags.list },
+    { name: "TaskMarker", style: tags.atom }
+  ],
+  parseBlock: [{
+    name: "TaskList",
+    leaf(cx, leaf) {
+      return /^\[[ xX]\][ \t]/.test(leaf.content) && cx.parentType().name == "ListItem" ? new TaskParser() : null;
+    },
+    after: "SetextHeading"
+  }]
+};
+var autolinkRE = /(www\.)|(https?:\/\/)|([\w.+-]{1,100}@)|(mailto:|xmpp:)/gy;
+var urlRE = /[\w-]+(\.[\w-]+)+(:\d+)?(\/[^\s<]*)?/gy;
+var lastTwoDomainWords = /[\w-]+\.[\w-]+($|[/:])/;
+var emailRE = /[\w.+-]+@[\w-]+(\.[\w.-]+)+/gy;
+var xmppResourceRE = /\/[a-zA-Z\d@.]+/gy;
+function count(str, from, to, ch) {
+  let result = 0;
+  for (let i = from; i < to; i++)
+    if (str[i] == ch)
+      result++;
+  return result;
+}
+function autolinkURLEnd(text, from) {
+  urlRE.lastIndex = from;
+  let m = urlRE.exec(text);
+  if (!m || lastTwoDomainWords.exec(m[0])[0].indexOf("_") > -1)
+    return -1;
+  let end = from + m[0].length;
+  for (; ; ) {
+    let last = text[end - 1], m2;
+    if (/[?!.,:*_~]/.test(last) || last == ")" && count(text, from, end, ")") > count(text, from, end, "("))
+      end--;
+    else if (last == ";" && (m2 = /&(?:#\d+|#x[a-f\d]+|\w+);$/.exec(text.slice(from, end))))
+      end = from + m2.index;
+    else
+      break;
+  }
+  return end;
+}
+function autolinkEmailEnd(text, from) {
+  emailRE.lastIndex = from;
+  let m = emailRE.exec(text);
+  if (!m)
+    return -1;
+  let last = m[0][m[0].length - 1];
+  return last == "_" || last == "-" ? -1 : from + m[0].length - (last == "." ? 1 : 0);
+}
+var Autolink = {
+  parseInline: [{
+    name: "Autolink",
+    parse(cx, next, absPos) {
+      let pos = absPos - cx.offset;
+      if (pos && /\w/.test(cx.text[pos - 1]))
+        return -1;
+      autolinkRE.lastIndex = pos;
+      let m = autolinkRE.exec(cx.text), end = -1;
+      if (!m)
+        return -1;
+      if (m[1] || m[2]) {
+        end = autolinkURLEnd(cx.text, pos + m[0].length);
+        if (end > -1 && cx.hasOpenLink) {
+          let noBracket = /([^\[\]]|\[[^\]]*\])*/.exec(cx.text.slice(pos, end));
+          end = pos + noBracket[0].length;
+        }
+      } else if (m[3]) {
+        end = autolinkEmailEnd(cx.text, pos);
+      } else {
+        end = autolinkEmailEnd(cx.text, pos + m[0].length);
+        if (end > -1 && m[0] == "xmpp:") {
+          xmppResourceRE.lastIndex = end;
+          m = xmppResourceRE.exec(cx.text);
+          if (m)
+            end = m.index + m[0].length;
+        }
+      }
+      if (end < 0)
+        return -1;
+      cx.addElement(cx.elt("URL", absPos, end + cx.offset));
+      return end + cx.offset;
+    }
+  }]
+};
+var GFM = [Table, TaskList, Strikethrough, Autolink];
+function parseSubSuper(ch, node, mark) {
+  return (cx, next, pos) => {
+    if (next != ch || cx.char(pos + 1) == ch)
+      return -1;
+    let elts = [cx.elt(mark, pos, pos + 1)];
+    for (let i = pos + 1; i < cx.end; i++) {
+      let next2 = cx.char(i);
+      if (next2 == ch)
+        return cx.addElement(cx.elt(node, pos, i + 1, elts.concat(cx.elt(mark, i, i + 1))));
+      if (next2 == 92)
+        elts.push(cx.elt("Escape", i, i++ + 2));
+      if (space4(next2))
+        break;
+    }
+    return -1;
+  };
+}
+var Superscript = {
+  defineNodes: [
+    { name: "Superscript", style: tags.special(tags.content) },
+    { name: "SuperscriptMark", style: tags.processingInstruction }
+  ],
+  parseInline: [{
+    name: "Superscript",
+    parse: parseSubSuper(94, "Superscript", "SuperscriptMark")
+  }]
+};
+var Subscript = {
+  defineNodes: [
+    { name: "Subscript", style: tags.special(tags.content) },
+    { name: "SubscriptMark", style: tags.processingInstruction }
+  ],
+  parseInline: [{
+    name: "Subscript",
+    parse: parseSubSuper(126, "Subscript", "SubscriptMark")
+  }]
+};
+var Emoji = {
+  defineNodes: [{ name: "Emoji", style: tags.character }],
+  parseInline: [{
+    name: "Emoji",
+    parse(cx, next, pos) {
+      let match;
+      if (next != 58 || !(match = /^[a-zA-Z_0-9]+:/.exec(cx.slice(pos + 1, cx.end))))
+        return -1;
+      return cx.addElement(cx.elt("Emoji", pos, pos + 1 + match[0].length));
+    }
+  }]
+};
+
+// node_modules/@codemirror/lang-markdown/dist/index.js
+var data = /* @__PURE__ */ defineLanguageFacet({ commentTokens: { block: { open: "<!--", close: "-->" } } });
+var headingProp = /* @__PURE__ */ new NodeProp();
+var commonmark = /* @__PURE__ */ parser7.configure({
+  props: [
+    /* @__PURE__ */ foldNodeProp.add((type) => {
+      return !type.is("Block") || type.is("Document") || isHeading(type) != null || isList(type) ? void 0 : (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to });
+    }),
+    /* @__PURE__ */ headingProp.add(isHeading),
+    /* @__PURE__ */ indentNodeProp.add({
+      Document: () => null
+    }),
+    /* @__PURE__ */ languageDataProp.add({
+      Document: data
+    })
+  ]
+});
+function isHeading(type) {
+  let match = /^(?:ATX|Setext)Heading(\d)$/.exec(type.name);
+  return match ? +match[1] : void 0;
+}
+function isList(type) {
+  return type.name == "OrderedList" || type.name == "BulletList";
+}
+function findSectionEnd(headerNode, level) {
+  let last = headerNode;
+  for (; ; ) {
+    let next = last.nextSibling, heading2;
+    if (!next || (heading2 = isHeading(next.type)) != null && heading2 <= level)
+      break;
+    last = next;
+  }
+  return last.to;
+}
+var headerIndent = /* @__PURE__ */ foldService.of((state, start, end) => {
+  for (let node = syntaxTree(state).resolveInner(end, -1); node; node = node.parent) {
+    if (node.from < start)
+      break;
+    let heading2 = node.type.prop(headingProp);
+    if (heading2 == null)
+      continue;
+    let upto = findSectionEnd(node, heading2);
+    if (upto > end)
+      return { from: end, to: upto };
+  }
+  return null;
+});
+function mkLang(parser8) {
+  return new Language(data, parser8, [], "markdown");
+}
+var commonmarkLanguage = /* @__PURE__ */ mkLang(commonmark);
+var extended = /* @__PURE__ */ commonmark.configure([GFM, Subscript, Superscript, Emoji, {
+  props: [
+    /* @__PURE__ */ foldNodeProp.add({
+      Table: (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to })
+    })
+  ]
+}]);
+var markdownLanguage = /* @__PURE__ */ mkLang(extended);
+function getCodeParser(languages, defaultLanguage) {
+  return (info) => {
+    if (info && languages) {
+      let found = null;
+      info = /\S*/.exec(info)[0];
+      if (typeof languages == "function")
+        found = languages(info);
+      else
+        found = LanguageDescription.matchLanguageName(languages, info, true);
+      if (found instanceof LanguageDescription)
+        return found.support ? found.support.language.parser : ParseContext.getSkippingParser(found.load());
+      else if (found)
+        return found.parser;
+    }
+    return defaultLanguage ? defaultLanguage.parser : null;
+  };
+}
+var Context2 = class {
+  constructor(node, from, to, spaceBefore, spaceAfter, type, item) {
+    this.node = node;
+    this.from = from;
+    this.to = to;
+    this.spaceBefore = spaceBefore;
+    this.spaceAfter = spaceAfter;
+    this.type = type;
+    this.item = item;
+  }
+  blank(maxWidth, trailing = true) {
+    let result = this.spaceBefore + (this.node.name == "Blockquote" ? ">" : "");
+    if (maxWidth != null) {
+      while (result.length < maxWidth)
+        result += " ";
+      return result;
+    } else {
+      for (let i = this.to - this.from - result.length - this.spaceAfter.length; i > 0; i--)
+        result += " ";
+      return result + (trailing ? this.spaceAfter : "");
+    }
+  }
+  marker(doc2, add2) {
+    let number2 = this.node.name == "OrderedList" ? String(+itemNumber(this.item, doc2)[2] + add2) : "";
+    return this.spaceBefore + number2 + this.type + this.spaceAfter;
+  }
+};
+function getContext(node, doc2) {
+  let nodes = [], context = [];
+  for (let cur2 = node; cur2; cur2 = cur2.parent) {
+    if (cur2.name == "FencedCode")
+      return context;
+    if (cur2.name == "ListItem" || cur2.name == "Blockquote")
+      nodes.push(cur2);
+  }
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    let node2 = nodes[i], match;
+    let line = doc2.lineAt(node2.from), startPos = node2.from - line.from;
+    if (node2.name == "Blockquote" && (match = /^ *>( ?)/.exec(line.text.slice(startPos)))) {
+      context.push(new Context2(node2, startPos, startPos + match[0].length, "", match[1], ">", null));
+    } else if (node2.name == "ListItem" && node2.parent.name == "OrderedList" && (match = /^( *)\d+([.)])( *)/.exec(line.text.slice(startPos)))) {
+      let after = match[3], len = match[0].length;
+      if (after.length >= 4) {
+        after = after.slice(0, after.length - 4);
+        len -= 4;
+      }
+      context.push(new Context2(node2.parent, startPos, startPos + len, match[1], after, match[2], node2));
+    } else if (node2.name == "ListItem" && node2.parent.name == "BulletList" && (match = /^( *)([-+*])( {1,4}\[[ xX]\])?( +)/.exec(line.text.slice(startPos)))) {
+      let after = match[4], len = match[0].length;
+      if (after.length > 4) {
+        after = after.slice(0, after.length - 4);
+        len -= 4;
+      }
+      let type = match[2];
+      if (match[3])
+        type += match[3].replace(/[xX]/, " ");
+      context.push(new Context2(node2.parent, startPos, startPos + len, match[1], after, type, node2));
+    }
+  }
+  return context;
+}
+function itemNumber(item, doc2) {
+  return /^(\s*)(\d+)(?=[.)])/.exec(doc2.sliceString(item.from, item.from + 10));
+}
+function renumberList(after, doc2, changes, offset = 0) {
+  for (let prev = -1, node = after; ; ) {
+    if (node.name == "ListItem") {
+      let m = itemNumber(node, doc2);
+      let number2 = +m[2];
+      if (prev >= 0) {
+        if (number2 != prev + 1)
+          return;
+        changes.push({ from: node.from + m[1].length, to: node.from + m[0].length, insert: String(prev + 2 + offset) });
+      }
+      prev = number2;
+    }
+    let next = node.nextSibling;
+    if (!next)
+      break;
+    node = next;
+  }
+}
+function normalizeIndent(content2, state) {
+  let blank = /^[ \t]*/.exec(content2)[0].length;
+  if (!blank || state.facet(indentUnit) != "	")
+    return content2;
+  let col = countColumn(content2, 4, blank);
+  let space5 = "";
+  for (let i = col; i > 0; ) {
+    if (i >= 4) {
+      space5 += "	";
+      i -= 4;
+    } else {
+      space5 += " ";
+      i--;
+    }
+  }
+  return space5 + content2.slice(blank);
+}
+var insertNewlineContinueMarkupCommand = (config2 = {}) => ({ state, dispatch }) => {
+  let tree = syntaxTree(state), { doc: doc2 } = state;
+  let dont = null, changes = state.changeByRange((range) => {
+    if (!range.empty || !markdownLanguage.isActiveAt(state, range.from, -1) && !markdownLanguage.isActiveAt(state, range.from, 1))
+      return dont = { range };
+    let pos = range.from, line = doc2.lineAt(pos);
+    let context = getContext(tree.resolveInner(pos, -1), doc2);
+    while (context.length && context[context.length - 1].from > pos - line.from)
+      context.pop();
+    if (!context.length)
+      return dont = { range };
+    let inner = context[context.length - 1];
+    if (inner.to - inner.spaceAfter.length > pos - line.from)
+      return dont = { range };
+    let emptyLine = pos >= inner.to - inner.spaceAfter.length && !/\S/.test(line.text.slice(inner.to));
+    if (inner.item && emptyLine) {
+      let first = inner.node.firstChild, second = inner.node.getChild("ListItem", "ListItem");
+      if (first.to >= pos || second && second.to < pos || line.from > 0 && !/[^\s>]/.test(doc2.lineAt(line.from - 1).text) || config2.nonTightLists === false) {
+        let next = context.length > 1 ? context[context.length - 2] : null;
+        let delTo, insert3 = "";
+        if (next && next.item) {
+          delTo = line.from + next.from;
+          insert3 = next.marker(doc2, 1);
+        } else {
+          delTo = line.from + (next ? next.to : 0);
+        }
+        let changes3 = [{ from: delTo, to: pos, insert: insert3 }];
+        if (inner.node.name == "OrderedList")
+          renumberList(inner.item, doc2, changes3, -2);
+        if (next && next.node.name == "OrderedList")
+          renumberList(next.item, doc2, changes3);
+        return { range: EditorSelection.cursor(delTo + insert3.length), changes: changes3 };
+      } else {
+        let insert3 = blankLine(context, state, line);
+        return {
+          range: EditorSelection.cursor(pos + insert3.length + 1),
+          changes: { from: line.from, insert: insert3 + state.lineBreak }
+        };
+      }
+    }
+    if (inner.node.name == "Blockquote" && emptyLine && line.from) {
+      let prevLine = doc2.lineAt(line.from - 1), quoted = />\s*$/.exec(prevLine.text);
+      if (quoted && quoted.index == inner.from) {
+        let changes3 = state.changes([
+          { from: prevLine.from + quoted.index, to: prevLine.to },
+          { from: line.from + inner.from, to: line.to }
+        ]);
+        return { range: range.map(changes3), changes: changes3 };
+      }
+    }
+    let changes2 = [];
+    if (inner.node.name == "OrderedList")
+      renumberList(inner.item, doc2, changes2);
+    let continued = inner.item && inner.item.from < line.from;
+    let insert2 = "";
+    if (!continued || /^[\s\d.)\-+*>]*/.exec(line.text)[0].length >= inner.to) {
+      for (let i = 0, e = context.length - 1; i <= e; i++) {
+        insert2 += i == e && !continued ? context[i].marker(doc2, 1) : context[i].blank(i < e ? countColumn(line.text, 4, context[i + 1].from) - insert2.length : null);
+      }
+    }
+    let from = pos;
+    while (from > line.from && /\s/.test(line.text.charAt(from - line.from - 1)))
+      from--;
+    insert2 = normalizeIndent(insert2, state);
+    if (nonTightList(inner.node, state.doc))
+      insert2 = blankLine(context, state, line) + state.lineBreak + insert2;
+    changes2.push({ from, to: pos, insert: state.lineBreak + insert2 });
+    return { range: EditorSelection.cursor(from + insert2.length + 1), changes: changes2 };
+  });
+  if (dont)
+    return false;
+  dispatch(state.update(changes, { scrollIntoView: true, userEvent: "input" }));
+  return true;
+};
+var insertNewlineContinueMarkup = /* @__PURE__ */ insertNewlineContinueMarkupCommand();
+function isMark(node) {
+  return node.name == "QuoteMark" || node.name == "ListMark";
+}
+function nonTightList(node, doc2) {
+  if (node.name != "OrderedList" && node.name != "BulletList")
+    return false;
+  let first = node.firstChild, second = node.getChild("ListItem", "ListItem");
+  if (!second)
+    return false;
+  let line1 = doc2.lineAt(first.to), line2 = doc2.lineAt(second.from);
+  let empty2 = /^[\s>]*$/.test(line1.text);
+  return line1.number + (empty2 ? 0 : 1) < line2.number;
+}
+function blankLine(context, state, line) {
+  let insert2 = "";
+  for (let i = 0, e = context.length - 2; i <= e; i++) {
+    insert2 += context[i].blank(i < e ? countColumn(line.text, 4, context[i + 1].from) - insert2.length : null, i < e);
+  }
+  return normalizeIndent(insert2, state);
+}
+function contextNodeForDelete(tree, pos) {
+  let node = tree.resolveInner(pos, -1), scan = pos;
+  if (isMark(node)) {
+    scan = node.from;
+    node = node.parent;
+  }
+  for (let prev; prev = node.childBefore(scan); ) {
+    if (isMark(prev)) {
+      scan = prev.from;
+    } else if (prev.name == "OrderedList" || prev.name == "BulletList") {
+      node = prev.lastChild;
+      scan = node.to;
+    } else {
+      break;
+    }
+  }
+  return node;
+}
+var deleteMarkupBackward = ({ state, dispatch }) => {
+  let tree = syntaxTree(state);
+  let dont = null, changes = state.changeByRange((range) => {
+    let pos = range.from, { doc: doc2 } = state;
+    if (range.empty && markdownLanguage.isActiveAt(state, range.from)) {
+      let line = doc2.lineAt(pos);
+      let context = getContext(contextNodeForDelete(tree, pos), doc2);
+      if (context.length) {
+        let inner = context[context.length - 1];
+        let spaceEnd = inner.to - inner.spaceAfter.length + (inner.spaceAfter ? 1 : 0);
+        if (pos - line.from > spaceEnd && !/\S/.test(line.text.slice(spaceEnd, pos - line.from)))
+          return {
+            range: EditorSelection.cursor(line.from + spaceEnd),
+            changes: { from: line.from + spaceEnd, to: pos }
+          };
+        if (pos - line.from == spaceEnd && // Only apply this if we're on the line that has the
+        // construct's syntax, or there's only indentation in the
+        // target range
+        (!inner.item || line.from <= inner.item.from || !/\S/.test(line.text.slice(0, inner.to)))) {
+          let start = line.from + inner.from;
+          if (inner.item && inner.node.from < inner.item.from && /\S/.test(line.text.slice(inner.from, inner.to))) {
+            let insert2 = inner.blank(countColumn(line.text, 4, inner.to) - countColumn(line.text, 4, inner.from));
+            if (start == line.from)
+              insert2 = normalizeIndent(insert2, state);
+            return {
+              range: EditorSelection.cursor(start + insert2.length),
+              changes: { from: start, to: line.from + inner.to, insert: insert2 }
+            };
+          }
+          if (start < pos)
+            return { range: EditorSelection.cursor(start), changes: { from: start, to: pos } };
+        }
+      }
+    }
+    return dont = { range };
+  });
+  if (dont)
+    return false;
+  dispatch(state.update(changes, { scrollIntoView: true, userEvent: "delete" }));
+  return true;
+};
+var markdownKeymap = [
+  { key: "Enter", run: insertNewlineContinueMarkup },
+  { key: "Backspace", run: deleteMarkupBackward }
+];
+var htmlNoMatch = /* @__PURE__ */ html({ matchClosingTags: false });
+function markdown(config2 = {}) {
+  let { codeLanguages, defaultCodeLanguage, addKeymap = true, base: { parser: parser8 } = commonmarkLanguage, completeHTMLTags = true, pasteURLAsLink: pasteURL = true, htmlTagLanguage = htmlNoMatch } = config2;
+  if (!(parser8 instanceof MarkdownParser))
+    throw new RangeError("Base parser provided to `markdown` should be a Markdown parser");
+  let extensions = config2.extensions ? [config2.extensions] : [];
+  let support = [htmlTagLanguage.support, headerIndent], defaultCode;
+  if (pasteURL)
+    support.push(pasteURLAsLink);
+  if (defaultCodeLanguage instanceof LanguageSupport) {
+    support.push(defaultCodeLanguage.support);
+    defaultCode = defaultCodeLanguage.language;
+  } else if (defaultCodeLanguage) {
+    defaultCode = defaultCodeLanguage;
+  }
+  let codeParser = codeLanguages || defaultCode ? getCodeParser(codeLanguages, defaultCode) : void 0;
+  extensions.push(parseCode({ codeParser, htmlParser: htmlTagLanguage.language.parser }));
+  if (addKeymap)
+    support.push(Prec.high(keymap.of(markdownKeymap)));
+  let lang = mkLang(parser8.configure(extensions));
+  if (completeHTMLTags)
+    support.push(lang.data.of({ autocomplete: htmlTagCompletion }));
+  return new LanguageSupport(lang, support);
+}
+function htmlTagCompletion(context) {
+  let { state, pos } = context, m = /<[:\-\.\w\u00b7-\uffff]*$/.exec(state.sliceDoc(pos - 25, pos));
+  if (!m)
+    return null;
+  let tree = syntaxTree(state).resolveInner(pos, -1);
+  while (tree && !tree.type.isTop) {
+    if (tree.name == "CodeBlock" || tree.name == "FencedCode" || tree.name == "ProcessingInstructionBlock" || tree.name == "CommentBlock" || tree.name == "Link" || tree.name == "Image")
+      return null;
+    tree = tree.parent;
+  }
+  return {
+    from: pos - m[0].length,
+    to: pos,
+    options: htmlTagCompletions(),
+    validFor: /^<[:\-\.\w\u00b7-\uffff]*$/
+  };
+}
+var _tagCompletions = null;
+function htmlTagCompletions() {
+  if (_tagCompletions)
+    return _tagCompletions;
+  let result = htmlCompletionSource(new CompletionContext(EditorState.create({ extensions: htmlNoMatch }), 0, true));
+  return _tagCompletions = result ? result.options : [];
+}
+var nonPlainText = /code|horizontalrule|html|link|comment|processing|escape|entity|image|mark|url/i;
+var pasteURLAsLink = /* @__PURE__ */ EditorView.domEventHandlers({
+  paste: (event, view) => {
+    var _a2;
+    let { main } = view.state.selection;
+    if (main.empty)
+      return false;
+    let link = (_a2 = event.clipboardData) === null || _a2 === void 0 ? void 0 : _a2.getData("text/plain");
+    if (!link || !/^(https?:\/\/|mailto:|xmpp:|www\.)/.test(link))
+      return false;
+    if (/^www\./.test(link))
+      link = "https://" + link;
+    if (!markdownLanguage.isActiveAt(view.state, main.from, 1))
+      return false;
+    let tree = syntaxTree(view.state), crossesNode = false;
+    tree.iterate({
+      from: main.from,
+      to: main.to,
+      enter: (node) => {
+        if (node.from > main.from || nonPlainText.test(node.name))
+          crossesNode = true;
+      },
+      leave: (node) => {
+        if (node.to < main.to)
+          crossesNode = true;
+      }
+    });
+    if (crossesNode)
+      return false;
+    view.dispatch({
+      changes: [{ from: main.from, insert: "[" }, { from: main.to, insert: `](${link})` }],
+      userEvent: "input.paste",
+      scrollIntoView: true
+    });
+    return true;
+  }
+});
 export {
+  Compartment,
   EditorView,
   basicSetup,
+  css,
+  html,
   javascript,
-  oneDark
+  json,
+  markdown,
+  oneDark,
+  python,
+  rust
 };

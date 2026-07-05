@@ -1,75 +1,151 @@
-// Anvil Editor — Phase 0 frontend
+// Anvil Editor — Phase 2 frontend
 //
-// CodeMirror 6 is vendored locally (src/vendor/codemirror.bundle.js) rather
-// than loaded from a CDN at runtime. This removes a runtime network
-// dependency entirely — consistent with Anvil's low-overhead philosophy,
-// and it's the same "vendor the JS locally" pattern already proven out in
-// AirNode. It also means Phase 0 has zero points of silent failure from
-// CORS/proxy/webview quirks fetching an external module.
-
-import { EditorView, basicSetup, javascript, oneDark } from "./vendor/codemirror.bundle.js";
-
-const startDoc = `// Anvil Editor — Phase 0
-// This is a real, live CodeMirror 6 instance running inside a Tauri v2 webview.
+// Adds: a file tree (lazy-loaded via list_dir), opening files into the editor
+// (read_text_file), and per-file syntax highlighting via a CodeMirror
+// Compartment (swaps language support without recreating the EditorView).
 //
-// Edit this text, then hit "Send to Daemon" below. That button sends this
-// exact buffer content across the process boundary to the Rust daemon,
-// which echoes it back. If you see it come back, the client<->daemon
-// round trip is proven — which is the entire point of Phase 0.
+// Requires an updated vendor bundle — see vendor-build/entry.js and the
+// rebuild command in this phase's notes. The bundle must export:
+// EditorView, basicSetup, Compartment, oneDark, and the language() functions
+// used in LANGUAGE_BY_EXT below.
 
-function helloAnvil() {
-  return "no editor logic beyond this file is expected to exist yet";
+import {
+  EditorView,
+  basicSetup,
+  Compartment,
+  oneDark,
+  javascript,
+  python,
+  rust,
+  json,
+  html,
+  css,
+  markdown,
+} from "./vendor/codemirror.bundle.js";
+
+const LANGUAGE_BY_EXT = {
+  js: () => javascript(),
+  jsx: () => javascript({ jsx: true }),
+  ts: () => javascript({ typescript: true }),
+  tsx: () => javascript({ typescript: true, jsx: true }),
+  py: () => python(),
+  rs: () => rust(),
+  json: () => json(),
+  html: () => html(),
+  css: () => css(),
+  md: () => markdown(),
+};
+
+function languageForPath(path) {
+  const ext = path.split(".").pop().toLowerCase();
+  const factory = LANGUAGE_BY_EXT[ext];
+  return factory ? factory() : [];
 }
-`;
 
-function showFatalError(context, err) {
-  // Surface failures visibly instead of a silent blank editor — if this
-  // ever breaks again, you'll see why, not just an empty window.
-  const el = document.getElementById("editor");
-  el.innerHTML = `<div style="padding:16px;color:#ff8a80;font-family:monospace;font-size:13px;white-space:pre-wrap;">
-FAILED TO INITIALIZE EDITOR
-Context: ${context}
-Error: ${err && err.message ? err.message : String(err)}
-</div>`;
+const languageCompartment = new Compartment();
+const currentFileEl = document.getElementById("current-file");
+
+const editor = new EditorView({
+  doc: "// Open a folder on the left, then click a file to edit it.\n",
+  extensions: [basicSetup, languageCompartment.of([]), oneDark],
+  parent: document.getElementById("editor"),
+});
+
+async function openFile(path) {
+  try {
+    const content = await window.__TAURI__.core.invoke("read_text_file", { path });
+    editor.dispatch({
+      changes: { from: 0, to: editor.state.doc.length, insert: content },
+      effects: languageCompartment.reconfigure(languageForPath(path)),
+    });
+    currentFileEl.textContent = path;
+  } catch (err) {
+    currentFileEl.textContent = "error opening file";
+    editor.dispatch({
+      changes: { from: 0, to: editor.state.doc.length, insert: `// Failed to open ${path}\n// ${err}` },
+    });
+  }
 }
 
-let editor;
-try {
-  editor = new EditorView({
-    doc: startDoc,
-    extensions: [basicSetup, javascript(), oneDark],
-    parent: document.getElementById("editor"),
-  });
-} catch (err) {
-  showFatalError("mounting CodeMirror", err);
+function iconFor(entry) {
+  return entry.is_dir ? "\u25B8" : "\u2022"; // ▸ for dirs, • for files
 }
 
-const resultEl = document.getElementById("result");
+async function buildTreeNode(entry, container) {
+  const row = document.createElement("div");
+  row.className = "tree-row";
 
-document.getElementById("ping-btn").addEventListener("click", async () => {
-  if (!editor) {
-    resultEl.textContent = "Editor failed to initialize — see error above. Cannot send.";
+  const caret = document.createElement("span");
+  caret.className = "tree-caret";
+  caret.textContent = entry.is_dir ? iconFor(entry) : " ";
+  row.appendChild(caret);
+
+  const label = document.createElement("span");
+  label.textContent = entry.name;
+  row.appendChild(label);
+
+  container.appendChild(row);
+
+  if (!entry.is_dir) {
+    row.addEventListener("click", () => {
+      document.querySelectorAll(".tree-row.active").forEach((el) => el.classList.remove("active"));
+      row.classList.add("active");
+      openFile(entry.path);
+    });
     return;
   }
 
-  const message = editor.state.doc.toString();
-  resultEl.textContent = "sending to daemon...";
+  // Directory: lazy-load children on first click, toggle visibility after.
+  let childrenEl = null;
+  let loaded = false;
+  let expanded = false;
 
-  try {
-    if (!window.__TAURI__ || !window.__TAURI__.core) {
-      throw new Error("window.__TAURI__.core is not available — check withGlobalTauri in tauri.conf.json");
+  row.addEventListener("click", async () => {
+    expanded = !expanded;
+    caret.textContent = expanded ? "\u25BE" : "\u25B8"; // ▾ / ▸
+
+    if (!loaded) {
+      loaded = true;
+      childrenEl = document.createElement("div");
+      childrenEl.className = "tree-children";
+      row.insertAdjacentElement("afterend", childrenEl);
+      try {
+        const children = await window.__TAURI__.core.invoke("list_dir", { path: entry.path });
+        for (const child of children) {
+          await buildTreeNode(child, childrenEl);
+        }
+      } catch (err) {
+        const errEl = document.createElement("div");
+        errEl.className = "tree-error";
+        errEl.textContent = "Error: " + err;
+        childrenEl.appendChild(errEl);
+      }
     }
-    const response = await window.__TAURI__.core.invoke("ping", { message });
-    resultEl.textContent = response;
+    childrenEl.style.display = expanded ? "block" : "none";
+  });
+}
+
+async function openWorkspace(path) {
+  const treeEl = document.getElementById("tree");
+  treeEl.innerHTML = "";
+  try {
+    const entries = await window.__TAURI__.core.invoke("list_dir", { path });
+    for (const entry of entries) {
+      await buildTreeNode(entry, treeEl);
+    }
   } catch (err) {
-    resultEl.textContent = "Error calling daemon: " + (err && err.message ? err.message : String(err));
+    const errEl = document.createElement("div");
+    errEl.className = "tree-error";
+    errEl.textContent = "Error: " + err;
+    treeEl.appendChild(errEl);
   }
+}
+
+document.getElementById("open-btn").addEventListener("click", () => {
+  const path = document.getElementById("workspace-path").value.trim();
+  if (path) openWorkspace(path);
 });
 
-// Catch anything that slips past the above (e.g. an error during the
-// dynamic import itself) so failures are never silent.
-window.addEventListener("error", (event) => {
-  if (!editor) {
-    showFatalError("script error", event.error || event.message);
-  }
+document.getElementById("workspace-path").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("open-btn").click();
 });

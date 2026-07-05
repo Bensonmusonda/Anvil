@@ -2,25 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Anvil Editor — Phase 0</title>
+  <title>Anvil Editor — Phase 2</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <span class="dot"></span>
-    <h1>Anvil <span class="dim">— Phase 0 Skeleton</span></h1>
+    <h1>Anvil</h1>
+    <span id="current-file" class="current-file">no file open</span>
   </header>
 
-  <main>
-    <div id="editor"></div>
+  <div class="body">
+    <aside id="sidebar">
+      <div class="workspace-bar">
+        <input id="workspace-path" type="text" placeholder="/path/to/your/project" />
+        <button id="open-btn">Open</button>
+      </div>
+      <div id="tree" class="tree"></div>
+    </aside>
 
-    <section class="panel">
-      <p class="label">IPC Round-Trip Test</p>
-      <p class="hint">Sends the editor's current contents to the Rust daemon and displays whatever comes back. This is the entire Phase 0 exit criterion — no editor logic, no filesystem access, no AI calls.</p>
-      <button id="ping-btn">Send to Daemon →</button>
-      <pre id="result">(no message sent yet)</pre>
-    </section>
-  </main>
+    <main id="editor"></main>
+  </div>
 
   <script type="module" src="main.js"></script>
 </body>

@@ -23,9 +23,10 @@ header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
+  flex-shrink: 0;
 }
 
 .dot {
@@ -37,75 +38,110 @@ header {
 }
 
 h1 {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   margin: 0;
   letter-spacing: 0.02em;
 }
 
-.dim { color: var(--dim); font-weight: 400; }
+.current-file {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--dim);
+  font-family: "Consolas", monospace;
+}
 
-main {
+.body {
   flex: 1;
   display: flex;
-  flex-direction: column;
   min-height: 0;
 }
 
+#sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace-bar input {
+  flex: 1;
+  min-width: 0;
+  background: #16181a;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.workspace-bar button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.workspace-bar button:hover { filter: brightness(1.1); }
+
+.tree {
+  flex: 1;
+  overflow: auto;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.tree-error {
+  padding: 10px;
+  color: #ff8a80;
+  font-size: 12px;
+  font-family: "Consolas", monospace;
+  white-space: pre-wrap;
+}
+
+.tree-node { user-select: none; }
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 3px;
+}
+
+.tree-row:hover { background: #2c2f33; }
+.tree-row.active { background: #383231; color: var(--accent); }
+
+.tree-caret {
+  width: 12px;
+  display: inline-block;
+  color: var(--dim);
+  font-size: 10px;
+}
+
+.tree-children { padding-left: 14px; }
+
 #editor {
   flex: 1;
-  min-height: 0;
+  min-width: 0;
   overflow: auto;
-  border-bottom: 1px solid var(--border);
 }
 
 .cm-editor { height: 100%; font-size: 14px; }
 .cm-editor.cm-focused { outline: none; }
-
-.panel {
-  padding: 14px 18px;
-  background: var(--panel);
-  flex-shrink: 0;
-}
-
-.label {
-  margin: 0 0 4px 0;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--dim);
-}
-
-.hint {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: var(--dim);
-  max-width: 640px;
-}
-
-button {
-  background: var(--accent);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-button:hover { filter: brightness(1.1); }
-button:active { filter: brightness(0.95); }
-
-#result {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: #16181a;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-family: "Consolas", monospace;
-  font-size: 12.5px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: #9fdca0;
-}
