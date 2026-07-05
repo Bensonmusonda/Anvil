@@ -1,0 +1,24 @@
+{
+  "providers": {
+    "deepseek": {
+      "base_url": "https://api.deepseek.com/v1",
+      "api_key": "ENV_DEEPSEEK_API_KEY"
+    },
+    "openrouter": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key": "ENV_OPENROUTER_API_KEY"
+    },
+    "local_ollama": {
+      "base_url": "http://localhost:11434/v1",
+      "api_key": "ollama"
+    }
+  },
+  "routing": {
+    "chat": { "provider": "deepseek", "model": "deepseek-reasoner" },
+    "inline": { "provider": "local_ollama", "model": "qwen2.5-coder:7b" }
+  },
+  "extensions": {
+    "enabled": [],
+    "search_paths": ["~/.anvil/extensions"]
+  }
+}

@@ -1,6 +1,26 @@
-# Rust build artifacts
-src-tauri/target/
+# --- Rust / Cargo ---
+target/
+**/target/
 
-# Node/Frontend dependencies
+anvil.config.json
+daemon/anvil.config.json
+*.env
+.env.*
+
+# --- Node (only relevant if you ever build vendor bundles in-repo) ---
 node_modules/
-dist/
+npm-debug.log*
+
+# --- Tauri build output ---
+src-tauri/target/
+src-tauri/gen/
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Anvil runtime artifacts (per spec §5/§7 state model) ---
+.anvil/
