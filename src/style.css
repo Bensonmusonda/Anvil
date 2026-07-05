@@ -220,3 +220,74 @@ h1 {
 
 .ai-bar button:hover { filter: brightness(1.1); }
 .ai-bar button:disabled { opacity: 0.5; cursor: default; }
+
+/* --- Right-side Agent nav --- */
+
+#agent-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-header {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.agent-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 8px;
+  min-height: 0;
+}
+
+.agent-panel textarea {
+  background: #16181a;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 70px;
+}
+
+.agent-panel button {
+  background: #2c2f33;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agent-panel button:hover { border-color: var(--accent); }
+.agent-panel button:disabled { opacity: 0.5; cursor: default; }
+
+.agent-output {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 10px;
+  background: #16181a;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: "Consolas", monospace;
+  font-size: 12px;
+  color: var(--dim);
+  white-space: pre-wrap;
+  overflow: auto;
+}

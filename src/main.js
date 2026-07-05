@@ -1,8 +1,10 @@
-// Anvil Editor — Phase 3 frontend
+// Anvil Editor — Phase 4 frontend
 //
-// Adds: filesystem watcher event handling (auto-reload on external
-// changes), Save/Revert/Commit wired to the snapshot model in history.rs,
-// and an AI prompt bar that inserts completions at the cursor.
+// Adds: an "Agent Task" panel wired to agent_run — the multi-step
+// tool-calling loop (native tools + MCP-bridged tools). Kept separate from
+// the existing single-shot "Ask AI" bar so the agent's behavior (which can
+// take several seconds while it calls tools) is clearly distinguishable
+// from a plain completion.
 
 import {
   EditorView,
@@ -42,9 +44,6 @@ const currentFileEl = document.getElementById("current-file");
 const statusEl = document.getElementById("status-msg");
 
 let currentFilePath = null;
-// Tracks whether the last write to disk for the current file came from us
-// (Save/Revert), so the watcher-triggered reload doesn't fight in-progress
-// edits when the change genuinely came from outside the editor.
 let suppressNextReload = false;
 
 const editor = new EditorView({
@@ -203,12 +202,10 @@ document.getElementById("commit-btn").addEventListener("click", async () => {
   }
 });
 
-// --- Filesystem watcher: View Invalidation (spec §5 step 3) ---
+// --- Filesystem watcher ---
 
 window.__TAURI__.event.listen("file-changed", async (event) => {
   const changedPath = event.payload;
-  console.log("[watcher] file-changed:", changedPath, "| currently open:", currentFilePath);
-
   const sameFile =
     changedPath === currentFilePath ||
     (currentFilePath && changedPath.split("/").pop() === currentFilePath.split("/").pop());
@@ -224,12 +221,11 @@ window.__TAURI__.event.listen("file-changed", async (event) => {
     setEditorContent(content);
     showStatus("Reloaded — changed on disk externally");
   } catch (err) {
-    // File may have been deleted/moved — not fatal, just surface it.
     showStatus("File changed but couldn't reload: " + err, true);
   }
 });
 
-// --- AI generation reaching the editor ---
+// --- Single-shot AI (Phase 3) ---
 
 const aiBtn = document.getElementById("ai-btn");
 const aiPrompt = document.getElementById("ai-prompt");
@@ -247,9 +243,7 @@ async function askAI() {
       prompt,
     });
     const cursorPos = editor.state.selection.main.head;
-    editor.dispatch({
-      changes: { from: cursorPos, insert: response },
-    });
+    editor.dispatch({ changes: { from: cursorPos, insert: response } });
     aiPrompt.value = "";
     showStatus("Inserted AI response");
   } catch (err) {
@@ -262,4 +256,35 @@ async function askAI() {
 aiBtn.addEventListener("click", askAI);
 aiPrompt.addEventListener("keydown", (e) => {
   if (e.key === "Enter") askAI();
+});
+
+// --- Phase 4: Agent task (multi-step tool calling) ---
+
+const agentBtn = document.getElementById("agent-btn");
+const agentPrompt = document.getElementById("agent-prompt");
+const agentOutput = document.getElementById("agent-output");
+
+async function runAgent() {
+  const prompt = agentPrompt.value.trim();
+  if (!prompt) return;
+
+  agentBtn.disabled = true;
+  agentOutput.textContent = "Running agent — this can take a few seconds if it calls tools...";
+
+  try {
+    const result = await window.__TAURI__.core.invoke("agent_run", { prompt });
+    agentOutput.textContent = result;
+  } catch (err) {
+    agentOutput.textContent = "Agent failed: " + err;
+  } finally {
+    agentBtn.disabled = false;
+  }
+}
+
+agentBtn.addEventListener("click", runAgent);
+agentPrompt.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    runAgent();
+  }
 });

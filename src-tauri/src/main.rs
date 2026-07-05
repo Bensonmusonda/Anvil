@@ -1,20 +1,19 @@
-// Anvil Editor — Phase 3: Dual-Process Wiring
+// Anvil Editor — Phase 4: Tool Registry + MCP Host
 //
-// Architecture note: the spec's "dual-process" model describes a daemon as
-// a genuinely separate OS process, talking to the frontend over IPC. For a
-// single-user desktop app, actually spawning/health-checking/restarting
-// anvil-daemon (Phase 1) as a live subprocess with a wire protocol is real
-// engineering overhead with little payoff — so this phase instead folds
-// provider routing directly into this Tauri host process (see config.rs /
-// provider.rs, duplicated from daemon/). The standalone anvil-daemon binary
-// still exists and still works standalone for CLI testing — it's just not
-// wired into the running app. Flag this back if you'd rather keep them
-// genuinely separate processes; it's a real architectural decision, not an
-// assumption I want to silently lock in.
+// MCP connections are per-call (connect, list/call, disconnect) rather than
+// a persisted connection held in AppState — deliberately, to avoid needing
+// to name rmcp's connected-client type in a long-lived struct field before
+// its exact shape has been confirmed against a real compile. Optimizable
+// later (e.g. Phase 6) once the per-call spawn latency actually matters in
+// practice, if it does.
 
+mod agent;
 mod config;
 mod history;
+mod mcp_host;
 mod provider;
+mod tool_registry;
+mod tools_native;
 
 use config::Config;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
@@ -22,13 +21,11 @@ use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 
 struct AppState {
     config: Mutex<Option<Config>>,
     workspace_root: Mutex<Option<PathBuf>>,
-    // Held so the watcher isn't dropped (which would stop watching) —
-    // never read directly, its presence is the point.
     watcher: Mutex<Option<RecommendedWatcher>>,
 }
 
@@ -95,7 +92,7 @@ fn read_text_file(path: String) -> Result<String, String> {
         .map_err(|e| format!("failed to read {}: {} (is it a binary file?)", path, e))
 }
 
-// --- Phase 3: filesystem watcher ---
+// --- Phase 3 commands, unchanged ---
 
 #[tauri::command]
 fn start_watching(path: String, state: State<AppState>, app: AppHandle) -> Result<(), String> {
@@ -126,8 +123,6 @@ fn start_watching(path: String, state: State<AppState>, app: AppHandle) -> Resul
     Ok(())
 }
 
-// --- Phase 3: snapshot / revert / commit (spec §5) ---
-
 #[tauri::command]
 fn write_text_file(path: String, content: String, state: State<AppState>) -> Result<(), String> {
     let file_path = PathBuf::from(&path);
@@ -157,13 +152,8 @@ fn commit_file(path: String, state: State<AppState>) -> Result<(), String> {
     history::commit(root, &file_path)
 }
 
-// --- Phase 3: AI generation reaching the editor ---
-
 #[tauri::command]
 async fn ai_complete(purpose: String, prompt: String, state: State<'_, AppState>) -> Result<String, String> {
-    // Lazily load + cache config on first use rather than at startup, so a
-    // missing ~/.anvil/config.json doesn't block the editor from opening —
-    // only AI features fail until it's created.
     {
         let mut cfg_guard = state.config.lock().unwrap();
         if cfg_guard.is_none() {
@@ -173,6 +163,37 @@ async fn ai_complete(purpose: String, prompt: String, state: State<'_, AppState>
     }
     let config = state.config.lock().unwrap().clone().unwrap();
     provider::complete(&config, &purpose, &prompt).await
+}
+
+// --- Phase 4: agent loop with tool registry + MCP host ---
+
+#[tauri::command]
+async fn agent_run(prompt: String, state: State<'_, AppState>) -> Result<String, String> {
+    {
+        let mut cfg_guard = state.config.lock().unwrap();
+        if cfg_guard.is_none() {
+            let path = Config::default_path()?;
+            *cfg_guard = Some(Config::load(&path)?);
+        }
+    }
+    let config = state.config.lock().unwrap().clone().unwrap();
+
+    let mut tools = tools_native::definitions();
+    let mut mcp_command: Option<(String, Vec<String>)> = None;
+
+    // Phase 4 supports one configured MCP server — takes the first entry.
+    if let Some((_name, server)) = config.mcp_servers.iter().next() {
+        match mcp_host::list_tools(&server.command, &server.args).await {
+            Ok(mcp_tools) => tools.extend(mcp_tools),
+            Err(e) => eprintln!("warning: could not connect to configured MCP server: {}", e),
+        }
+        mcp_command = Some((server.command.clone(), server.args.clone()));
+    }
+
+    let workspace_root = state.workspace_root.lock().unwrap().clone();
+    let mcp_ref = mcp_command.as_ref().map(|(c, a)| (c.as_str(), a.as_slice()));
+
+    agent::run(&config, &prompt, &tools, workspace_root.as_deref(), mcp_ref).await
 }
 
 fn main() {
@@ -189,7 +210,8 @@ fn main() {
             write_text_file,
             revert_file,
             commit_file,
-            ai_complete
+            ai_complete,
+            agent_run
         ])
         .run(tauri::generate_context!())
         .expect("error while running Anvil host");

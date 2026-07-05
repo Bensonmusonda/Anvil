@@ -1,10 +1,6 @@
-//! Config Mapping Strategy (spec §4.1).
-//!
-//! Duplicated from daemon/src/config.rs rather than shared as a workspace
-//! crate — a deliberate shortcut for now, per the Phase 3 decision to fold
-//! provider routing into the Tauri host instead of running a separate OS
-//! process. Worth extracting into a shared `anvil-core` crate if/when
-//! Phase 4's tool registry needs this same logic a third time.
+//! Config Mapping Strategy (spec §4.1). Duplicated from daemon/src/config.rs
+//! — see that file's comment for why. Phase 4 adds mcp_servers, used only
+//! by src-tauri (the daemon crate stays scoped to provider routing).
 
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -31,17 +27,27 @@ pub struct ExtensionsConfig {
     pub search_paths: Vec<String>,
 }
 
+/// A single MCP server to spawn as a child process and connect to over
+/// stdio. Phase 4 supports configuring one; agent_run uses the first entry
+/// found. Multiple concurrent MCP servers are a later-phase concern.
+#[derive(Debug, Deserialize, Clone)]
+pub struct McpServerConfig {
+    pub command: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub providers: HashMap<String, ProviderConfig>,
     pub routing: HashMap<String, RouteConfig>,
     #[serde(default)]
     pub extensions: ExtensionsConfig,
+    #[serde(default)]
+    pub mcp_servers: HashMap<String, McpServerConfig>,
 }
 
 impl Config {
-    /// Default location: ~/.anvil/config.json — matches the `~/.anvil/`
-    /// prefix already used for extensions.search_paths in the spec.
     pub fn default_path() -> Result<PathBuf, String> {
         let home = std::env::var("HOME")
             .map_err(|_| "HOME environment variable not set".to_string())?;

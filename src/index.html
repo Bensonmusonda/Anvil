@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Anvil Editor — Phase 3</title>
+  <title>Anvil Editor — Phase 4</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -36,6 +36,15 @@
         <button id="ai-btn">Ask AI →</button>
       </div>
     </div>
+
+    <aside id="agent-sidebar">
+      <div class="agent-header">Agent Task</div>
+      <div class="agent-panel">
+        <pre id="agent-output" class="agent-output">(no agent task run yet)</pre>
+        <textarea id="agent-prompt" placeholder="e.g. 'Read /path/to/file, then echo its first line back'"></textarea>
+        <button id="agent-btn">Run Agent →</button>
+      </div>
+    </aside>
   </div>
 
   <script type="module" src="main.js"></script>
