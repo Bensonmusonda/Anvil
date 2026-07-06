@@ -26,7 +26,7 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, Manager};
 use terminal::TerminalState;
 
 struct AppState {
@@ -241,6 +241,30 @@ fn resize_terminal(rows: u16, cols: u16, state: State<'_, AppState>) -> Result<(
     terminal::resize(&state.terminal, rows, cols)
 }
 
+// --- Window Controls ---
+
+#[tauri::command]
+fn win_minimize(app: tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.minimize();
+    }
+}
+
+#[tauri::command]
+fn win_toggle_maximize(app: tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window("main") {
+        let is_max = win.is_maximized().unwrap_or(false);
+        if is_max { let _ = win.unmaximize(); } else { let _ = win.maximize(); }
+    }
+}
+
+#[tauri::command]
+fn win_close(app: tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.close();
+    }
+}
+
 // --- Phase 6: Git commands ---
 
 fn get_workspace(state: &State<'_, AppState>) -> Result<PathBuf, String> {
@@ -288,6 +312,7 @@ fn fuzzy_files(query: String, state: State<'_, AppState>) -> Result<Vec<fuzzy::F
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             config: Mutex::new(None),
             workspace_root: Mutex::new(None),
@@ -315,7 +340,10 @@ fn main() {
             git_stage,
             git_unstage,
             git_commit_action,
-            fuzzy_files
+            fuzzy_files,
+            win_minimize,
+            win_toggle_maximize,
+            win_close
         ])
         .run(tauri::generate_context!())
         .expect("error while running Anvil host");

@@ -11,6 +11,69 @@
 // If start_lsp fails with an argument-related error, that's the first
 // thing to check — the param name below may need to go back to snake_case.
 
+// --- UI Dropdown Logic ---
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll('.dropdown-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dropdown = btn.nextElementSibling;
+      const isShowing = dropdown.classList.contains('show');
+      
+      document.querySelectorAll('.dropdown-content').forEach(dc => dc.classList.remove('show'));
+      document.querySelectorAll('.dropdown-btn').forEach(db => db.classList.remove('active'));
+      
+      if (!isShowing) {
+        dropdown.classList.add('show');
+        btn.classList.add('active');
+      }
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown')) {
+      document.querySelectorAll('.dropdown-content').forEach(dc => dc.classList.remove('show'));
+      document.querySelectorAll('.dropdown-btn').forEach(db => db.classList.remove('active'));
+    }
+  });
+
+  // --- Window Controls ---
+  document.getElementById('win-minimize')?.addEventListener('click', () => {
+    window.__TAURI__.core.invoke('win_minimize');
+  });
+  document.getElementById('win-maximize')?.addEventListener('click', () => {
+    window.__TAURI__.core.invoke('win_toggle_maximize');
+  });
+  document.getElementById('win-close')?.addEventListener('click', () => {
+    window.__TAURI__.core.invoke('win_close');
+  });
+
+  // --- Window Drag: start dragging on mousedown on the drag region ---
+  // Use JS startDragging so that gaps between interactive elements are draggable
+  document.querySelector('.top-bar')?.addEventListener('mousedown', (e) => {
+    // Only drag on left button, not on interactive elements
+    if (e.button !== 0) return;
+    const tag = e.target.tagName.toLowerCase();
+    const interactive = ['button', 'input', 'textarea', 'select', 'a'];
+    if (interactive.includes(tag)) return;
+    if (e.target.closest('.window-controls, .dropdown, .top-bar-menu')) return;
+    window.__TAURI__.window.getCurrentWindow().startDragging();
+  });
+
+  // --- Sidebar collapse: clicking active tab collapses the sidebar ---
+  const sidebar = document.getElementById('sidebar');
+  document.querySelectorAll('.activity-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const isActive = tab.classList.contains('active');
+      if (isActive) {
+        // collapse
+        sidebar.style.display = sidebar.style.display === 'none' ? 'flex' : 'none';
+      } else {
+        sidebar.style.display = 'flex';
+      }
+    });
+  });
+});
+
 import {
   EditorView,
   basicSetup,
@@ -219,7 +282,31 @@ async function goToDefinition(view) {
   return true;
 }
 
+function toggleAiPopup(view) {
+  const aiPopup = document.getElementById("ai-popup");
+  const aiPrompt = document.getElementById("ai-prompt");
+  if (aiPopup.style.display === "none" || !aiPopup.style.display) {
+    aiPopup.style.transform = "none";
+    const coords = view.coordsAtPos(view.state.selection.main.head);
+    if (coords) {
+      aiPopup.style.left = `${coords.left}px`;
+      aiPopup.style.top = `${coords.bottom + 5}px`;
+    } else {
+      aiPopup.style.left = "50%";
+      aiPopup.style.top = "50%";
+      aiPopup.style.transform = "translate(-50%, -50%)";
+    }
+    aiPopup.style.display = "block";
+    aiPrompt.focus();
+  } else {
+    aiPopup.style.display = "none";
+    view.focus();
+  }
+  return true;
+}
+
 const definitionKeymap = keymap.of([{ key: "Alt-d", run: goToDefinition }]);
+const aiPopupKeymap = keymap.of([{ key: "Mod-k", run: toggleAiPopup }]);
 
 const dynamicTheme = EditorView.theme({
   "&": {
@@ -241,10 +328,11 @@ const dynamicTheme = EditorView.theme({
     border: "none"
   },
   ".cm-activeLineGutter": {
-    backgroundColor: "var(--panel)"
+    backgroundColor: "var(--panel)",
+    color: "var(--text)"
   },
   ".cm-activeLine": {
-    backgroundColor: "transparent"
+    backgroundColor: "rgba(255, 255, 255, 0.04)"
   }
 }, { dark: false });
 
@@ -259,6 +347,7 @@ const editor = new EditorView({
     lintGutter(),
     rustHover,
     definitionKeymap,
+    aiPopupKeymap,
   ],
   parent: document.getElementById("editor")
 });
@@ -482,6 +571,31 @@ document.getElementById("workspace-path").addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("open-btn").click();
 });
 
+// Native folder picker (Tauri dialog plugin)
+async function openFolderDialog() {
+  try {
+    const selected = await window.__TAURI__.dialog.open({
+      directory: true,
+      multiple: false,
+      title: "Open Workspace Folder",
+    });
+    if (selected) {
+      document.getElementById("workspace-path").value = selected;
+      openWorkspace(selected);
+    }
+  } catch (err) {
+    showStatus("Folder picker failed: " + err, true);
+  }
+}
+
+document.getElementById("browse-folder-btn").addEventListener("click", openFolderDialog);
+document.getElementById("open-folder-btn").addEventListener("click", () => {
+  // close dropdown first
+  document.querySelectorAll('.dropdown-content').forEach(dc => dc.classList.remove('show'));
+  document.querySelectorAll('.dropdown-btn').forEach(db => db.classList.remove('active'));
+  openFolderDialog();
+});
+
 // --- Save / Revert / Commit ---
 
 document.getElementById("save-btn").addEventListener("click", async () => {
@@ -563,17 +677,33 @@ async function askAI() {
     const cursorPos = editor.state.selection.main.head;
     editor.dispatch({ changes: { from: cursorPos, insert: response } });
     aiPrompt.value = "";
+    document.getElementById("ai-popup").style.display = "none";
     showStatus("Inserted AI response");
   } catch (err) {
     showStatus("AI request failed: " + err, true);
   } finally {
     aiBtn.disabled = false;
+    editor.focus();
   }
 }
 
 aiBtn.addEventListener("click", askAI);
 aiPrompt.addEventListener("keydown", (e) => {
   if (e.key === "Enter") askAI();
+  if (e.key === "Escape") {
+    document.getElementById("ai-popup").style.display = "none";
+    editor.focus();
+  }
+});
+
+// Hide AI popup if clicking outside
+document.addEventListener("click", (e) => {
+  const aiPopup = document.getElementById("ai-popup");
+  if (aiPopup && aiPopup.style.display === "block") {
+    if (!e.target.closest("#ai-popup")) {
+      aiPopup.style.display = "none";
+    }
+  }
 });
 
 // --- Agent task ---
@@ -794,12 +924,14 @@ const terminalToggleBtn = document.getElementById("terminal-toggle-btn");
 const terminalContainer = document.getElementById("terminal-container");
 
 const term = new Terminal({
-  fontFamily: '"Consolas", monospace',
+  fontFamily: '"JetBrains Mono", "Fira Code", Consolas, monospace',
   fontSize: 13,
   theme: {
-    background: '#000',
-    foreground: '#e6e6e6',
-  }
+    background: 'transparent',
+    foreground: '#cccccc',
+    cursor: '#f0514e'
+  },
+  allowTransparency: true
 });
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
@@ -874,20 +1006,32 @@ const tabGit = document.getElementById("tab-git");
 const panelFiles = document.getElementById("files-panel");
 const panelGit = document.getElementById("git-panel");
 
-tabFiles.addEventListener("click", () => {
-  tabFiles.classList.add("active");
-  tabGit.classList.remove("active");
-  panelFiles.style.display = "flex";
-  panelGit.style.display = "none";
-});
+function switchTab(tabId) {
+  [tabFiles, tabGit].forEach(t => t.classList.remove("active"));
+  [panelFiles, panelGit].forEach(p => p.style.display = "none");
+  
+  if (tabId === "files") {
+    tabFiles.classList.add("active");
+    panelFiles.style.display = "flex";
+  } else if (tabId === "git") {
+    tabGit.classList.add("active");
+    panelGit.style.display = "flex";
+    if (currentWorkspacePath) refreshGitStatus();
+  }
+}
 
-tabGit.addEventListener("click", () => {
-  tabGit.classList.add("active");
-  tabFiles.classList.remove("active");
-  panelGit.style.display = "flex";
-  panelFiles.style.display = "none";
-  if (currentWorkspacePath) {
-    refreshGitStatus();
+tabFiles.addEventListener("click", () => switchTab("files"));
+tabGit.addEventListener("click", () => switchTab("git"));
+
+// --- Agent Pane Toggle ---
+const agentToggleBtn = document.getElementById("agent-toggle-btn");
+const rightSidebar = document.getElementById("right-sidebar");
+
+agentToggleBtn.addEventListener("click", () => {
+  if (rightSidebar.style.display === "none") {
+    rightSidebar.style.display = "flex";
+  } else {
+    rightSidebar.style.display = "none";
   }
 });
 
