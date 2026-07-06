@@ -14,6 +14,9 @@ mod mcp_host;
 mod provider;
 mod tool_registry;
 mod tools_native;
+mod terminal;
+mod git;
+mod fuzzy;
 
 use config::Config;
 use lsp::LspState;
@@ -24,12 +27,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
+use terminal::TerminalState;
 
 struct AppState {
     config: Mutex<Option<Config>>,
     workspace_root: Mutex<Option<PathBuf>>,
     watcher: Mutex<Option<RecommendedWatcher>>,
     lsp: Arc<LspState>,
+    terminal: TerminalState,
 }
 
 #[derive(Serialize)]
@@ -214,11 +219,71 @@ async fn lsp_request(method: String, params: Value, state: State<'_, AppState>) 
     lsp::request(Arc::clone(&state.lsp), method, params).await
 }
 
-/// Generic LSP notification passthrough — used for didOpen/didChange,
-/// which don't expect a response.
 #[tauri::command]
 fn lsp_notify(method: String, params: Value, state: State<AppState>) -> Result<(), String> {
     lsp::notify(&state.lsp, &method, params)
+}
+
+// --- Phase 6: Terminal commands ---
+
+#[tauri::command]
+fn spawn_terminal(cwd: String, state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
+    terminal::spawn(cwd, &state.terminal, app)
+}
+
+#[tauri::command]
+fn write_terminal(data: String, state: State<'_, AppState>) -> Result<(), String> {
+    terminal::write(&state.terminal, data)
+}
+
+#[tauri::command]
+fn resize_terminal(rows: u16, cols: u16, state: State<'_, AppState>) -> Result<(), String> {
+    terminal::resize(&state.terminal, rows, cols)
+}
+
+// --- Phase 6: Git commands ---
+
+fn get_workspace(state: &State<'_, AppState>) -> Result<PathBuf, String> {
+    let guard = state.workspace_root.lock().unwrap();
+    guard.clone().ok_or("No workspace open".to_string())
+}
+
+#[tauri::command]
+fn git_status(state: State<'_, AppState>) -> Result<Vec<git::GitStatus>, String> {
+    let root = get_workspace(&state)?;
+    git::status(&root)
+}
+
+#[tauri::command]
+fn git_diff(path: String, state: State<'_, AppState>) -> Result<String, String> {
+    let root = get_workspace(&state)?;
+    git::diff(&root, &path)
+}
+
+#[tauri::command]
+fn git_stage(path: String, state: State<'_, AppState>) -> Result<(), String> {
+    let root = get_workspace(&state)?;
+    git::stage(&root, &path)
+}
+
+#[tauri::command]
+fn git_unstage(path: String, state: State<'_, AppState>) -> Result<(), String> {
+    let root = get_workspace(&state)?;
+    git::unstage(&root, &path)
+}
+
+#[tauri::command]
+fn git_commit_action(message: String, state: State<'_, AppState>) -> Result<(), String> {
+    let root = get_workspace(&state)?;
+    git::commit(&root, &message)
+}
+
+// --- Phase 6: Fuzzy Finder ---
+
+#[tauri::command]
+fn fuzzy_files(query: String, state: State<'_, AppState>) -> Result<Vec<fuzzy::FuzzyResult>, String> {
+    let root = get_workspace(&state)?;
+    fuzzy::find_files(&root, &query)
 }
 
 fn main() {
@@ -228,6 +293,7 @@ fn main() {
             workspace_root: Mutex::new(None),
             watcher: Mutex::new(None),
             lsp: Arc::new(LspState::new()),
+            terminal: TerminalState::new(),
         })
         .invoke_handler(tauri::generate_handler![
             list_dir,
@@ -240,7 +306,16 @@ fn main() {
             agent_run,
             start_lsp,
             lsp_request,
-            lsp_notify
+            lsp_notify,
+            spawn_terminal,
+            write_terminal,
+            resize_terminal,
+            git_status,
+            git_diff,
+            git_stage,
+            git_unstage,
+            git_commit_action,
+            fuzzy_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running Anvil host");

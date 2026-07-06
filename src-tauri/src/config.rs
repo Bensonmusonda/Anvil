@@ -30,7 +30,7 @@ pub struct ExtensionsConfig {
 /// A single MCP server to spawn as a child process and connect to over
 /// stdio. Phase 4 supports configuring one; agent_run uses the first entry
 /// found. Multiple concurrent MCP servers are a later-phase concern.
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct McpServerConfig {
     pub command: String,
     #[serde(default)]
@@ -45,6 +45,27 @@ pub struct Config {
     pub extensions: ExtensionsConfig,
     #[serde(default)]
     pub mcp_servers: HashMap<String, McpServerConfig>,
+    #[serde(default)]
+    pub auto_save: bool,
+    #[serde(default = "default_theme")]
+    pub theme: String,
+}
+
+fn default_theme() -> String {
+    "dark".to_string()
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            providers: HashMap::new(),
+            routing: HashMap::new(),
+            extensions: ExtensionsConfig::default(),
+            mcp_servers: HashMap::new(),
+            auto_save: false,
+            theme: "dark".to_string(),
+        }
+    }
 }
 
 impl Config {

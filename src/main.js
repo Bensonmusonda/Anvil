@@ -14,15 +14,13 @@
 import {
   EditorView,
   basicSetup,
-  Compartment,
-  oneDark,
   javascript,
-  python,
   rust,
-  json,
+  markdown,
   html,
   css,
-  markdown,
+  json,
+  Compartment,
   autocompletion,
   linter,
   lintGutter,
@@ -30,6 +28,9 @@ import {
   hoverTooltip,
   keymap,
 } from "./vendor/codemirror.bundle.js";
+
+import { Terminal } from "./vendor/xterm.js";
+import { FitAddon } from "./vendor/xterm-addon-fit.js";
 
 const LANGUAGE_BY_EXT = {
   js: () => javascript(),
@@ -79,6 +80,7 @@ const languageCompartment = new Compartment();
 const currentFileEl = document.getElementById("current-file");
 const statusEl = document.getElementById("status-msg");
 
+let currentWorkspacePath = null;
 let currentFilePath = null;
 let suppressNextReload = false;
 let lspStarted = false;
@@ -219,18 +221,46 @@ async function goToDefinition(view) {
 
 const definitionKeymap = keymap.of([{ key: "Alt-d", run: goToDefinition }]);
 
+const dynamicTheme = EditorView.theme({
+  "&": {
+    color: "var(--text)",
+    backgroundColor: "var(--bg)"
+  },
+  ".cm-content": {
+    caretColor: "var(--accent)"
+  },
+  "&.cm-focused .cm-cursor": {
+    borderLeftColor: "var(--accent)"
+  },
+  "&.cm-focused .cm-selectionBackground, ::selection": {
+    backgroundColor: "var(--panel)"
+  },
+  ".cm-gutters": {
+    backgroundColor: "var(--bg)",
+    color: "var(--dim)",
+    border: "none"
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "var(--panel)"
+  },
+  ".cm-activeLine": {
+    backgroundColor: "transparent"
+  }
+}, { dark: false });
+
 const editor = new EditorView({
   doc: "// Open a folder on the left, then click a file to edit it.\n",
   extensions: [
     basicSetup,
+    dynamicTheme,
     languageCompartment.of([]),
-    oneDark,
+    EditorView.lineWrapping,
     autocompletion({ override: [rustCompletionSource] }),
     lintGutter(),
     rustHover,
     definitionKeymap,
   ],
-  parent: document.getElementById("editor"),
+  parent: document.getElementById("editor")
 });
 
 function setEditorContent(content) {
@@ -425,6 +455,7 @@ async function buildTreeNode(entry, container) {
 }
 
 async function openWorkspace(path) {
+  currentWorkspacePath = path;
   const treeEl = document.getElementById("tree");
   treeEl.innerHTML = "";
   try {
@@ -573,5 +604,408 @@ agentPrompt.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
     runAgent();
+  }
+
+  // Ctrl+P / Cmd+P for File Palette
+  if (e.key === "p" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+    e.preventDefault();
+    openCommandPalette("files");
+  }
+
+  // Ctrl+Shift+P / Cmd+Shift+P for Command Palette
+  if (e.key === "P" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+    e.preventDefault();
+    openCommandPalette("commands");
+  }
+});
+
+// --- Command Palette ---
+const paletteOverlay = document.getElementById("command-palette");
+const paletteInput = document.getElementById("palette-input");
+const paletteResults = document.getElementById("palette-results");
+let paletteItems = [];
+let paletteSelectedIndex = 0;
+let paletteMode = "files"; // "files" or "commands"
+
+const AVAILABLE_COMMANDS = [
+  { id: "git.refresh", title: "Git: Refresh Status" },
+  { id: "terminal.toggle", title: "Terminal: Toggle Panel" },
+  { id: "editor.save", title: "Editor: Save File" },
+  { id: "agent.run", title: "Agent: Run" },
+  { id: "theme.dark", title: "Theme: Anvil Dark" },
+  { id: "theme.light", title: "Theme: Anvil Light" },
+  { id: "theme.hacker", title: "Theme: Hacker" },
+];
+
+function openCommandPalette(mode) {
+  if (mode === "files" && !currentWorkspacePath) {
+    showStatus("Open a workspace first to use the file palette.", true);
+    return;
+  }
+  paletteMode = mode;
+  paletteOverlay.style.display = "flex";
+  paletteInput.value = "";
+  paletteInput.placeholder = mode === "files" ? "Search files..." : "Search commands...";
+  paletteResults.innerHTML = "";
+  paletteInput.focus();
+  updatePaletteResults();
+}
+
+function closeCommandPalette() {
+  paletteOverlay.style.display = "none";
+  editor.focus();
+}
+
+paletteOverlay.addEventListener("mousedown", (e) => {
+  if (e.target === paletteOverlay) closeCommandPalette();
+});
+
+paletteInput.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    closeCommandPalette();
+  } else if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (paletteSelectedIndex < paletteItems.length - 1) {
+      paletteSelectedIndex++;
+      renderPaletteSelection();
+    }
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (paletteSelectedIndex > 0) {
+      paletteSelectedIndex--;
+      renderPaletteSelection();
+    }
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (paletteItems.length > 0) {
+      const selectedItem = paletteItems[paletteSelectedIndex];
+      closeCommandPalette();
+      
+      if (paletteMode === "files") {
+        const absPath = currentWorkspacePath + "/" + selectedItem.path;
+        loadFile(absPath);
+      } else if (paletteMode === "commands") {
+        executeCommand(selectedItem.id);
+      }
+    }
+  }
+});
+
+function executeCommand(id) {
+  switch(id) {
+    case "git.refresh":
+      if (currentWorkspacePath) refreshGitStatus();
+      break;
+    case "terminal.toggle":
+      terminalToggleBtn.click();
+      break;
+    case "editor.save":
+      saveFile();
+      break;
+    case "agent.run":
+      runAgent();
+      break;
+    case "theme.dark":
+      document.documentElement.setAttribute("data-theme", "dark");
+      break;
+    case "theme.light":
+      document.documentElement.setAttribute("data-theme", "light");
+      break;
+    case "theme.hacker":
+      document.documentElement.setAttribute("data-theme", "hacker");
+      break;
+  }
+}
+
+let paletteTimeout = null;
+paletteInput.addEventListener("input", () => {
+  clearTimeout(paletteTimeout);
+  paletteTimeout = setTimeout(() => {
+    updatePaletteResults();
+  }, 100);
+});
+
+async function updatePaletteResults() {
+  const query = paletteInput.value.toLowerCase();
+  try {
+    if (paletteMode === "files") {
+      paletteItems = await window.__TAURI__.core.invoke("fuzzy_files", { query });
+    } else {
+      paletteItems = AVAILABLE_COMMANDS.filter(cmd => 
+        cmd.title.toLowerCase().includes(query) || cmd.id.toLowerCase().includes(query)
+      );
+    }
+    
+    paletteSelectedIndex = 0;
+    
+    paletteResults.innerHTML = "";
+    if (paletteItems.length === 0) {
+      paletteResults.innerHTML = `<div class='palette-item'><span class='palette-item-path'>No ${paletteMode} found</span></div>`;
+      return;
+    }
+    
+    paletteItems.forEach((item, index) => {
+      const div = document.createElement("div");
+      div.className = "palette-item";
+      if (index === paletteSelectedIndex) div.classList.add("selected");
+      
+      const label = paletteMode === "files" ? item.path : item.title;
+      div.innerHTML = `<span class="palette-item-path">${label}</span>`;
+      
+      div.onmousedown = () => {
+        closeCommandPalette();
+        if (paletteMode === "files") {
+          const absPath = currentWorkspacePath + "/" + item.path;
+          loadFile(absPath);
+        } else {
+          executeCommand(item.id);
+        }
+      };
+      div.onmouseover = () => {
+        paletteSelectedIndex = index;
+        renderPaletteSelection();
+      };
+      paletteResults.appendChild(div);
+    });
+    
+    renderPaletteSelection();
+  } catch (err) {
+    paletteResults.innerHTML = `<div class="palette-item" style="color:var(--error)">Error: ${err}</div>`;
+  }
+}
+
+function renderPaletteSelection() {
+  const children = paletteResults.children;
+  for (let i = 0; i < children.length; i++) {
+    if (i === paletteSelectedIndex) {
+      children[i].classList.add("selected");
+      children[i].scrollIntoView({ block: "nearest" });
+    } else {
+      children[i].classList.remove("selected");
+    }
+  }
+}
+
+// --- Integrated Terminal ---
+
+const terminalPanel = document.getElementById("terminal-panel");
+const terminalToggleBtn = document.getElementById("terminal-toggle-btn");
+const terminalContainer = document.getElementById("terminal-container");
+
+const term = new Terminal({
+  fontFamily: '"Consolas", monospace',
+  fontSize: 13,
+  theme: {
+    background: '#000',
+    foreground: '#e6e6e6',
+  }
+});
+const fitAddon = new FitAddon();
+term.loadAddon(fitAddon);
+
+let terminalSpawned = false;
+
+terminalToggleBtn.addEventListener("click", async () => {
+  if (terminalPanel.style.display === "none") {
+    terminalPanel.style.display = "flex";
+    if (!term.element) {
+      term.open(terminalContainer);
+    }
+    
+    // Defer fit so that the DOM has updated
+    requestAnimationFrame(() => {
+      fitAddon.fit();
+    });
+
+    if (!terminalSpawned && currentWorkspacePath) {
+      try {
+        await window.__TAURI__.core.invoke("spawn_terminal", { cwd: currentWorkspacePath });
+        terminalSpawned = true;
+      } catch (err) {
+        showStatus("Failed to spawn terminal: " + err, true);
+      }
+    }
+    term.focus();
+  } else {
+    terminalPanel.style.display = "none";
+    editor.focus();
+  }
+});
+
+term.onData(async (data) => {
+  if (terminalSpawned) {
+    try {
+      await window.__TAURI__.core.invoke("write_terminal", { data });
+    } catch (err) {
+      console.error("write_terminal error:", err);
+    }
+  }
+});
+
+term.onResize(async ({ cols, rows }) => {
+  if (terminalSpawned) {
+    try {
+      await window.__TAURI__.core.invoke("resize_terminal", { cols, rows });
+    } catch (err) {
+      console.error("resize_terminal error:", err);
+    }
+  }
+});
+
+window.addEventListener("resize", () => {
+  if (terminalPanel.style.display !== "none") {
+    fitAddon.fit();
+  }
+});
+
+window.__TAURI__.event.listen("terminal-data", (event) => {
+  term.write(event.payload);
+});
+
+window.__TAURI__.event.listen("terminal-exit", () => {
+  terminalSpawned = false;
+  term.write("\r\n[Terminal exited]\r\n");
+});
+
+// --- Sidebar Tabs ---
+const tabFiles = document.getElementById("tab-files");
+const tabGit = document.getElementById("tab-git");
+const panelFiles = document.getElementById("files-panel");
+const panelGit = document.getElementById("git-panel");
+
+tabFiles.addEventListener("click", () => {
+  tabFiles.classList.add("active");
+  tabGit.classList.remove("active");
+  panelFiles.style.display = "flex";
+  panelGit.style.display = "none";
+});
+
+tabGit.addEventListener("click", () => {
+  tabGit.classList.add("active");
+  tabFiles.classList.remove("active");
+  panelGit.style.display = "flex";
+  panelFiles.style.display = "none";
+  if (currentWorkspacePath) {
+    refreshGitStatus();
+  }
+});
+
+// --- Git Panel ---
+const gitRefreshBtn = document.getElementById("git-refresh-btn");
+const gitStatusList = document.getElementById("git-status-list");
+const gitCommitMsg = document.getElementById("git-commit-msg");
+const gitCommitBtn = document.getElementById("git-commit-action-btn");
+
+gitRefreshBtn.addEventListener("click", () => {
+  if (currentWorkspacePath) refreshGitStatus();
+});
+
+async function refreshGitStatus() {
+  gitStatusList.innerHTML = "Loading...";
+  try {
+    const statuses = await window.__TAURI__.core.invoke("git_status");
+    gitStatusList.innerHTML = "";
+    if (statuses.length === 0) {
+      gitStatusList.innerHTML = "<div style='padding:10px; color:var(--dim)'>No changes</div>";
+      return;
+    }
+    
+    for (const item of statuses) {
+      const row = document.createElement("div");
+      row.className = "git-file";
+      
+      const badge = document.createElement("div");
+      badge.className = "git-status-badge";
+      badge.textContent = item.status;
+      row.appendChild(badge);
+      
+      const pathEl = document.createElement("div");
+      pathEl.className = "git-path";
+      pathEl.textContent = item.path;
+      pathEl.title = item.path;
+      row.appendChild(pathEl);
+      
+      const actions = document.createElement("div");
+      actions.className = "git-actions";
+      
+      const isStaged = item.status[0] !== ' ' && item.status[0] !== '?';
+      const isUnstaged = item.status[1] !== ' ';
+      
+      if (isUnstaged || item.status === '??') {
+        const stageBtn = document.createElement("button");
+        stageBtn.className = "git-action-btn";
+        stageBtn.textContent = "+";
+        stageBtn.title = "Stage";
+        stageBtn.onclick = async (e) => {
+          e.stopPropagation();
+          try {
+            await window.__TAURI__.core.invoke("git_stage", { path: item.path });
+            refreshGitStatus();
+          } catch (err) {
+            showStatus("Stage failed: " + err, true);
+          }
+        };
+        actions.appendChild(stageBtn);
+      }
+      
+      if (isStaged) {
+        const unstageBtn = document.createElement("button");
+        unstageBtn.className = "git-action-btn";
+        unstageBtn.textContent = "-";
+        unstageBtn.title = "Unstage";
+        unstageBtn.onclick = async (e) => {
+          e.stopPropagation();
+          try {
+            await window.__TAURI__.core.invoke("git_unstage", { path: item.path });
+            refreshGitStatus();
+          } catch (err) {
+            showStatus("Unstage failed: " + err, true);
+          }
+        };
+        actions.appendChild(unstageBtn);
+      }
+      
+      row.appendChild(actions);
+      
+      row.onclick = async () => {
+        document.querySelectorAll(".git-file.active").forEach((el) => el.classList.remove("active"));
+        row.classList.add("active");
+        
+        try {
+          const diff = await window.__TAURI__.core.invoke("git_diff", { path: item.path });
+          currentFilePath = item.path; // somewhat hacky: pretending diff is a file for editor
+          editor.dispatch({
+            changes: { from: 0, to: editor.state.doc.length, insert: diff || "(no diff output / new file)" },
+            effects: languageCompartment.reconfigure([]), // No specific language, plain text or diff
+          });
+          currentFileEl.textContent = "Diff: " + item.path;
+        } catch (err) {
+          showStatus("Failed to get diff: " + err, true);
+        }
+      };
+      
+      gitStatusList.appendChild(row);
+    }
+  } catch (err) {
+    gitStatusList.innerHTML = "<div class='tree-error'>Error: " + err + "</div>";
+  }
+}
+
+gitCommitBtn.addEventListener("click", async () => {
+  const msg = gitCommitMsg.value.trim();
+  if (!msg) {
+    showStatus("Commit message required", true);
+    return;
+  }
+  if (!currentWorkspacePath) return;
+  
+  try {
+    await window.__TAURI__.core.invoke("git_commit_action", { message: msg });
+    gitCommitMsg.value = "";
+    showStatus("Committed");
+    refreshGitStatus();
+  } catch (err) {
+    showStatus("Commit failed: " + err, true);
   }
 });

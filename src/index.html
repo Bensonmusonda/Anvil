@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Anvil Editor — Phase 4</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="vendor/xterm.css" />
 </head>
 <body>
   <header>
@@ -15,11 +16,29 @@
 
   <div class="body">
     <aside id="sidebar">
-      <div class="workspace-bar">
-        <input id="workspace-path" type="text" placeholder="/path/to/your/project" />
-        <button id="open-btn">Open</button>
+      <div class="sidebar-tabs">
+        <button id="tab-files" class="sidebar-tab active">Files</button>
+        <button id="tab-git" class="sidebar-tab">Git</button>
       </div>
-      <div id="tree" class="tree"></div>
+
+      <div id="files-panel" class="sidebar-panel active">
+        <div class="workspace-bar">
+          <input id="workspace-path" type="text" placeholder="/path/to/your/project" />
+          <button id="open-btn">Open</button>
+        </div>
+        <div id="tree" class="tree"></div>
+      </div>
+
+      <div id="git-panel" class="sidebar-panel" style="display: none;">
+        <div class="git-toolbar">
+          <button id="git-refresh-btn" title="Refresh Git Status">↻ Refresh</button>
+        </div>
+        <div id="git-status-list" class="git-status-list"></div>
+        <div class="git-commit-box">
+          <textarea id="git-commit-msg" placeholder="Commit message..."></textarea>
+          <button id="git-commit-action-btn">Commit Staged</button>
+        </div>
+      </div>
     </aside>
 
     <div class="main-column">
@@ -27,9 +46,16 @@
         <button id="save-btn" title="Write buffer to disk (snapshots previous content first)">Save</button>
         <button id="revert-btn" title="Restore from last snapshot">Revert</button>
         <button id="commit-btn" title="Clear snapshot — accept current disk state as final">Commit</button>
+        <div style="flex:1"></div>
+        <button id="terminal-toggle-btn" title="Toggle Terminal">Terminal</button>
       </div>
 
       <main id="editor"></main>
+      
+      <div id="terminal-panel" class="terminal-panel" style="display: none;">
+        <div class="terminal-header">Terminal</div>
+        <div id="terminal-container"></div>
+      </div>
 
       <div class="ai-bar">
         <input id="ai-prompt" type="text" placeholder="Ask AI — response inserts at cursor..." />
@@ -45,6 +71,13 @@
         <button id="agent-btn">Run Agent →</button>
       </div>
     </aside>
+  </div>
+
+  <div id="command-palette" class="overlay" style="display: none;">
+    <div class="palette-container">
+      <input id="palette-input" type="text" placeholder="Search files..." autocomplete="off" />
+      <div id="palette-results" class="palette-results"></div>
+    </div>
   </div>
 
   <script type="module" src="main.js"></script>
