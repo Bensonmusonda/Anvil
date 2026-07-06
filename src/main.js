@@ -1,10 +1,15 @@
-// Anvil Editor — Phase 4 frontend
+// Anvil Editor — Phase 5 frontend
 //
-// Adds: an "Agent Task" panel wired to agent_run — the multi-step
-// tool-calling loop (native tools + MCP-bridged tools). Kept separate from
-// the existing single-shot "Ask AI" bar so the agent's behavior (which can
-// take several seconds while it calls tools) is clearly distinguishable
-// from a plain completion.
+// Adds LSP integration for Rust files: autocomplete, hover, go-to-definition
+// (F12), and live diagnostics — all via rust-analyzer, relayed through the
+// start_lsp/lsp_request/lsp_notify commands in lsp.rs.
+//
+// ⚠️ One genuine unknown carried over from scoping: Tauri v2 auto-converts
+// multi-word Rust command parameter names to camelCase for the frontend
+// (workspace_root -> workspaceRoot). Every command before this phase only
+// had single-word params, so this is the first real test of that behavior.
+// If start_lsp fails with an argument-related error, that's the first
+// thing to check — the param name below may need to go back to snake_case.
 
 import {
   EditorView,
@@ -18,6 +23,12 @@ import {
   html,
   css,
   markdown,
+  autocompletion,
+  linter,
+  lintGutter,
+  setDiagnostics,
+  hoverTooltip,
+  keymap,
 } from "./vendor/codemirror.bundle.js";
 
 const LANGUAGE_BY_EXT = {
@@ -39,18 +50,40 @@ function languageForPath(path) {
   return factory ? factory() : [];
 }
 
+function isRustFile(path) {
+  return path && path.endsWith(".rs");
+}
+
+function pathToUri(path) {
+  return "file://" + path;
+}
+
+function uriToPath(uri) {
+  return uri.startsWith("file://") ? uri.slice("file://".length) : uri;
+}
+
+// --- LSP position helpers: LSP uses {line, character}, both 0-indexed;
+// CodeMirror uses a flat character offset into the document. ---
+
+function offsetToLspPos(doc, offset) {
+  const line = doc.lineAt(offset);
+  return { line: line.number - 1, character: offset - line.from };
+}
+
+function lspPosToOffset(doc, pos) {
+  const line = doc.line(pos.line + 1);
+  return line.from + pos.character;
+}
+
 const languageCompartment = new Compartment();
 const currentFileEl = document.getElementById("current-file");
 const statusEl = document.getElementById("status-msg");
 
 let currentFilePath = null;
 let suppressNextReload = false;
-
-const editor = new EditorView({
-  doc: "// Open a folder on the left, then click a file to edit it.\n",
-  extensions: [basicSetup, languageCompartment.of([]), oneDark],
-  parent: document.getElementById("editor"),
-});
+let lspStarted = false;
+let docVersion = 0;
+let lspOpenPath = null;
 
 function showStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -60,11 +93,249 @@ function showStatus(message, isError = false) {
   }, 3000);
 }
 
+// --- LSP-backed CodeMirror extensions ---
+
+async function rustCompletionSource(context) {
+  if (!lspStarted || !isRustFile(currentFilePath)) return null;
+
+  const pos = offsetToLspPos(context.state.doc, context.pos);
+  let result;
+  try {
+    result = await window.__TAURI__.core.invoke("lsp_request", {
+      method: "textDocument/completion",
+      params: {
+        textDocument: { uri: pathToUri(currentFilePath) },
+        position: pos,
+      },
+    });
+  } catch (err) {
+    return null; // don't break typing over an LSP hiccup
+  }
+
+  const items = Array.isArray(result) ? result : result?.items || [];
+  if (items.length === 0) return null;
+
+  const word = context.matchBefore(/\w*/);
+  return {
+    from: word ? word.from : context.pos,
+    options: items.slice(0, 50).map((item) => ({
+      label: item.label,
+      detail: item.detail || undefined,
+      type: "text",
+    })),
+  };
+}
+
+const rustHover = hoverTooltip(async (view, pos) => {
+  if (!lspStarted || !isRustFile(currentFilePath)) return null;
+
+  const lspPos = offsetToLspPos(view.state.doc, pos);
+  let result;
+  try {
+    result = await window.__TAURI__.core.invoke("lsp_request", {
+      method: "textDocument/hover",
+      params: {
+        textDocument: { uri: pathToUri(currentFilePath) },
+        position: lspPos,
+      },
+    });
+  } catch (err) {
+    return null;
+  }
+
+  if (!result || !result.contents) return null;
+
+  let text;
+  const c = result.contents;
+  if (typeof c === "string") text = c;
+  else if (c.value) text = c.value;
+  else if (Array.isArray(c)) text = c.map((x) => (typeof x === "string" ? x : x.value)).join("\n\n");
+  if (!text) return null;
+
+  return {
+    pos,
+    end: pos,
+    create() {
+      const dom = document.createElement("div");
+      dom.className = "cm-lsp-hover";
+      dom.textContent = text;
+      return { dom };
+    },
+  };
+});
+
+async function goToDefinition(view) {
+  if (!lspStarted || !isRustFile(currentFilePath)) return false;
+
+  const pos = offsetToLspPos(view.state.doc, view.state.selection.main.head);
+  let result;
+  try {
+    result = await window.__TAURI__.core.invoke("lsp_request", {
+      method: "textDocument/definition",
+      params: {
+        textDocument: { uri: pathToUri(currentFilePath) },
+        position: pos,
+      },
+    });
+  } catch (err) {
+    showStatus("Go-to-definition failed: " + err, true);
+    return true;
+  }
+
+  const location = Array.isArray(result) ? result[0] : result;
+  if (!location || !location.uri) {
+    showStatus("No definition found");
+    return true;
+  }
+
+  const targetPath = uriToPath(location.uri);
+  const targetLine = location.range?.start?.line ?? 0;
+  const targetChar = location.range?.start?.character ?? 0;
+
+  if (targetPath === currentFilePath) {
+    const offset = lspPosToOffset(view.state.doc, { line: targetLine, character: targetChar });
+    view.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
+  } else {
+    await openFile(targetPath);
+    const offset = lspPosToOffset(editor.state.doc, { line: targetLine, character: targetChar });
+    editor.dispatch({ selection: { anchor: offset }, scrollIntoView: true });
+  }
+  return true;
+}
+
+const definitionKeymap = keymap.of([{ key: "Alt-d", run: goToDefinition }]);
+
+const editor = new EditorView({
+  doc: "// Open a folder on the left, then click a file to edit it.\n",
+  extensions: [
+    basicSetup,
+    languageCompartment.of([]),
+    oneDark,
+    autocompletion({ override: [rustCompletionSource] }),
+    lintGutter(),
+    rustHover,
+    definitionKeymap,
+  ],
+  parent: document.getElementById("editor"),
+});
+
 function setEditorContent(content) {
   editor.dispatch({
     changes: { from: 0, to: editor.state.doc.length, insert: content },
   });
 }
+
+// --- LSP diagnostics: pushed by rust-analyzer, not pulled ---
+
+window.__TAURI__.event.listen("lsp-notification", (event) => {
+  const msg = event.payload;
+  if (msg.method !== "textDocument/publishDiagnostics") {
+    console.log("[lsp]", msg.method, msg.params);
+    return;
+  }
+
+  const uri = msg.params?.uri;
+  if (!uri || uriToPath(uri) !== currentFilePath) return;
+
+  const diagnostics = (msg.params.diagnostics || [])
+    .map((d) => {
+      try {
+        return {
+          from: lspPosToOffset(editor.state.doc, d.range.start),
+          to: lspPosToOffset(editor.state.doc, d.range.end),
+          severity: d.severity === 1 ? "error" : d.severity === 2 ? "warning" : "info",
+          message: d.message,
+        };
+      } catch (e) {
+        return null; // range outside current doc bounds — stale notification
+      }
+    })
+    .filter(Boolean);
+
+  editor.dispatch(setDiagnostics(editor.state, diagnostics));
+});
+
+async function maybeStartLsp(workspaceRoot, entries) {
+  const hasCargoToml = entries.some((e) => !e.is_dir && e.name === "Cargo.toml");
+  if (!hasCargoToml) return;
+
+  try {
+    await window.__TAURI__.core.invoke("start_lsp", { workspaceRoot: workspaceRoot });
+    lspStarted = true;
+    showStatus("rust-analyzer started");
+  } catch (err) {
+    lspStarted = false;
+    showStatus("rust-analyzer failed to start: " + err, true);
+  }
+}
+
+async function notifyDidClose(path) {
+  if (!lspStarted || !isRustFile(path)) return;
+  try {
+    await window.__TAURI__.core.invoke("lsp_notify", {
+      method: "textDocument/didClose",
+      params: { textDocument: { uri: pathToUri(path) } },
+    });
+  } catch (err) {
+    console.error("didClose failed:", err);
+  }
+}
+
+async function notifyDidOpen(path, content) {
+  if (!lspStarted || !isRustFile(path)) return;
+
+  // Already open as far as the server knows — re-sending didOpen for the
+  // same URI without a didClose in between is a protocol violation (this
+  // was the actual bug: "duplicate DidOpenTextDocument").
+  if (lspOpenPath === path) return;
+
+  if (lspOpenPath && lspOpenPath !== path) {
+    await notifyDidClose(lspOpenPath);
+  }
+
+  docVersion = 1;
+  try {
+    await window.__TAURI__.core.invoke("lsp_notify", {
+      method: "textDocument/didOpen",
+      params: {
+        textDocument: {
+          uri: pathToUri(path),
+          languageId: "rust",
+          version: docVersion,
+          text: content,
+        },
+      },
+    });
+    lspOpenPath = path;
+  } catch (err) {
+    console.error("didOpen failed:", err);
+  }
+}
+
+let didChangeTimer = null;
+function notifyDidChangeDebounced() {
+  if (!lspStarted || !isRustFile(currentFilePath)) return;
+  clearTimeout(didChangeTimer);
+  didChangeTimer = setTimeout(async () => {
+    docVersion += 1;
+    try {
+      await window.__TAURI__.core.invoke("lsp_notify", {
+        method: "textDocument/didChange",
+        params: {
+          textDocument: { uri: pathToUri(currentFilePath), version: docVersion },
+          // Omitting `range` means "replace the whole document" — valid
+          // regardless of negotiated sync mode, and much simpler than
+          // computing incremental diffs for this phase.
+          contentChanges: [{ text: editor.state.doc.toString() }],
+        },
+      });
+    } catch (err) {
+      console.error("didChange failed:", err);
+    }
+  }, 300);
+}
+
+editor.contentDOM.addEventListener("keyup", notifyDidChangeDebounced);
 
 async function openFile(path) {
   try {
@@ -75,6 +346,7 @@ async function openFile(path) {
       effects: languageCompartment.reconfigure(languageForPath(path)),
     });
     currentFileEl.textContent = path;
+    await notifyDidOpen(path, content);
   } catch (err) {
     currentFileEl.textContent = "error opening file";
     setEditorContent(`// Failed to open ${path}\n// ${err}`);
@@ -147,6 +419,7 @@ async function openWorkspace(path) {
       await buildTreeNode(entry, treeEl);
     }
     await window.__TAURI__.core.invoke("start_watching", { path });
+    await maybeStartLsp(path, entries);
   } catch (err) {
     const errEl = document.createElement("div");
     errEl.className = "tree-error";
@@ -225,7 +498,7 @@ window.__TAURI__.event.listen("file-changed", async (event) => {
   }
 });
 
-// --- Single-shot AI (Phase 3) ---
+// --- Single-shot AI ---
 
 const aiBtn = document.getElementById("ai-btn");
 const aiPrompt = document.getElementById("ai-prompt");
@@ -258,7 +531,7 @@ aiPrompt.addEventListener("keydown", (e) => {
   if (e.key === "Enter") askAI();
 });
 
-// --- Phase 4: Agent task (multi-step tool calling) ---
+// --- Agent task ---
 
 const agentBtn = document.getElementById("agent-btn");
 const agentPrompt = document.getElementById("agent-prompt");

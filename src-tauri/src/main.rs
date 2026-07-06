@@ -1,32 +1,35 @@
-// Anvil Editor — Phase 4: Tool Registry + MCP Host
+// Anvil Editor — Phase 5: LSP Integration
 //
-// MCP connections are per-call (connect, list/call, disconnect) rather than
-// a persisted connection held in AppState — deliberately, to avoid needing
-// to name rmcp's connected-client type in a long-lived struct field before
-// its exact shape has been confirmed against a real compile. Optimizable
-// later (e.g. Phase 6) once the per-call spawn latency actually matters in
-// practice, if it does.
+// LSP-specific state (rust-analyzer's child process, stdin handle, pending
+// request map) lives in its own LspState struct (lsp.rs) rather than
+// AppState directly, wrapped in an Arc so it can be cloned into the
+// background relay threads spawned in lsp::start without fighting the
+// borrow checker over AppState's lifetime.
 
 mod agent;
 mod config;
 mod history;
+mod lsp;
 mod mcp_host;
 mod provider;
 mod tool_registry;
 mod tools_native;
 
 use config::Config;
+use lsp::LspState;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 
 struct AppState {
     config: Mutex<Option<Config>>,
     workspace_root: Mutex<Option<PathBuf>>,
     watcher: Mutex<Option<RecommendedWatcher>>,
+    lsp: Arc<LspState>,
 }
 
 #[derive(Serialize)]
@@ -165,7 +168,7 @@ async fn ai_complete(purpose: String, prompt: String, state: State<'_, AppState>
     provider::complete(&config, &purpose, &prompt).await
 }
 
-// --- Phase 4: agent loop with tool registry + MCP host ---
+// --- Phase 4 command, unchanged ---
 
 #[tauri::command]
 async fn agent_run(prompt: String, state: State<'_, AppState>) -> Result<String, String> {
@@ -181,7 +184,6 @@ async fn agent_run(prompt: String, state: State<'_, AppState>) -> Result<String,
     let mut tools = tools_native::definitions();
     let mut mcp_command: Option<(String, Vec<String>)> = None;
 
-    // Phase 4 supports one configured MCP server — takes the first entry.
     if let Some((_name, server)) = config.mcp_servers.iter().next() {
         match mcp_host::list_tools(&server.command, &server.args).await {
             Ok(mcp_tools) => tools.extend(mcp_tools),
@@ -196,12 +198,36 @@ async fn agent_run(prompt: String, state: State<'_, AppState>) -> Result<String,
     agent::run(&config, &prompt, &tools, workspace_root.as_deref(), mcp_ref).await
 }
 
+// --- Phase 5: LSP commands ---
+
+/// Starts rust-analyzer for the given workspace root. Frontend should only
+/// call this for workspaces that actually contain a Cargo.toml.
+#[tauri::command]
+async fn start_lsp(workspace_root: String, state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
+    lsp::start(workspace_root, Arc::clone(&state.lsp), app).await
+}
+
+/// Generic LSP request passthrough — used for completion, hover, and
+/// definition, all of which need a response back.
+#[tauri::command]
+async fn lsp_request(method: String, params: Value, state: State<'_, AppState>) -> Result<Value, String> {
+    lsp::request(Arc::clone(&state.lsp), method, params).await
+}
+
+/// Generic LSP notification passthrough — used for didOpen/didChange,
+/// which don't expect a response.
+#[tauri::command]
+fn lsp_notify(method: String, params: Value, state: State<AppState>) -> Result<(), String> {
+    lsp::notify(&state.lsp, &method, params)
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(AppState {
             config: Mutex::new(None),
             workspace_root: Mutex::new(None),
             watcher: Mutex::new(None),
+            lsp: Arc::new(LspState::new()),
         })
         .invoke_handler(tauri::generate_handler![
             list_dir,
@@ -211,7 +237,10 @@ fn main() {
             revert_file,
             commit_file,
             ai_complete,
-            agent_run
+            agent_run,
+            start_lsp,
+            lsp_request,
+            lsp_notify
         ])
         .run(tauri::generate_context!())
         .expect("error while running Anvil host");

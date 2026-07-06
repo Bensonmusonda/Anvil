@@ -24,3 +24,8 @@ Thumbs.db
 
 # --- Anvil runtime artifacts (per spec §5/§7 state model) ---
 .anvil/
+.antigravity-ide
+.agent/
+
+
+ANVIL_PROJECT_TRACKER.md
