@@ -73,7 +73,14 @@ async function buildTreeNode(entry, container, parentPath) {
     e.preventDefault();
     e.stopPropagation();
     const targetDir = entry.is_dir ? entry.path : parentPath;
-    showTreeContextMenu(e.pageX, e.pageY, targetDir);
+    showTreeContextMenu(e.pageX, e.pageY, targetDir, {
+      path: entry.path,
+      isDir: entry.is_dir,
+      parentPath,
+      row,
+      label,
+      currentName: entry.name,
+    });
   });
 
   if (!entry.is_dir) {
@@ -339,6 +346,120 @@ function createInlineInputRow(container, parentDir, isFile) {
   activeInlineEdit = { row, cancel };
 }
 
+// Rewrites a path if it equals oldPath or is nested inside it
+// (oldPath + separator + ...), replacing the oldPath portion with
+// newPath. Returns null if fullPath isn't affected. Needed because a
+// folder rename changes the prefix of every path underneath it, and both
+// appState.currentFilePath and expandedPaths cache full paths that would
+// otherwise silently go stale (pointing at something that no longer
+// exists) after renaming an ancestor folder.
+function remapPath(fullPath, oldPath, newPath, sep) {
+  if (fullPath === oldPath) return newPath;
+  if (fullPath.startsWith(oldPath + sep)) {
+    return newPath + fullPath.slice(oldPath.length);
+  }
+  return null;
+}
+
+function beginInlineRename(target) {
+  const { row, label, path, parentPath, isDir, currentName } = target;
+
+  // Same one-at-a-time guard as inline create.
+  if (activeInlineEdit) {
+    activeInlineEdit.cancel();
+  }
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "tree-inline-input";
+  input.value = currentName;
+
+  row.replaceChild(input, label);
+  input.focus();
+  input.select();
+
+  let settled = false;
+
+  function restoreLabel() {
+    if (input.parentNode === row) row.replaceChild(label, input);
+  }
+
+  function clearActiveIfSelf() {
+    if (activeInlineEdit && activeInlineEdit.row === row) {
+      activeInlineEdit = null;
+    }
+  }
+
+  async function commit() {
+    if (settled) return;
+    const newName = input.value.trim();
+    if (!newName || newName === currentName) {
+      cancel();
+      return;
+    }
+    settled = true;
+    clearActiveIfSelf();
+
+    // The separator between parentPath and the old name in the original
+    // path — reused here rather than assuming "/" so this works whether
+    // the backend gave us "/" or "\" paths.
+    const sep = path.charAt(parentPath.length);
+    const newPath = parentPath + sep + newName;
+
+    try {
+      const resultPath = await window.__TAURI__.core.invoke("rename_path", {
+        oldPath: path,
+        newPath,
+      });
+
+      const remappedCurrent = appState.currentFilePath
+        ? remapPath(appState.currentFilePath, path, resultPath, sep)
+        : null;
+      if (remappedCurrent) {
+        appState.currentFilePath = remappedCurrent;
+        document.getElementById("current-file").textContent = remappedCurrent;
+      }
+
+      const remappedExpanded = new Set();
+      for (const p of expandedPaths) {
+        remappedExpanded.add(remapPath(p, path, resultPath, sep) ?? p);
+      }
+      expandedPaths.clear();
+      for (const p of remappedExpanded) expandedPaths.add(p);
+
+      activeSelection = { path: resultPath, isDir, parentPath };
+      showStatus(isDir ? "Folder renamed" : "File renamed");
+      await refreshTree();
+    } catch (err) {
+      showStatus("Rename failed: " + err, true);
+      restoreLabel();
+    }
+  }
+
+  function cancel() {
+    if (settled) return;
+    settled = true;
+    clearActiveIfSelf();
+    restoreLabel();
+  }
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancel();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    if (!settled) cancel();
+  });
+
+  activeInlineEdit = { row, cancel };
+}
+
 async function beginInlineCreate(parentDir, isFile) {
   if (!parentDir) {
     showStatus("Open a workspace first", true);
@@ -373,7 +494,7 @@ function closeTreeContextMenu() {
   }
 }
 
-function showTreeContextMenu(x, y, targetDir) {
+function showTreeContextMenu(x, y, targetDir, renameTarget = null) {
   closeTreeContextMenu();
 
   const menu = document.createElement("div");
@@ -399,10 +520,21 @@ function showTreeContextMenu(x, y, targetDir) {
 
   menu.appendChild(newFileItem);
   menu.appendChild(newFolderItem);
+
+  if (renameTarget) {
+    const renameItem = document.createElement("div");
+    renameItem.className = "context-menu-item";
+    renameItem.textContent = "Rename";
+    renameItem.addEventListener("click", () => {
+      closeTreeContextMenu();
+      beginInlineRename(renameTarget);
+    });
+    menu.appendChild(renameItem);
+  }
+
   document.body.appendChild(menu);
   activeContextMenu = menu;
 
-  // Deferred so the click that opened the menu doesn't immediately close it.
   setTimeout(() => document.addEventListener("click", closeTreeContextMenu), 0);
 }
 
