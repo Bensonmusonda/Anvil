@@ -51,20 +51,6 @@ function initWindowControls() {
   });
 }
 
-function initSidebarCollapse() {
-  const sidebar = document.getElementById("sidebar");
-  document.querySelectorAll(".activity-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const isActive = tab.classList.contains("active");
-      if (isActive) {
-        sidebar.style.display = sidebar.style.display === "none" ? "flex" : "none";
-      } else {
-        sidebar.style.display = "flex";
-      }
-    });
-  });
-}
-
 function switchSidebarTab(tabId) {
   const tabFiles = document.getElementById("tab-files");
   const tabGit = document.getElementById("tab-git");
@@ -84,9 +70,41 @@ function switchSidebarTab(tabId) {
   }
 }
 
+// One handler per tab button, replacing the previous split between a
+// separate collapse-toggle listener and this switch listener. The two
+// used to race on the same click: switchSidebarTab (whichever listener
+// ran first) added .active to the clicked tab, so the other listener
+// would then see it as "already active" and immediately close the
+// sidebar it had just opened/switched. Reading isActive/isOpen once,
+// before any mutation, removes the race entirely.
 function initSidebarTabs() {
-  document.getElementById("tab-files").addEventListener("click", () => switchSidebarTab("files"));
-  document.getElementById("tab-git").addEventListener("click", () => switchSidebarTab("git"));
+  const sidebar = document.getElementById("sidebar");
+
+  function handleTabClick(tabId, tabEl) {
+    const isActive = tabEl.classList.contains("active");
+    const isOpen = sidebar.style.display !== "none";
+
+    if (isActive && isOpen) {
+      sidebar.style.display = "none";
+      return;
+    }
+
+    sidebar.style.display = "flex";
+    switchSidebarTab(tabId);
+  }
+
+  const tabFiles = document.getElementById("tab-files");
+  const tabGit = document.getElementById("tab-git");
+  tabFiles.addEventListener("click", () => handleTabClick("files", tabFiles));
+  tabGit.addEventListener("click", () => handleTabClick("git", tabGit));
+}
+
+// Lets other modules (fileTree.js, before showing an inline create input)
+// make sure the Explorer pane is actually open and visible, rather than
+// silently building UI inside a hidden panel.
+export function showExplorerPanel() {
+  document.getElementById("sidebar").style.display = "flex";
+  switchSidebarTab("files");
 }
 
 function initAgentPaneToggle() {
@@ -102,7 +120,6 @@ export function initUiChrome() {
   document.addEventListener("DOMContentLoaded", () => {
     initDropdowns();
     initWindowControls();
-    initSidebarCollapse();
   });
   // These don't need DOMContentLoaded since main.js itself only runs after
   // the module script is parsed, which is already deferred until the DOM

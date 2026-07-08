@@ -6,6 +6,7 @@
 import { appState, showStatus } from "./state.js";
 import { getEditor, setEditorContent, languageCompartment, languageForPath } from "./editorSetup.js";
 import { notifyDidOpen } from "./lspClient.js";
+import { updateEmptyState } from "./emptyState.js";
 
 export async function openFile(path) {
   const editor = getEditor();
@@ -17,6 +18,7 @@ export async function openFile(path) {
       effects: languageCompartment.reconfigure(languageForPath(path)),
     });
     document.getElementById("current-file").textContent = path;
+    updateEmptyState();
     await notifyDidOpen(path, content);
   } catch (err) {
     document.getElementById("current-file").textContent = "error opening file";

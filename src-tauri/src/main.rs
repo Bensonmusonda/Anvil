@@ -100,6 +100,88 @@ fn read_text_file(path: String) -> Result<String, String> {
         .map_err(|e| format!("failed to read {}: {} (is it a binary file?)", path, e))
 }
 
+// --- Phase 7: recent workspaces ---
+
+fn recent_workspaces_path() -> Result<PathBuf, String> {
+    let home = std::env::var("HOME").map_err(|_| "HOME environment variable not set".to_string())?;
+    Ok(PathBuf::from(home).join(".anvil").join("recent_workspaces.json"))
+}
+
+fn read_recent_workspaces(path: &Path) -> Vec<String> {
+    if !path.exists() {
+        return Vec::new();
+    }
+    fs::read_to_string(path)
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_default()
+}
+
+#[tauri::command]
+fn get_recent_workspaces() -> Result<Vec<String>, String> {
+    Ok(read_recent_workspaces(&recent_workspaces_path()?))
+}
+
+#[tauri::command]
+fn add_recent_workspace(path: String) -> Result<(), String> {
+    let file_path = recent_workspaces_path()?;
+    let mut list = read_recent_workspaces(&file_path);
+
+    list.retain(|p| p != &path);
+    list.insert(0, path);
+    list.truncate(10);
+
+    if let Some(parent) = file_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("failed to create .anvil dir: {}", e))?;
+    }
+    let json = serde_json::to_string_pretty(&list)
+        .map_err(|e| format!("failed to serialize recent workspaces: {}", e))?;
+    fs::write(&file_path, json)
+        .map_err(|e| format!("failed to write recent workspaces: {}", e))?;
+    Ok(())
+}
+
+// --- Phase 7: File/Folder creation ---
+
+fn validate_entry_name(name: &str) -> Result<(), String> {
+    if name.trim().is_empty() {
+        return Err("name cannot be empty".to_string());
+    }
+    if name.contains('/') || name.contains('\\') {
+        return Err(format!(
+            "invalid name \"{}\": must not contain path separators",
+            name
+        ));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn create_file(parent_dir: String, name: String) -> Result<String, String> {
+    validate_entry_name(&name)?;
+    let path = Path::new(&parent_dir).join(&name);
+    if path.exists() {
+        return Err(format!("a file or folder named \"{}\" already exists", name));
+    }
+    fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|e| format!("failed to create file {}: {}", path.display(), e))?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn create_folder(parent_dir: String, name: String) -> Result<String, String> {
+    validate_entry_name(&name)?;
+    let path = Path::new(&parent_dir).join(&name);
+    if path.exists() {
+        return Err(format!("a file or folder named \"{}\" already exists", name));
+    }
+    fs::create_dir(&path).map_err(|e| format!("failed to create folder {}: {}", path.display(), e))?;
+    Ok(path.to_string_lossy().to_string())
+}
+
 // --- Phase 3 commands, unchanged ---
 
 #[tauri::command]
@@ -323,6 +405,10 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             list_dir,
             read_text_file,
+            create_file,
+            create_folder,
+            get_recent_workspaces,
+            add_recent_workspace,
             start_watching,
             write_text_file,
             revert_file,

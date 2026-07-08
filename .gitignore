@@ -28,6 +28,10 @@ Thumbs.db
 .agent/
 .agents/
 
+ANVIL_STATE.md
+fallback-model-session.md
+new-chat-session.md
+
 ANVIL_PROJECT_TRACKER.md
 *.zip.agents/
 
