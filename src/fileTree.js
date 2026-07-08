@@ -460,6 +460,41 @@ function beginInlineRename(target) {
   activeInlineEdit = { row, cancel };
 }
 
+// Guards the tree's keyboard shortcuts so they don't fire while typing
+// anywhere text-editable — the CodeMirror pane, the command palette
+// input, an inline create/rename input, the workspace-path field, etc.
+function isEditableTarget(el) {
+  if (!el) return false;
+  const tag = el.tagName ? el.tagName.toLowerCase() : "";
+  if (["input", "textarea", "select"].includes(tag)) return true;
+  if (el.isContentEditable) return true;
+  if (el.closest && el.closest(".cm-editor")) return true;
+  return false;
+}
+
+// F2 targets whatever's currently selected in the tree. Unlike the
+// context-menu path (which already has row/label from the click that
+// opened the menu), this has to look the row up by path — it can fail if
+// the selected item is inside a folder that's since been collapsed.
+function beginRenameFromSelection() {
+  if (!activeSelection) return;
+  const row = document.querySelector(`[data-path="${CSS.escape(activeSelection.path)}"]`);
+  if (!row) {
+    showStatus("Selected item isn't visible in the tree", true);
+    return;
+  }
+  const label = row.querySelector(":scope > span:not(.tree-caret)");
+  if (!label) return;
+  beginInlineRename({
+    path: activeSelection.path,
+    isDir: activeSelection.isDir,
+    parentPath: activeSelection.parentPath,
+    row,
+    label,
+    currentName: label.textContent,
+  });
+}
+
 async function beginInlineCreate(parentDir, isFile) {
   if (!parentDir) {
     showStatus("Open a workspace first", true);
@@ -699,6 +734,24 @@ export function initFileTreeBindings() {
     if (e.target.closest(".tree-row")) return;
     e.preventDefault();
     showTreeContextMenu(e.pageX, e.pageY, appState.currentWorkspacePath);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (isEditableTarget(e.target)) return;
+
+    if (e.key === "F2") {
+      e.preventDefault();
+      beginRenameFromSelection();
+    } else if (e.key.toLowerCase() === "n" && (e.ctrlKey || e.metaKey) && e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      triggerNewFile();
+    } else if (e.key.toLowerCase() === "n" && (e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey) {
+      e.preventDefault();
+      triggerNewFolder();
+    }
+    // Delete / permanent-delete shortcuts (Delete, Ctrl/Cmd+Shift+Delete)
+    // land here once delete_path exists — deliberately not stubbed in yet,
+    // see the Phase 6.5 gotcha about binding to not-yet-defined functions.
   });
 
   // Initial paint: nothing is open yet, so the empty-state panel (with its
