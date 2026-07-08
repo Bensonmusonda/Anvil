@@ -408,6 +408,8 @@ fn main() {
             create_file,
             create_folder,
             rename_path,
+            delete_path,
+            delete_path_permanent,
             get_recent_workspaces,
             add_recent_workspace,
             start_watching,
@@ -483,4 +485,46 @@ fn rename_path(old_path: String, new_path: String, state: State<AppState>) -> Re
         .map_err(|e| format!("failed to rename {} to {}: {}", old_path, new_path, e))?;
 
     Ok(new.to_string_lossy().to_string())
+}
+
+// --- Phase 7: File/Folder deletion ---
+#[tauri::command]
+fn delete_path(path: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("{} does not exist", path));
+    }
+    trash::delete(p).map_err(|e| format!("failed to move {} to trash: {}", path, e))
+}
+
+#[tauri::command]
+fn delete_path_permanent(path: String, state: State<AppState>) -> Result<(), String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("{} does not exist", path));
+    }
+
+    if p.is_dir() {
+        fs::remove_dir_all(p)
+            .map_err(|e| format!("failed to permanently delete folder {}: {}", path, e))?;
+        // Snapshot cleanup for deleted-folder contents is a known gap, not
+        // handled here — see the discussion before this change: snapshots
+        // are flattened filenames under .anvil/history/, not a nested
+        // structure, so finding every snapshot that belonged to a file
+        // under this folder needs a prefix scan, which isn't implemented
+        // yet. Orphaned snapshot files can accumulate; not a correctness
+        // bug, just wasted disk space until that scan is added.
+    } else {
+        fs::remove_file(p)
+            .map_err(|e| format!("failed to permanently delete file {}: {}", path, e))?;
+        // Best-effort snapshot cleanup for the single-file case — reuses
+        // commit(), which already does exactly "delete the snapshot if one
+        // exists". Errors here are swallowed rather than propagated: the
+        // actual delete already succeeded by this point, and failing the
+        // whole command now would misleadingly suggest nothing happened.
+        if let Some(root) = state.workspace_root.lock().unwrap().as_ref() {
+            let _ = history::commit(root, p);
+        }
+    }
+    Ok(())
 }
