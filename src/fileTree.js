@@ -1,13 +1,12 @@
 // Sidebar file tree: lazy-loaded directory browsing, workspace opening,
 // the native folder picker, and (Phase 7) inline file/folder creation via
 // a right-click context menu, the File dropdown, or the empty-state panel.
-
+import { showPromptDialog, showConfirmDialog } from "./promptDialog.js";
 import { appState, showStatus } from "./state.js";
 import { maybeStartLsp } from "./lspClient.js";
 import { openFile } from "./fileOps.js";
 import { updateEmptyState } from "./emptyState.js";
 import { showExplorerPanel } from "./uiChrome.js";
-import { showPromptDialog } from "./promptDialog.js";
 
 // Folder paths the user currently has expanded, preserved across
 // refreshTree() so creating a file doesn't collapse the whole tree.
@@ -460,6 +459,92 @@ function beginInlineRename(target) {
   activeInlineEdit = { row, cancel };
 }
 
+// --- Phase 7: delete (trash + permanent) ---:
+function nameFromPath(path) {
+  return path.split(/[\\/]/).filter(Boolean).pop() || path;
+}
+
+// True if fullPath is exactly basePath, or nested inside it. Same
+// prefix-match idea as remapPath, but for "is this now-gone" rather than
+// "rewrite this" — deletion has no destination to remap onto.
+function isUnderOrEqual(fullPath, basePath) {
+  return fullPath === basePath || fullPath.startsWith(basePath + "/") || fullPath.startsWith(basePath + "\\");
+}
+
+// Clears any state that pointed at something that no longer exists —
+// deleting the open file (or a folder containing it) shouldn't leave
+// Save/Revert/Commit operating on a stale path, and deleting an expanded
+// folder shouldn't leave a phantom entry in expandedPaths.
+function handleDeletedPath(deletedPath) {
+  if (appState.currentFilePath && isUnderOrEqual(appState.currentFilePath, deletedPath)) {
+    appState.currentFilePath = null;
+    document.getElementById("current-file").textContent = "no file open";
+    updateEmptyState();
+  }
+  if (activeSelection && isUnderOrEqual(activeSelection.path, deletedPath)) {
+    activeSelection = null;
+  }
+  for (const p of Array.from(expandedPaths)) {
+    if (isUnderOrEqual(p, deletedPath)) expandedPaths.delete(p);
+  }
+}
+
+async function performTrashDelete(target) {
+  const kind = target.isDir ? "folder" : "file";
+  const ok = await showConfirmDialog({
+    title: `Delete ${kind}?`,
+    message: `"${target.currentName}" will be moved to the system trash.`,
+    confirmLabel: "Delete",
+  });
+  if (!ok) return;
+
+  appState.suppressNextReload = true; // see fileOps.js's file-changed race, discussed in chat
+  try {
+    await window.__TAURI__.core.invoke("delete_path", { path: target.path });
+    handleDeletedPath(target.path);
+    showStatus(`${kind === "folder" ? "Folder" : "File"} moved to trash`);
+    await refreshTree();
+  } catch (err) {
+    showStatus("Delete failed: " + err, true);
+  }
+}
+
+async function performPermanentDelete(target) {
+  const kind = target.isDir ? "folder" : "file";
+  const ok = await showConfirmDialog({
+    title: `Permanently delete ${kind}?`,
+    message: `"${target.currentName}" will be permanently deleted. This cannot be undone.`,
+    confirmLabel: "Delete Forever",
+    danger: true,
+  });
+  if (!ok) return;
+
+  appState.suppressNextReload = true; // see fileOps.js's file-changed race, discussed in chat
+  try {
+    await window.__TAURI__.core.invoke("delete_path_permanent", { path: target.path });
+    handleDeletedPath(target.path);
+    showStatus(`${kind === "folder" ? "Folder" : "File"} permanently deleted`);
+    await refreshTree();
+  } catch (err) {
+    showStatus("Permanent delete failed: " + err, true);
+  }
+}
+
+// Shared by the keyboard shortcuts and the Edit-menu item, both of which
+// only have activeSelection to go on (no row/label from a click, unlike
+// the context-menu path).
+function targetFromSelection() {
+  if (!activeSelection) {
+    showStatus("Select a file or folder first", true);
+    return null;
+  }
+  return {
+    path: activeSelection.path,
+    isDir: activeSelection.isDir,
+    currentName: nameFromPath(activeSelection.path),
+  };
+}
+
 // Guards the tree's keyboard shortcuts so they don't fire while typing
 // anywhere text-editable — the CodeMirror pane, the command palette
 // input, an inline create/rename input, the workspace-path field, etc.
@@ -565,6 +650,24 @@ function showTreeContextMenu(x, y, targetDir, renameTarget = null) {
       beginInlineRename(renameTarget);
     });
     menu.appendChild(renameItem);
+
+    const deleteItem = document.createElement("div");
+    deleteItem.className = "context-menu-item";
+    deleteItem.textContent = "Delete";
+    deleteItem.addEventListener("click", () => {
+      closeTreeContextMenu();
+      performTrashDelete(renameTarget);
+    });
+    menu.appendChild(deleteItem);
+
+    const deletePermItem = document.createElement("div");
+    deletePermItem.className = "context-menu-item";
+    deletePermItem.textContent = "Delete Permanently";
+    deletePermItem.addEventListener("click", () => {
+      closeTreeContextMenu();
+      performPermanentDelete(renameTarget);
+    });
+    menu.appendChild(deletePermItem);
   }
 
   document.body.appendChild(menu);
@@ -716,6 +819,20 @@ export function initFileTreeBindings() {
     openFolderDialog();
   });
 
+  document.getElementById("delete-btn").addEventListener("click", () => {
+    document.querySelectorAll(".dropdown-content").forEach((dc) => dc.classList.remove("show"));
+    document.querySelectorAll(".dropdown-btn").forEach((db) => db.classList.remove("active"));
+    const target = targetFromSelection();
+    if (target) performTrashDelete(target);
+  });
+
+  document.getElementById("delete-permanent-btn").addEventListener("click", () => {
+    document.querySelectorAll(".dropdown-content").forEach((dc) => dc.classList.remove("show"));
+    document.querySelectorAll(".dropdown-btn").forEach((db) => db.classList.remove("active"));
+    const target = targetFromSelection();
+    if (target) performPermanentDelete(target);
+  });
+
   // File dropdown's New File / New Folder — target whatever's active in
   // the tree (a selected folder, a selected file's parent, or workspace
   // root), or fall back to the no-workspace flow if nothing's open yet.
@@ -748,10 +865,15 @@ export function initFileTreeBindings() {
     } else if (e.key.toLowerCase() === "n" && (e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey) {
       e.preventDefault();
       triggerNewFolder();
+    } else if (e.key === "Delete" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      e.preventDefault();
+      const target = targetFromSelection();
+      if (target) performPermanentDelete(target);
+    } else if (e.key === "Delete") {
+      e.preventDefault();
+      const target = targetFromSelection();
+      if (target) performTrashDelete(target);
     }
-    // Delete / permanent-delete shortcuts (Delete, Ctrl/Cmd+Shift+Delete)
-    // land here once delete_path exists — deliberately not stubbed in yet,
-    // see the Phase 6.5 gotcha about binding to not-yet-defined functions.
   });
 
   // Initial paint: nothing is open yet, so the empty-state panel (with its
