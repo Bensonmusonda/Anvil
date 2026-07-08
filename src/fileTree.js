@@ -796,6 +796,29 @@ async function triggerNewFolder() {
   }
 }
 
+// --- Phase 7: tree refresh on external watcher events ---
+
+let watcherRefreshTimeout = null;
+const WATCHER_REFRESH_DEBOUNCE_MS = 300;
+
+// Debounced so one external operation that touches many files (a git
+// checkout, an IDE's atomic save-via-rename, etc.) collapses into a
+// single rebuild instead of one per event.
+function scheduleWatcherRefresh() {
+  // Skip while an inline create/rename input is open — rebuilding the
+  // tree out from under a pending row would silently discard what the
+  // user was typing. The input's own commit/cancel path already calls
+  // refreshTree() when it resolves, so nothing is permanently missed,
+  // just deferred until they finish.
+  if (activeInlineEdit) return;
+  if (!appState.currentWorkspacePath) return;
+
+  clearTimeout(watcherRefreshTimeout);
+  watcherRefreshTimeout = setTimeout(() => {
+    refreshTree();
+  }, WATCHER_REFRESH_DEBOUNCE_MS);
+}
+
 export function initFileTreeBindings() {
   document.getElementById("open-btn").addEventListener("click", () => {
     const path = document.getElementById("workspace-path").value.trim();
@@ -874,6 +897,10 @@ export function initFileTreeBindings() {
       const target = targetFromSelection();
       if (target) performTrashDelete(target);
     }
+  });
+
+  window.__TAURI__.event.listen("file-changed", () => {
+    scheduleWatcherRefresh();
   });
 
   // Initial paint: nothing is open yet, so the empty-state panel (with its
