@@ -407,6 +407,7 @@ fn main() {
             read_text_file,
             create_file,
             create_folder,
+            rename_path,
             get_recent_workspaces,
             add_recent_workspace,
             start_watching,
@@ -433,4 +434,53 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running Anvil host");
+}
+
+#[tauri::command]
+fn rename_path(old_path: String, new_path: String, state: State<AppState>) -> Result<String, String> {
+    let old = Path::new(&old_path);
+    let new = Path::new(&new_path);
+
+    if !old.exists() {
+        return Err(format!("{} does not exist", old_path));
+    }
+
+    // Validate just the final path component (the actual new file/folder
+    // name) — file_name() extracts it correctly whether new_path stayed
+    // in the same directory or pointed somewhere else entirely.
+    let name = new
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| format!("{} has no valid file/folder name", new_path))?;
+    validate_entry_name(name)?;
+
+    let new_parent = new
+        .parent()
+        .ok_or_else(|| format!("{} has no parent directory", new_path))?;
+    if !new_parent.is_dir() {
+        return Err(format!(
+            "destination directory {} does not exist",
+            new_parent.display()
+        ));
+    }
+
+    if new.exists() {
+        return Err(format!(
+            "a file or folder named \"{}\" already exists at the destination",
+            name
+        ));
+    }
+
+    // Relocate the snapshot before the actual rename/move, so a failure
+    // here leaves the file untouched rather than moved-but-orphaned. Only
+    // possible (and only needed) if a workspace is open; operating outside
+    // one just skips history bookkeeping rather than erroring.
+    if let Some(root) = state.workspace_root.lock().unwrap().as_ref() {
+        history::relocate_snapshot(root, old, new)?;
+    }
+
+    fs::rename(old, new)
+        .map_err(|e| format!("failed to rename {} to {}: {}", old_path, new_path, e))?;
+
+    Ok(new.to_string_lossy().to_string())
 }

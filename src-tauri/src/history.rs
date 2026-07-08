@@ -65,3 +65,24 @@ pub fn commit(workspace_root: &Path, file_path: &Path) -> Result<(), String> {
     }
     Ok(())
 }
+
+/// Rename/move support (Phase 7). Relocates an existing snapshot from the
+/// old path's location to the new path's, so renaming or moving a file
+/// doesn't orphan its revert point (a stale snapshot nobody can reach) or
+/// leave `revert` silently finding nothing where a snapshot actually
+/// existed. No-op if there's no snapshot for the old path — mirrors
+/// snapshot_before_write's "nothing to do yet" no-op for the same reason.
+pub fn relocate_snapshot(
+    workspace_root: &Path,
+    old_path: &Path,
+    new_path: &Path,
+) -> Result<(), String> {
+    let old_snap = snapshot_path_for(workspace_root, old_path)?;
+    if !old_snap.exists() {
+        return Ok(());
+    }
+    let new_snap = snapshot_path_for(workspace_root, new_path)?;
+    fs::rename(&old_snap, &new_snap)
+        .map_err(|e| format!("failed to relocate snapshot for rename: {}", e))?;
+    Ok(())
+}

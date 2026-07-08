@@ -536,6 +536,12 @@ export function initFileTreeBindings() {
     if (e.key === "Enter") document.getElementById("open-btn").click();
   });
 
+  document.getElementById("open-file-btn").addEventListener("click", () => {
+    document.querySelectorAll(".dropdown-content").forEach((dc) => dc.classList.remove("show"));
+    document.querySelectorAll(".dropdown-btn").forEach((db) => db.classList.remove("active"));
+    openFileDialog();
+  });
+
   document.getElementById("browse-folder-btn").addEventListener("click", openFolderDialog);
   document.getElementById("open-folder-btn").addEventListener("click", () => {
     document.querySelectorAll(".dropdown-content").forEach((dc) => dc.classList.remove("show"));
