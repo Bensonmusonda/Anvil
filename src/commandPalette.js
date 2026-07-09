@@ -193,20 +193,13 @@ export function initCommandPaletteBindings() {
 
   // Global shortcuts to open the palette in each mode.
   document.addEventListener("keydown", (e) => {
-    if (isEditableTarget(e.target)) return;
-
-    if (e.key === "F2") {
+    if (e.key === "p" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
       e.preventDefault();
-      beginRenameFromSelection();
-    } else if (e.key.toLowerCase() === "n" && (e.ctrlKey || e.metaKey) && e.altKey && !e.shiftKey) {
-      e.preventDefault();
-      triggerNewFile();
-    } else if (e.key.toLowerCase() === "n" && (e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey) {
-      e.preventDefault();
-      triggerNewFolder();
+      openCommandPalette("files");
     }
-    // Delete / permanent-delete shortcuts (Delete, Ctrl/Cmd+Shift+Delete)
-    // land here once delete_path exists — deliberately not stubbed in yet,
-    // see the Phase 6.5 gotcha about binding to not-yet-defined functions.
+    if (e.key === "P" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      e.preventDefault();
+      openCommandPalette("commands");
+    }
   });
 }
