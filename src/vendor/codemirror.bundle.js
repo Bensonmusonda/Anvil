@@ -6208,7 +6208,7 @@ var TileUpdate = class {
   }
   emit(from, to) {
     let pendingLineAttrs = null;
-    let b = this.builder, markCount = 0;
+    let b = this.builder, markCount = -1;
     let openEnd = RangeSet.spans(this.decorations, from, to, {
       point: (from2, to2, deco, active, openStart, index) => {
         if (deco instanceof PointDecoration) {
@@ -6258,7 +6258,8 @@ var TileUpdate = class {
         markCount = active.length;
       }
     });
-    this.openWidget = openEnd > markCount;
+    if (markCount > -1)
+      this.openWidget = openEnd > markCount;
     if (!this.openWidget)
       b.addLineStartIfNotCovered(pendingLineAttrs);
     this.openMarks = openEnd;
@@ -29794,6 +29795,8 @@ var BlockContext = class {
         if (parser8.nextLine(this, line, leaf))
           return null;
       leaf.content += "\n" + line.scrub();
+      if (line.markers.length)
+        console.log("leaf lmar", line.markers.length);
       for (let m of line.markers)
         leaf.marks.push(m);
     }
@@ -30948,7 +30951,7 @@ function hasPipe(str, start) {
   }
   return false;
 }
-var delimiterLine = /^\|?(\s*:?-+:?\s*\|)+(\s*:?-+:?\s*)?$/;
+var delimiterLine = /^[>\s]*\|?(\s*:?-+:?\s*\|)+(\s*:?-+:?\s*)?$/;
 var TableParser = class {
   constructor() {
     this.rows = null;
@@ -31569,6 +31572,7 @@ var pasteURLAsLink = /* @__PURE__ */ EditorView.domEventHandlers({
 });
 export {
   Compartment,
+  EditorState,
   EditorView,
   autocompletion,
   basicSetup,

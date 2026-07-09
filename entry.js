@@ -3,7 +3,7 @@
 // as before, with the additional packages listed in this phase's notes.
 
 export { EditorView, basicSetup } from "codemirror";
-export { Compartment } from "@codemirror/state";
+export { Compartment, EditorState } from "@codemirror/state";
 export { hoverTooltip } from "@codemirror/view";
 export { oneDark } from "@codemirror/theme-one-dark";
 export { javascript } from "@codemirror/lang-javascript";

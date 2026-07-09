@@ -4,25 +4,22 @@
 // openFile there) is safe rather than a bug.
 
 import { appState, showStatus } from "./state.js";
-import { getEditor, setEditorContent, languageCompartment, languageForPath } from "./editorSetup.js";
-import { notifyDidOpen } from "./lspClient.js";
-import { updateEmptyState } from "./emptyState.js";
+import { getEditor, setEditorContent } from "./editorSetup.js";
+import { notifyDidOpen, notifyDidClose } from "./lspClient.js";
+import { openOrSwitchToFile, updateActiveTabSavedDoc, closeTabByPath } from "./tabs.js";
 
 export async function openFile(path) {
-  const editor = getEditor();
   try {
-    const content = await window.__TAURI__.core.invoke("read_text_file", { path });
-    appState.currentFilePath = path;
-    editor.dispatch({
-      changes: { from: 0, to: editor.state.doc.length, insert: content },
-      effects: languageCompartment.reconfigure(languageForPath(path)),
-    });
-    document.getElementById("current-file").textContent = path;
-    updateEmptyState();
+    const { tab, isNew, content } = await openOrSwitchToFile(path);
     await notifyDidOpen(path, content);
   } catch (err) {
-    document.getElementById("current-file").textContent = "error opening file";
-    setEditorContent(`// Failed to open ${path}\n// ${err}`);
+    // Previously this overwrote the editor's content in place with an
+    // error message. Under the tab model that would corrupt whatever tab
+    // happens to be currently active (its cached EditorState, not just a
+    // transient display) if the open that failed wasn't for the active
+    // tab — so this is now a status message instead of clobbering a tab's
+    // actual document. Intentional change, not an oversight.
+    showStatus("Failed to open " + path + ": " + err, true);
   }
 }
 
@@ -36,10 +33,12 @@ export async function saveFile() {
   const editor = getEditor();
   try {
     appState.suppressNextReload = true;
+    const content = editor.state.doc.toString();
     await window.__TAURI__.core.invoke("write_text_file", {
       path: appState.currentFilePath,
-      content: editor.state.doc.toString(),
+      content,
     });
+    updateActiveTabSavedDoc(content);
     showStatus("Saved");
   } catch (err) {
     showStatus("Save failed: " + err, true);
@@ -52,6 +51,7 @@ export async function revertFile() {
     appState.suppressNextReload = true;
     const content = await window.__TAURI__.core.invoke("revert_file", { path: appState.currentFilePath });
     setEditorContent(content);
+    updateActiveTabSavedDoc(content);
     showStatus("Reverted to last snapshot");
   } catch (err) {
     showStatus("Revert failed: " + err, true);
@@ -88,9 +88,35 @@ export function initFileOpsBindings() {
     try {
       const content = await window.__TAURI__.core.invoke("read_text_file", { path: changedPath });
       setEditorContent(content);
+      updateActiveTabSavedDoc(content);
       showStatus("Reloaded — changed on disk externally");
     } catch (err) {
       showStatus("File changed but couldn't reload: " + err, true);
     }
   });
+}
+
+/// Closing a tab that ISN'T the active one needs no LSP notification at
+/// all — per the single-active-document LSP model (locked decision,
+/// 2026-07-09), switching away from a tab already triggers an implicit
+/// didClose as a side effect of the next tab's didOpen (see
+/// lspClient.js's notifyDidOpen). So a background tab's document is
+/// already closed server-side by the time its tab gets closed here.
+/// Closing the ACTIVE tab is different: if another tab takes its place,
+/// that reuses the same "didOpen triggers didClose of whatever was open"
+/// mechanism. But if it was the LAST tab, nothing else calls didOpen to
+/// trigger that implicit close — so this explicitly sends didClose itself
+/// in that one case, otherwise the server would be left thinking a
+/// document is still open when Anvil has no tabs left at all.
+export async function closeTab(path) {
+  const result = closeTabByPath(path);
+  if (!result) return;
+
+  if (result.closedWasActive) {
+    if (result.nextTab) {
+      await notifyDidOpen(result.nextTab.path, result.nextTab.editorState.doc.toString());
+    } else {
+      await notifyDidClose(path);
+    }
+  }
 }

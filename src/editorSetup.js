@@ -10,6 +10,7 @@
 
 import {
   EditorView,
+  EditorState,
   basicSetup,
   Compartment,
   javascript,
@@ -71,20 +72,35 @@ const dynamicTheme = EditorView.theme({
 }, { dark: false });
 
 let _editor = null;
+let sharedExtensions = [];
 
-/// Constructs the EditorView exactly once. `extensions` is whatever the
-/// caller (main.js) gathered from other modules (autocompletion, hover,
-/// keymaps, etc.) — this module has no idea what's in it.
-export function createEditor(extensions) {
-  _editor = new EditorView({
-    doc: "// Open a folder on the left, then click a file to edit it.\n",
+/// Builds a fresh EditorState for one tab's content. Shares the same base
+/// setup (theme, line wrapping, language-per-extension) and the same
+/// LSP/AI/keymap extensions every tab was constructed with, so every tab
+/// behaves identically — only the document, language, and (via the
+/// caller) selection/undo-history differ per tab. `path` is null for the
+/// placeholder state shown before any file is open.
+export function buildEditorState(content, path) {
+  return EditorState.create({
+    doc: content,
     extensions: [
       basicSetup,
       dynamicTheme,
-      languageCompartment.of([]),
+      languageCompartment.of(path ? languageForPath(path) : []),
       EditorView.lineWrapping,
-      ...extensions,
+      ...sharedExtensions,
     ],
+  });
+}
+
+/// Constructs the EditorView exactly once. `extensions` is whatever the
+/// caller (main.js) gathered from other modules (autocompletion, hover,
+/// keymaps, etc.) — stashed in sharedExtensions so buildEditorState() can
+/// reuse the identical list for every subsequently-created tab.
+export function createEditor(extensions) {
+  sharedExtensions = extensions;
+  _editor = new EditorView({
+    state: buildEditorState("// Open a folder on the left, then click a file to edit it.\n", null),
     parent: document.getElementById("editor"),
   });
   return _editor;
