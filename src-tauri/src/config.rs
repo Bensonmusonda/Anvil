@@ -2,7 +2,7 @@
 //! — see that file's comment for why. Phase 4 adds mcp_servers, used only
 //! by src-tauri (the daemon crate stays scoped to provider routing).
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -49,6 +49,29 @@ pub struct Config {
     pub auto_save: bool,
     #[serde(default = "default_theme")]
     pub theme: String,
+    #[serde(default)]
+    pub pane_widths: PaneWidths,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PaneWidths {
+    #[serde(default = "default_left_width")]
+    pub left: u32,
+    #[serde(default = "default_right_width")]
+    pub right: u32,
+}
+
+fn default_left_width() -> u32 {
+    260
+}
+fn default_right_width() -> u32 {
+    260
+}
+
+impl Default for PaneWidths {
+    fn default() -> Self {
+        Self { left: default_left_width(), right: default_right_width() }
+    }
 }
 
 fn default_theme() -> String {
@@ -64,6 +87,7 @@ impl Default for Config {
             mcp_servers: HashMap::new(),
             auto_save: false,
             theme: "dark".to_string(),
+            pane_widths: PaneWidths::default(),
         }
     }
 }

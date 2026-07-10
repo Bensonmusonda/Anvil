@@ -122,10 +122,15 @@ export function showExplorerPanel() {
 
 function initAgentPaneToggle() {
   const agentToggleBtn = document.getElementById("agent-toggle-btn");
+  const agentCloseBtn = document.getElementById("agent-close-btn");
   const rightSidebar = document.getElementById("right-sidebar");
 
   agentToggleBtn.addEventListener("click", () => {
     rightSidebar.style.display = rightSidebar.style.display === "none" ? "flex" : "none";
+  });
+
+  agentCloseBtn.addEventListener("click", () => {
+    rightSidebar.style.display = "none"; // unconditional close, unlike the toggle button
   });
 }
 
@@ -134,9 +139,65 @@ export function initUiChrome() {
     initDropdowns();
     initWindowControls();
   });
-  // These don't need DOMContentLoaded since main.js itself only runs after
-  // the module script is parsed, which is already deferred until the DOM
-  // is ready (standard behavior for type="module" scripts).
   initSidebarTabs();
   initAgentPaneToggle();
+  initPaneResize();
+  loadPaneWidths();
+}
+
+const MIN_PANE_WIDTH = 180;
+const MAX_PANE_WIDTH = 500;
+const MAX_RIGHT_PANE_WIDTH = 750;
+
+function makeResizable(resizer, pane, getDelta, maxWidth = MAX_PANE_WIDTH) {
+  let dragging = false;
+  let startX = 0;
+  let startWidth = 0;
+
+  resizer.addEventListener("mousedown", (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startWidth = pane.getBoundingClientRect().width;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none"; // prevents selecting editor text while dragging across it
+    e.preventDefault();
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const delta = e.clientX - startX;
+    const newWidth = Math.min(maxWidth, Math.max(MIN_PANE_WIDTH, startWidth + getDelta(delta)));
+    pane.style.width = newWidth + "px";
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    persistPaneWidths(); // fires once, on release — not per pixel during the drag
+  });
+}
+
+function persistPaneWidths() {
+  const left = Math.round(document.getElementById("sidebar").getBoundingClientRect().width);
+  const right = Math.round(document.getElementById("right-sidebar").getBoundingClientRect().width);
+  window.__TAURI__.core.invoke("save_pane_widths", { left, right }).catch((err) => {
+    console.error("Failed to save pane widths:", err);
+  });
+}
+
+async function loadPaneWidths() {
+  try {
+    const widths = await window.__TAURI__.core.invoke("get_pane_widths");
+    document.getElementById("sidebar").style.width = widths.left + "px";
+    document.getElementById("right-sidebar").style.width = widths.right + "px";
+  } catch (err) {
+    console.error("Failed to load pane widths:", err);
+  }
+}
+
+function initPaneResize() {
+  makeResizable(document.getElementById("sidebar-resizer"), document.getElementById("sidebar"), (delta) => delta);
+  makeResizable(document.getElementById("right-sidebar-resizer"), document.getElementById("right-sidebar"), (delta) => -delta, MAX_RIGHT_PANE_WIDTH);
 }

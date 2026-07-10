@@ -290,6 +290,7 @@ h1 {
 #sidebar,
 #right-sidebar {
   width: 260px;
+  max-width: 45vw;
   flex-shrink: 0;
   background: var(--panel);
   display: flex;
@@ -1119,4 +1120,40 @@ h1 {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
+}
+
+.pane-resizer {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.pane-resizer:hover {
+  background: var(--accent);
+}
+
+.agent-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.agent-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.agent-close-btn:hover {
+  background: var(--border);
+  color: var(--text);
 }

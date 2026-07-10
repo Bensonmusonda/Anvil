@@ -31,9 +31,18 @@ Thumbs.db
 ANVIL_STATE.md
 fallback-model-session.md
 new-chat-session.md
+# AI Project Tracking & Documentation
+ANVIL_PROJECT_TRACKER.md
+ANVIL_STATE.md
+TRACKER_EDITING_SKILL.md
+docs/ARCHITECTURE_DEEP_DIVE.md
+docs/LANGUAGE_REGISTRY_REFACTOR.md
+docs/WORKING_WITH_CLAUDE.md
 
 ANVIL_PROJECT_TRACKER.md
 *.zip.agents/
+
+*.zip
 
 
 commit_msg.txt

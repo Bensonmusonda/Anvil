@@ -430,7 +430,9 @@ fn main() {
             fuzzy_files,
             win_minimize,
             win_toggle_maximize,
-            win_close
+            win_close,
+            save_pane_widths,
+            get_pane_widths
         ])
         .run(tauri::generate_context!())
         .expect("error while running Anvil host");
@@ -483,4 +485,40 @@ fn rename_path(old_path: String, new_path: String, state: State<AppState>) -> Re
         .map_err(|e| format!("failed to rename {} to {}: {}", old_path, new_path, e))?;
 
     Ok(new.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn get_pane_widths(state: State<AppState>) -> Result<config::PaneWidths, String> {
+    let mut cfg_guard = state.config.lock().unwrap();
+    if cfg_guard.is_none() {
+        let path = Config::default_path()?;
+        *cfg_guard = Some(Config::load(&path)?);
+    }
+    Ok(cfg_guard.as_ref().unwrap().pane_widths.clone())
+}
+
+#[tauri::command]
+fn save_pane_widths(left: u32, right: u32, state: State<AppState>) -> Result<(), String> {
+    let path = Config::default_path()?;
+
+    // Patches just the pane_widths key in the raw JSON on disk, rather than
+    // reserializing the whole typed Config — Config only derives
+    // Deserialize, deliberately, so a resize save can never clobber a
+    // hand-edited field (providers, routing, mcp_servers, or anything the
+    // typed struct doesn't model) elsewhere in the file.
+    let raw = fs::read_to_string(&path).map_err(|e| format!("failed to read config: {}", e))?;
+    let mut json: Value =
+        serde_json::from_str(&raw).map_err(|e| format!("failed to parse config JSON: {}", e))?;
+    json["pane_widths"] = serde_json::json!({ "left": left, "right": right });
+    let pretty = serde_json::to_string_pretty(&json)
+        .map_err(|e| format!("failed to serialize config: {}", e))?;
+    fs::write(&path, pretty).map_err(|e| format!("failed to write config: {}", e))?;
+
+    // Keep the cached in-memory config in sync too, so nothing reading
+    // state.config this session sees stale widths before a restart.
+    let mut cfg_guard = state.config.lock().unwrap();
+    if let Some(cfg) = cfg_guard.as_mut() {
+        cfg.pane_widths = config::PaneWidths { left, right };
+    }
+    Ok(())
 }
