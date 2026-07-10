@@ -840,6 +840,15 @@ h1 {
   flex-shrink: 0;
 }
 
+.tree-dirty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .tab-bar-item.dragging {
   opacity: 0.5;
 }

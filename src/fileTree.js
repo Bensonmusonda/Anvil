@@ -5,6 +5,7 @@
 import { appState, showStatus } from "./state.js";
 import { maybeStartLsp } from "./lspClient.js";
 import { openFile, saveAllFiles } from "./fileOps.js";
+import { isPathDirty } from "./tabs.js";
 import { updateEmptyState } from "./emptyState.js";
 import { showExplorerPanel } from "./uiChrome.js";
 import { showPromptDialog } from "./promptDialog.js";
@@ -56,6 +57,12 @@ async function buildTreeNode(entry, container, parentPath) {
   row.dataset.path = entry.path;
   if (activeSelection && activeSelection.path === entry.path) {
     row.classList.add("active");
+  }
+
+  if (!entry.is_dir && isPathDirty(entry.path)) {
+    const dot = document.createElement("span");
+    dot.className = "tree-dirty-dot";
+    row.appendChild(dot);
   }
 
   const caret = document.createElement("span");
@@ -685,6 +692,20 @@ export function initFileTreeBindings() {
     document.querySelectorAll(".dropdown-content").forEach((dc) => dc.classList.remove("show"));
     document.querySelectorAll(".dropdown-btn").forEach((db) => db.classList.remove("active"));
     saveAllFiles();
+  });
+
+  window.addEventListener("anvil:tab-dirty-changed", (e) => {
+    const { path, dirty } = e.detail;
+    const row = document.querySelector(`[data-path="${CSS.escape(path)}"]`);
+    if (!row) return; // file's parent folder is currently collapsed — fine, isPathDirty() covers it whenever that row does get built
+    let dot = row.querySelector(":scope > .tree-dirty-dot");
+    if (dirty && !dot) {
+      dot = document.createElement("span");
+      dot.className = "tree-dirty-dot";
+      row.appendChild(dot);
+    } else if (!dirty && dot) {
+      dot.remove();
+    }
   });
 
   // File dropdown's New File / New Folder — target whatever's active in

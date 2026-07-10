@@ -189,12 +189,18 @@ export async function openOrSwitchToFile(path) {
     return { tab, isNew: true, content };
 }
 
+function setTabDirty(tab, isDirty) {
+    if (tab.dirty === isDirty) return; // no-op if nothing actually changed
+    tab.dirty = isDirty;
+    window.dispatchEvent(new CustomEvent("anvil:tab-dirty-changed", { detail: { path: tab.path, dirty: isDirty } }));
+}
+
 function handleActiveDocChanged() {
     const tab = getActiveTab();
     if (!tab) return;
     const isDirty = getEditor().state.doc.toString() !== tab.savedDoc;
     if (tab.dirty !== isDirty) {
-        tab.dirty = isDirty; // only re-render when the flag actually flips, not on every keystroke once already dirty
+        setTabDirty(tab, isDirty);
         renderTabBar();
     }
 }
@@ -211,8 +217,13 @@ export function updateActiveTabSavedDoc(content) {
     const tab = getActiveTab();
     if (!tab) return;
     tab.savedDoc = content;
-    tab.dirty = false;
+    setTabDirty(tab, false);
     renderTabBar();
+}
+
+export function isPathDirty(path) {
+    const tab = tabs.find((t) => t.kind === "file" && t.path === path);
+    return tab ? tab.dirty : false;
 }
 
 /// Removes a tab by path. If it was the active tab, activates whichever
@@ -253,7 +264,7 @@ export function getEffectiveContent(tab) {
 
 export function markTabSaved(tab, content) {
     tab.savedDoc = content;
-    tab.dirty = false;
+    setTabDirty(tab, false);
 }
 
 export { renderTabBar };
