@@ -1088,6 +1088,12 @@ h1 {
   color: var(--text);
 }
 
+.prompt-dialog-message {
+  font-size: 13px;
+  color: var(--dim);
+  line-height: 1.4;
+}
+
 .prompt-dialog-input {
   background: var(--bg);
   border: 1px solid var(--border);

@@ -82,6 +82,13 @@ function renderTabBar() {
             moveTab(draggedId, tab.id);
         });
 
+        item.addEventListener("mousedown", (e) => {
+            if (e.button === 1) {
+                e.preventDefault(); // stops the browser's middle-click autoscroll cursor from engaging
+                closeTab(tab.path);
+            }
+        });
+
         bar.appendChild(item);
     }
 }

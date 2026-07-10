@@ -15,6 +15,7 @@ import {
   markTabSaved,
   renderTabBar,
 } from "./tabs.js";
+import { showConfirmDialog } from "./promptDialog.js";
 
 export async function openFile(path) {
   try {
@@ -158,6 +159,17 @@ export async function saveAllFiles() {
 /// in that one case, otherwise the server would be left thinking a
 /// document is still open when Anvil has no tabs left at all.
 export async function closeTab(path) {
+  const tab = getTabs().find((t) => t.path === path);
+  if (tab && tab.dirty) {
+    const ok = await showConfirmDialog({
+      title: "Discard changes?",
+      message: `"${tab.title}" has unsaved changes. Closing will discard them.`,
+      confirmLabel: "Discard Changes",
+      danger: true,
+    });
+    if (!ok) return;
+  }
+
   const result = closeTabByPath(path);
   if (!result) return;
 
