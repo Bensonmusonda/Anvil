@@ -5,7 +5,7 @@
 // everything else.
 
 import { appState, showStatus } from "./state.js";
-import { openFile, saveFile } from "./fileOps.js";
+import { openFile, saveFile, saveAllFiles } from "./fileOps.js";
 import { toggleTerminal } from "./terminalPanel.js";
 import { refreshGitStatus } from "./gitPanel.js";
 import { runAgent } from "./agentPanel.js";
@@ -20,6 +20,7 @@ const AVAILABLE_COMMANDS = [
   { id: "git.refresh", title: "Git: Refresh Status" },
   { id: "terminal.toggle", title: "Terminal: Toggle Panel" },
   { id: "editor.save", title: "Editor: Save File" },
+  { id: "editor.saveAll", title: "Editor: Save All Files" },
   { id: "agent.run", title: "Agent: Run" },
   { id: "theme.dark", title: "Theme: Anvil Dark" },
   { id: "theme.light", title: "Theme: Anvil Light" },
@@ -38,6 +39,9 @@ function executeCommand(id) {
       // Fixed during the Phase 6.5 split: this called a non-existent
       // saveFile() before — see fileOps.js's comment on that bug.
       saveFile();
+      break;
+    case "editor.saveAll":
+      saveAllFiles();
       break;
     case "agent.run":
       runAgent();

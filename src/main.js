@@ -18,12 +18,15 @@ import { initAgentPanelBindings } from "./agentPanel.js";
 import { initCommandPaletteBindings } from "./commandPalette.js";
 import { initUiChrome } from "./uiChrome.js";
 
+import { docChangeListener } from "./tabs.js";
+
 const editor = createEditor([
   autocompletion({ override: [rustCompletionSource] }),
   lintGutter(),
   rustHover,
   definitionKeymap,
   aiPopupKeymap,
+  docChangeListener,
 ]);
 
 initLspEditorBindings(editor);

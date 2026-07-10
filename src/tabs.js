@@ -19,6 +19,7 @@ import { appState } from "./state.js";
 import { getEditor, buildEditorState } from "./editorSetup.js";
 import { updateEmptyState } from "./emptyState.js";
 import { openFile, closeTab } from "./fileOps.js";
+import { EditorView } from "./vendor/codemirror.bundle.js";
 
 let tabs = [];
 let activeTabId = null;
@@ -41,6 +42,12 @@ function renderTabBar() {
         label.className = "tab-bar-item-label";
         label.textContent = tab.title;
         label.title = tab.path;
+
+        if (tab.dirty) {
+            const dot = document.createElement("span");
+            dot.className = "tab-bar-item-dirty-dot";
+            item.appendChild(dot);
+        }
 
         const closeBtn = document.createElement("span");
         closeBtn.className = "tab-bar-item-close";
@@ -173,6 +180,7 @@ export async function openOrSwitchToFile(path) {
         title: titleForPath(path),
         editorState: buildEditorState(content, path),
         savedDoc: content, // dirty-check baseline; kept in sync by fileOps.js on save/revert/external-reload
+        dirty: false,
         scrollTop: 0,
     };
     tabs.push(tab);
@@ -181,12 +189,30 @@ export async function openOrSwitchToFile(path) {
     return { tab, isNew: true, content };
 }
 
+function handleActiveDocChanged() {
+    const tab = getActiveTab();
+    if (!tab) return;
+    const isDirty = getEditor().state.doc.toString() !== tab.savedDoc;
+    if (tab.dirty !== isDirty) {
+        tab.dirty = isDirty; // only re-render when the flag actually flips, not on every keystroke once already dirty
+        renderTabBar();
+    }
+}
+
+export const docChangeListener = EditorView.updateListener.of((update) => {
+    if (update.docChanged) handleActiveDocChanged();
+});
+
+
 /// Called by fileOps.js after a successful save/revert/external-reload, so
 /// the dirty-check baseline (used by Phase 8's not-yet-built unsaved
 /// indicator) doesn't go stale the moment this lands.
 export function updateActiveTabSavedDoc(content) {
     const tab = getActiveTab();
-    if (tab) tab.savedDoc = content;
+    if (!tab) return;
+    tab.savedDoc = content;
+    tab.dirty = false;
+    renderTabBar();
 }
 
 /// Removes a tab by path. If it was the active tab, activates whichever
@@ -200,6 +226,8 @@ export function closeTabByPath(path) {
 
     const wasActive = tabs[idx].id === activeTabId;
     tabs.splice(idx, 1);
+
+
 
     let nextTab = null;
     if (wasActive) {
@@ -218,3 +246,14 @@ export function closeTabByPath(path) {
     }
     return { closedWasActive: wasActive, nextTab };
 }
+
+export function getEffectiveContent(tab) {
+    return tab.id === activeTabId ? getEditor().state.doc.toString() : tab.editorState.doc.toString();
+}
+
+export function markTabSaved(tab, content) {
+    tab.savedDoc = content;
+    tab.dirty = false;
+}
+
+export { renderTabBar };

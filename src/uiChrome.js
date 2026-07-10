@@ -22,6 +22,19 @@ function initDropdowns() {
     });
   });
 
+  // Closes whichever dropdown is open the moment an item inside it is
+  // actually clicked — delegated to the container so every current and
+  // future .dropdown-item gets this for free, instead of each button's
+  // own handler needing to remember to do it.
+  document.querySelectorAll(".dropdown-content").forEach((dc) => {
+    dc.addEventListener("click", (e) => {
+      if (e.target.closest(".dropdown-item")) {
+        document.querySelectorAll(".dropdown-content").forEach((d) => d.classList.remove("show"));
+        document.querySelectorAll(".dropdown-btn").forEach((db) => db.classList.remove("active"));
+      }
+    });
+  });
+
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".dropdown")) {
       document.querySelectorAll(".dropdown-content").forEach((dc) => dc.classList.remove("show"));

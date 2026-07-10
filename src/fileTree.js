@@ -4,7 +4,7 @@
 
 import { appState, showStatus } from "./state.js";
 import { maybeStartLsp } from "./lspClient.js";
-import { openFile } from "./fileOps.js";
+import { openFile, saveAllFiles } from "./fileOps.js";
 import { updateEmptyState } from "./emptyState.js";
 import { showExplorerPanel } from "./uiChrome.js";
 import { showPromptDialog } from "./promptDialog.js";
@@ -679,6 +679,12 @@ export function initFileTreeBindings() {
     document.querySelectorAll(".dropdown-content").forEach((dc) => dc.classList.remove("show"));
     document.querySelectorAll(".dropdown-btn").forEach((db) => db.classList.remove("active"));
     openFolderDialog();
+  });
+
+  document.getElementById("save-all-btn").addEventListener("click", () => {
+    document.querySelectorAll(".dropdown-content").forEach((dc) => dc.classList.remove("show"));
+    document.querySelectorAll(".dropdown-btn").forEach((db) => db.classList.remove("active"));
+    saveAllFiles();
   });
 
   // File dropdown's New File / New Folder — target whatever's active in

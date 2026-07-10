@@ -6,7 +6,15 @@
 import { appState, showStatus } from "./state.js";
 import { getEditor, setEditorContent } from "./editorSetup.js";
 import { notifyDidOpen, notifyDidClose } from "./lspClient.js";
-import { openOrSwitchToFile, updateActiveTabSavedDoc, closeTabByPath } from "./tabs.js";
+import {
+  openOrSwitchToFile,
+  updateActiveTabSavedDoc,
+  closeTabByPath,
+  getTabs,
+  getEffectiveContent,
+  markTabSaved,
+  renderTabBar,
+} from "./tabs.js";
 
 export async function openFile(path) {
   try {
@@ -72,6 +80,24 @@ export function initFileOpsBindings() {
   document.getElementById("save-btn").addEventListener("click", saveFile);
   document.getElementById("revert-btn").addEventListener("click", revertFile);
   document.getElementById("commit-btn").addEventListener("click", commitFile);
+  document.addEventListener("keydown", (e) => {
+    const key = e.key.toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && key === "s" && !e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      saveFile();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const key = e.key.toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && key === "s" && e.altKey) {
+      e.preventDefault();
+      saveAllFiles();
+    } else if ((e.ctrlKey || e.metaKey) && key === "s" && !e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      saveFile();
+    }
+  });
 
   window.__TAURI__.event.listen("file-changed", async (event) => {
     const changedPath = event.payload;
@@ -94,6 +120,29 @@ export function initFileOpsBindings() {
       showStatus("File changed but couldn't reload: " + err, true);
     }
   });
+}
+
+export async function saveAllFiles() {
+  const dirtyTabs = getTabs().filter((t) => t.dirty);
+  if (dirtyTabs.length === 0) return showStatus("Nothing to save");
+
+  appState.suppressNextReload = true; // covers the active tab's own write, same guard saveFile() uses
+  let failed = 0;
+  for (const tab of dirtyTabs) {
+    const content = getEffectiveContent(tab);
+    try {
+      await window.__TAURI__.core.invoke("write_text_file", { path: tab.path, content });
+      markTabSaved(tab, content);
+    } catch (err) {
+      failed++;
+      console.error(`Failed to save ${tab.path}:`, err);
+    }
+  }
+  renderTabBar();
+  showStatus(
+    failed === 0 ? `Saved ${dirtyTabs.length} file(s)` : `Saved ${dirtyTabs.length - failed}, ${failed} failed`,
+    failed > 0
+  );
 }
 
 /// Closing a tab that ISN'T the active one needs no LSP notification at

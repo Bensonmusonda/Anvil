@@ -832,6 +832,14 @@ h1 {
   flex-shrink: 0;
 }
 
+.tab-bar-item-dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text);
+  flex-shrink: 0;
+}
+
 .tab-bar-item.dragging {
   opacity: 0.5;
 }
