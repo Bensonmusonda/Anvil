@@ -12,14 +12,14 @@ An AI-native code editor built for simplicity, low overhead, and extensibility.
 
 Anvil is a lightweight code editor designed around a simple premise: remove the friction that comes with bloated configurations, heavy dependencies, and rigid layouts. AI assistance isn't bolted on as an afterthought—it's part of the core design from the start.
 
-The goal isn't to compete with VS Code or replicate its feature set. Anvil exists because the act of writing code should feel fast and responsive, and thinking about your tools shouldn't slow you down. It's a project built entirely for the love of the craft.
+The project exists because writing code should feel fast and responsive. Your tools shouldn't get in the way. It's built entirely for the love of the craft.
 
 The approach is deliberate and incremental. Each phase of development produces something that actually works and can be tested independently before moving forward. No vaporware, no half-finished features.
 
 ### Core Design Goals
 
 - **Provider-agnostic AI integration** — Route AI requests to local models (Ollama) or hosted services (DeepSeek, OpenRouter) through a unified interface.
-- **Low overhead** — Native compilation with Tauri and Rust, not an Electron-style runtime that eats memory and battery life.
+- **Native performance** — Built with Tauri and Rust for speed and efficiency.
 - **Extensibility without over-engineering** — Internal tools are modular from day one. Third-party extensions can come later, once the foundation is proven.
 
 ---
@@ -173,7 +173,7 @@ cp codemirror.bundle.js <path-to-Anvil>/src/vendor/codemirror.bundle.js
 
 ## Philosophy
 
-Rather than reinvent the wheel for every component, Anvil uses established, well-maintained open-source projects where they make sense. CodeMirror for syntax highlighting, language servers for intelligence, proven terminal emulators for terminal support. This keeps the focus on what makes Anvil different: a clean, AI-first design without the bloat.
+Rather than reinvent the wheel for every component, Anvil uses established, well-maintained open-source projects where they make sense. CodeMirror for syntax highlighting, language servers for intelligence, proven terminal emulators for terminal support. This keeps the focus on what makes Anvil different: a clean, AI-first design without unnecessary complexity.
 
 ---
 
