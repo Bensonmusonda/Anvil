@@ -1,72 +1,63 @@
 # Anvil Editor
 
-> **⚠️ Pre-Release Notice:** Anvil has not yet reached a stable release. This project is in active early development. Progress tracking and setup instructions are available below for developers and contributors interested in following along.
+**Pre-Release Notice:** Anvil has not reached a stable release yet. This project is in early active development. Below you'll find documentation on the current state, architecture, and setup instructions for anyone interested in following along or contributing.
 
-An AI-native code editor built for low overhead and real extensibility.
+An AI-native code editor built for simplicity, low overhead, and extensibility.
 
-**Built with:** Tauri v2 · CodeMirror 6 · Rust Daemon
-
----
-
-## Overview
-
-Anvil is an independent, lightweight code editor designed to eliminate the configuration friction, dependency bloat, and layout constraints common in mainstream editors. AI assistance and extensibility are treated as first-class design concerns from inception, not afterthoughts.
-
-Anvil is **not** positioned as a day-one drop-in replacement for VS Code. It's being built incrementally: each development phase must produce something independently testable and functional before the next phase begins.
-
-### Core Design Principles
-
-- **Provider-agnostic AI** — Route AI requests across local models (Ollama) and hosted providers (DeepSeek, OpenRouter) through a single OpenAI-compatible interface.
-- **Low overhead** — Native compilation (Tauri + Rust) instead of heavyweight Electron-style runtimes.
-- **Real extensibility without premature complexity** — Internal tooling is modular from day one. Third-party extension support is deliberately deferred until the architecture has proven itself.
+**Built with:** Tauri v2, CodeMirror 6, Rust
 
 ---
 
-## Development Status
+## What is Anvil?
 
-Anvil is organized into discrete, sequential development phases. Each phase must achieve its exit criteria before the next begins.
+Anvil is a lightweight code editor designed around a simple premise: remove the friction that comes with bloated configurations, heavy dependencies, and rigid layouts. AI assistance isn't bolted on as an afterthought—it's part of the core design from the start.
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| **0** | **Skeleton** — Tauri shell, CodeMirror instance, IPC round trip | ✅ Complete |
-| **1** | **Backend routing prototype** — Ollama / DeepSeek / OpenRouter integration | 🔜 In Progress |
-| **2** | **Text surface** — File tree, syntax highlighting, basic navigation | Planned |
-| **3** | **Dual-process wiring** — Live AI generation in the editor | Planned |
-| **4** | **Tool Registry + MCP Host** — Model Context Protocol support | Planned |
-| **5** | **LSP integration** — Autocomplete, diagnostics, go-to-def | Planned |
-| **6** | **Polish** — Terminal, git panel, fuzzy finder, theming | Planned |
+The goal isn't to compete with VS Code or replicate its feature set. Anvil exists because the act of writing code should feel fast and responsive, and thinking about your tools shouldn't slow you down. It's a project built entirely for the love of the craft.
+
+The approach is deliberate and incremental. Each phase of development produces something that actually works and can be tested independently before moving forward. No vaporware, no half-finished features.
+
+### Core Design Goals
+
+- **Provider-agnostic AI integration** — Route AI requests to local models (Ollama) or hosted services (DeepSeek, OpenRouter) through a unified interface.
+- **Low overhead** — Native compilation with Tauri and Rust, not an Electron-style runtime that eats memory and battery life.
+- **Extensibility without over-engineering** — Internal tools are modular from day one. Third-party extensions can come later, once the foundation is proven.
 
 ---
 
-## Architecture
+## Development Phases
 
-Anvil operates as a **dual-process application**:
+The project moves through discrete, well-defined phases. Each one must achieve its goals before the next begins.
+
+| Phase | Goal | Status |
+|-------|------|--------|
+| 0 | Skeleton—Tauri shell, CodeMirror instance, IPC round trip | Complete |
+| 1 | Backend routing prototype—Ollama, DeepSeek, OpenRouter support | In Progress |
+| 2 | Text surface—File tree, syntax highlighting | Planned |
+| 3 | Live AI integration—Dual-process wiring in the editor | Planned |
+| 4 | Tool registry and MCP host | Planned |
+| 5 | Language server integration—Autocomplete, diagnostics, navigation | Planned |
+| 6 | Polish—Terminal, git integration, fuzzy finder, theming | Planned |
+
+---
+
+## How It Works
+
+Anvil runs as a two-part system: a frontend shell and a backend daemon.
 
 ### Frontend Shell
-A Tauri v2 webview rendering a CodeMirror 6 editing surface. The frontend holds no business logic; it renders state and forwards user intent to the daemon.
+A Tauri v2 webview that renders the editor surface using CodeMirror 6. It handles rendering and captures user input, but doesn't contain any business logic. Everything gets forwarded to the daemon.
 
-### Core Daemon
-A native Rust process that owns:
-- Configuration and settings
-- AI provider routing and orchestration
-- Filesystem access and monitoring
-- (Later) Tool registry and MCP host
+### Backend Daemon
+A Rust process that owns the real work: configuration, AI provider routing, filesystem operations, and (later) the tool registry and language server integration. This is the single source of truth for everything.
 
-The daemon is the **single source of truth** for all state and behavior.
-
-### State Model
-Anvil follows a **"file on disk is truth"** philosophy:
-1. Edits write immediately to disk
-2. A filesystem watcher signals the frontend to reload
-3. A lightweight snapshot cache enables instant revert
-4. No separate in-memory state model
+### State and Files
+Anvil treats the filesystem as the source of truth. When you edit, the changes write directly to disk. A watcher notices the change and tells the frontend to reload. There's no complex in-memory state model—what's on disk is what's real. If you want to undo, there's a lightweight snapshot cache that lets you revert instantly.
 
 ### Extensibility
+The design splits extensibility into two parts that people often mix up:
 
-Two distinct concerns kept intentionally separate:
-
-- **Internal extensibility** (in progress) — New capabilities are added via a uniform Tool Registry schema, whether built-in or bridged through the Model Context Protocol (MCP).
-- **Third-party extensions** (reserved) — Extensions are designed to *be* MCP servers, avoiding the need for a separate plugin format. The configuration already reserves the seam for this integration.
+- **Internal extensibility** — New features get added through a tool registry with a consistent schema. These can be built-in or bridged through MCP (Model Context Protocol).
+- **Third-party extensions** — This comes later, after the core is solid. The plan is for extensions to simply be MCP servers, so there's no need to learn a separate plugin system.
 
 ---
 
@@ -74,16 +65,21 @@ Two distinct concerns kept intentionally separate:
 
 ### Prerequisites
 
-- **Rust** — Install via [rustup](https://rustup.rs), **not** your OS package manager. Anvil's dependencies require a recent toolchain.
-- **Tauri CLI**:
-  ```bash
-  cargo install tauri-cli --version "^2.0.0"
-  ```
-- **Linux only** — System webview dependencies:
-  ```bash
-  sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-  ```
-  (macOS and Windows use their OS-native webview and require no additional installation.)
+Install Rust using [rustup](https://rustup.rs), not your system package manager. Anvil's dependencies need a current toolchain.
+
+Then install the Tauri CLI:
+
+```bash
+cargo install tauri-cli --version "^2.0.0"
+```
+
+If you're on Linux, you'll also need the system webview libraries:
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+```
+
+macOS and Windows don't need anything extra—they use the system's native webview.
 
 ### Running the Editor
 
@@ -93,40 +89,46 @@ cd Anvil
 cargo tauri dev
 ```
 
-A window titled **"Anvil Editor"** should open with a live, syntax-highlighted editing surface.
+A window should open with "Anvil Editor" in the title bar, showing a working editor with syntax highlighting.
 
-### Testing the Phase 1 Daemon
+### Testing the Phase 1 Backend
 
-The Phase 1 backend routing prototype can be tested independently:
+The Phase 1 daemon can be tested standalone, without the UI.
 
-1. **Prepare configuration:**
-   ```bash
-   cd daemon
-   cp anvil.config.example.json anvil.config.json
-   export DEEPSEEK_API_KEY="your-key-here"
-   export OPENROUTER_API_KEY="your-key-here"
-   ```
-   (Local Ollama requires no key — it assumes Ollama is running on the default port.)
+First, set up your config:
 
-2. **Build:**
-   ```bash
-   cargo build --release
-   ```
+```bash
+cd daemon
+cp anvil.config.example.json anvil.config.json
+export DEEPSEEK_API_KEY="your-key-here"
+export OPENROUTER_API_KEY="your-key-here"
+```
 
-3. **Single-shot mode** (quick testing):
-   ```bash
-   ./target/release/anvil-daemon --config anvil.config.json --purpose chat "Say hello in one sentence."
-   ```
+(If you're using local Ollama, you don't need to set API keys—it assumes Ollama is running on the default port.)
 
-4. **Interactive mode** (agent script loop):
-   ```bash
-   ./target/release/anvil-daemon --config anvil.config.json --purpose chat
-   ```
-   Type messages, press Enter to receive completions. Type `exit` to quit.
+Build it:
+
+```bash
+cargo build --release
+```
+
+Try a single request:
+
+```bash
+./target/release/anvil-daemon --config anvil.config.json --purpose chat "Say hello in one sentence."
+```
+
+Or run it in interactive mode:
+
+```bash
+./target/release/anvil-daemon --config anvil.config.json --purpose chat
+```
+
+Type messages and press Enter to get responses. Type `exit` to quit.
 
 ---
 
-## Project Structure
+## Project Layout
 
 ```
 Anvil/
@@ -134,26 +136,23 @@ Anvil/
 │   ├── index.html
 │   ├── main.js
 │   ├── style.css
-│   └── vendor/                # Locally vendored JS dependencies
-├── src-tauri/                 # Rust daemon (Tauri backend)
+│   └── vendor/                # Locally bundled JavaScript
+├── src-tauri/                 # Rust backend (Tauri)
 │   ├── src/main.rs
 │   ├── Cargo.toml
 │   └── tauri.conf.json
-├── daemon/                    # Phase 1 standalone daemon prototype
+├── daemon/                    # Phase 1 standalone backend
 │   ├── src/
 │   ├── Cargo.toml
 │   └── anvil.config.example.json
 └── README.md
 ```
 
-### Frontend Dependencies
+### About the Vendored Frontend Dependencies
 
-Frontend JavaScript dependencies (currently CodeMirror 6) are vendored as pre-built local bundles rather than fetched from a CDN at runtime. This approach:
-- Eliminates runtime network dependencies
-- Ensures reproducible builds
-- Simplifies deployment
+CodeMirror 6 and related packages are bundled locally as pre-built JavaScript instead of fetched from a CDN. This keeps things simple: no runtime network calls, no CDN dependency, and builds are reproducible.
 
-To rebuild the CodeMirror bundle:
+If you need to rebuild the bundle:
 
 ```bash
 mkdir -p /tmp/cm-build && cd /tmp/cm-build
@@ -172,39 +171,26 @@ cp codemirror.bundle.js <path-to-Anvil>/src/vendor/codemirror.bundle.js
 
 ---
 
-## Design Philosophy
+## Philosophy
 
-Components that are not core to Anvil's unique identity are adopted from mature, battle-tested open-source projects rather than rebuilt:
-
-- **Syntax highlighting** — CodeMirror's own language packages
-- **Language intelligence** — Language Server Protocol (LSP) providers
-- **Terminal emulation** — Established terminal libraries
-
-This approach allows the team to focus on the distinctive value Anvil provides: low-overhead, AI-first extensibility.
+Rather than reinvent the wheel for every component, Anvil uses established, well-maintained open-source projects where they make sense. CodeMirror for syntax highlighting, language servers for intelligence, proven terminal emulators for terminal support. This keeps the focus on what makes Anvil different: a clean, AI-first design without the bloat.
 
 ---
 
 ## Contributing
 
-Contributions, feedback, and issue reports are welcome. Please review the current phase goals before proposing changes — features intended for later phases may be deliberately deferred to maintain a clean, incremental build order.
+Contributions and feedback are welcome. Before diving in, take a look at which phase you're working toward—some features are intentionally deferred to keep the build order clean and focused.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for full details.
-
-You are free to use, modify, and distribute this code for any purpose — personal, commercial, or otherwise — provided you include the original license text.
+MIT License. See [LICENSE](LICENSE) for the full text. Use it however you like—personally, commercially, whatever. Just keep the license with it.
 
 ---
 
 ## Author
 
-Built by [Benson Musonda](https://github.com/Bensonmusonda) as part of the Bennieslab ecosystem.
+Built by [Benson Musonda](https://github.com/Bensonmusonda).
 
----
-
-## Additional Resources
-
-- **Phase 1 Daemon Details** — See [daemon/README.md](daemon/README.md) for a detailed guide to the backend routing prototype.
-- **Issues & Feature Requests** — Open an issue to report bugs or propose enhancements.
+For more details on the Phase 1 backend implementation, see [daemon/README.md](daemon/README.md).
