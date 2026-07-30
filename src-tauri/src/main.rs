@@ -407,6 +407,7 @@ fn main() {
             read_text_file,
             create_file,
             create_folder,
+            delete_path,
             rename_path,
             get_recent_workspaces,
             add_recent_workspace,
@@ -436,6 +437,19 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running Anvil host");
+}
+
+#[tauri::command]
+fn delete_path(path: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("{} does not exist", path));
+    }
+    if p.is_dir() {
+        fs::remove_dir_all(p).map_err(|e| format!("failed to delete directory {}: {}", path, e))
+    } else {
+        fs::remove_file(p).map_err(|e| format!("failed to delete file {}: {}", path, e))
+    }
 }
 
 #[tauri::command]
