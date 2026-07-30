@@ -287,11 +287,42 @@ async fn agent_run(prompt: String, state: State<'_, AppState>) -> Result<String,
 
 // --- Phase 5: LSP commands ---
 
-/// Starts rust-analyzer for the given workspace root. Frontend should only
-/// call this for workspaces that actually contain a Cargo.toml.
+/// Starts a language server for the given workspace root. `server_name` is
+/// the key in `config.language_servers` (e.g. `"rust"`, `"typescript"`).
+/// If omitted, defaults to the first entry whose `project_markers` match
+/// files found in the workspace — or falls back to `"rust"` for compatibility.
 #[tauri::command]
-async fn start_lsp(workspace_root: String, state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
-    lsp::start(workspace_root, Arc::clone(&state.lsp), app).await
+async fn start_lsp(
+    workspace_root: String,
+    server_name: Option<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    // Load config (lazy, same pattern as ai_complete / agent_run).
+    {
+        let mut cfg_guard = state.config.lock().unwrap();
+        if cfg_guard.is_none() {
+            let path = Config::default_path()?;
+            *cfg_guard = Some(Config::load(&path).unwrap_or_default());
+        }
+    }
+    let config = state.config.lock().unwrap().clone().unwrap();
+
+    // Resolve which server to start.
+    let key = server_name.unwrap_or_else(|| "rust".to_string());
+    let server = config
+        .language_servers
+        .get(&key)
+        .ok_or_else(|| format!("no language server configured for \"{}\"", key))?;
+
+    lsp::start(
+        &server.command,
+        &server.args,
+        workspace_root,
+        Arc::clone(&state.lsp),
+        app,
+    )
+    .await
 }
 
 /// Generic LSP request passthrough — used for completion, hover, and
@@ -304,6 +335,20 @@ async fn lsp_request(method: String, params: Value, state: State<'_, AppState>) 
 #[tauri::command]
 fn lsp_notify(method: String, params: Value, state: State<AppState>) -> Result<(), String> {
     lsp::notify(&state.lsp, &method, params)
+}
+
+/// Returns the full `language_servers` map from the loaded config so the
+/// frontend can build its language registry without duplicating the data.
+/// Called by `maybeStartLsp` in lspClient.js at workspace-open time.
+#[tauri::command]
+fn get_language_servers(state: State<AppState>) -> Result<Value, String> {
+    let mut cfg_guard = state.config.lock().unwrap();
+    if cfg_guard.is_none() {
+        let path = Config::default_path()?;
+        *cfg_guard = Some(Config::load(&path).unwrap_or_default());
+    }
+    let servers = &cfg_guard.as_ref().unwrap().language_servers;
+    serde_json::to_value(servers).map_err(|e| format!("failed to serialize language servers: {}", e))
 }
 
 // --- Phase 6: Terminal commands ---
@@ -420,6 +465,7 @@ fn main() {
             start_lsp,
             lsp_request,
             lsp_notify,
+            get_language_servers,
             spawn_terminal,
             write_terminal,
             resize_terminal,

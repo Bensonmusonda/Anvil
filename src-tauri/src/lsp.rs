@@ -73,29 +73,38 @@ fn read_message<R: BufRead>(reader: &mut R) -> Result<Option<Value>, String> {
     Ok(Some(value))
 }
 
-/// Spawns rust-analyzer for the given workspace root, starts background
-/// threads relaying stderr (for diagnosis) and stdout (responses resolve
-/// pending requests by id; notifications like publishDiagnostics are
-/// emitted to the frontend), then performs the initialize handshake.
-pub async fn start(workspace_root: String, state: Arc<LspState>, app: AppHandle) -> Result<(), String> {
-    let mut child = Command::new("rust-analyzer")
+/// Spawns the given language server binary (`command`) with `args` for the
+/// given workspace root, starts background threads relaying stderr (for
+/// diagnosis) and stdout (responses resolve pending requests by id;
+/// notifications like publishDiagnostics are emitted to the frontend), then
+/// performs the initialize handshake.
+pub async fn start(
+    command: &str,
+    args: &[String],
+    workspace_root: String,
+    state: Arc<LspState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let mut child = Command::new(command)
+        .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("failed to spawn rust-analyzer — is it installed and on PATH? ({})", e))?;
+        .map_err(|e| format!("failed to spawn {} — is it installed and on PATH? ({})", command, e))?;
 
-    let stdin = child.stdin.take().ok_or("failed to capture rust-analyzer stdin")?;
-    let stdout = child.stdout.take().ok_or("failed to capture rust-analyzer stdout")?;
-    let stderr = child.stderr.take().ok_or("failed to capture rust-analyzer stderr")?;
+    let stdin = child.stdin.take().ok_or_else(|| format!("failed to capture {} stdin", command))?;
+    let stdout = child.stdout.take().ok_or_else(|| format!("failed to capture {} stdout", command))?;
+    let stderr = child.stderr.take().ok_or_else(|| format!("failed to capture {} stderr", command))?;
 
     *state.stdin.lock().unwrap() = Some(stdin);
     *state.child.lock().unwrap() = Some(child);
 
+    let server_label = command.to_string();
     std::thread::spawn(move || {
         let reader = BufReader::new(stderr);
         for line in reader.lines().flatten() {
-            eprintln!("[rust-analyzer] {}", line);
+            eprintln!("[{}] {}", server_label, line);
         }
     });
 
