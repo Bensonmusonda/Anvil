@@ -11,6 +11,7 @@
 import { mountModelSelector, getSelectedModel } from "./modelSelector.js";
 import { showSettingsDialog } from "./promptDialog.js";
 import MarkdownIt from "./vendor/markdown-it.bundle.js";
+import { highlightCodeBlock } from "./codeHighlight.js";
 
 let bindingsMounted = false;
 let conversationHistory = []; // [{role: "user"|"assistant", content: string}, ...]
@@ -123,6 +124,7 @@ function appendMessage(role, text, { turnStart } = {}) {
   if (role === "agent") {
     bubble.className = "chat-bubble chat-bubble--markdown";
     bubble.innerHTML = md.render(text);
+    highlightRenderedCode(bubble);
     addCodeCopyButtons(bubble);
   } else {
     bubble.className = "chat-bubble chat-bubble--plain";
@@ -251,5 +253,16 @@ function addCodeCopyButtons(bubble) {
       setTimeout(() => (btn.innerHTML = COPY_ICON), 1000);
     });
     wrapper.appendChild(btn);
+  });
+}
+
+function highlightRenderedCode(bubble) {
+  bubble.querySelectorAll("pre code").forEach((codeEl) => {
+    const langClass = [...codeEl.classList].find((c) => c.startsWith("language-"));
+    const lang = langClass ? langClass.slice("language-".length) : "";
+    const highlighted = highlightCodeBlock(codeEl.textContent, lang);
+    if (highlighted !== null) {
+      codeEl.innerHTML = highlighted;
+    }
   });
 }

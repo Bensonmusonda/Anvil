@@ -22,23 +22,68 @@ import {
   markdown,
 } from "./vendor/codemirror.bundle.js";
 
-const LANGUAGE_BY_EXT = {
-  js: () => javascript(),
-  jsx: () => javascript({ jsx: true }),
-  ts: () => javascript({ typescript: true }),
-  tsx: () => javascript({ typescript: true, jsx: true }),
-  py: () => python(),
-  rs: () => rust(),
+
+const LANGUAGE_FACTORIES = {
+  javascript: () => javascript(),
+  javascriptJsx: () => javascript({ jsx: true }),
+  typescript: () => javascript({ typescript: true }),
+  typescriptTsx: () => javascript({ typescript: true, jsx: true }),
+  python: () => python(),
+  rust: () => rust(),
   json: () => json(),
   html: () => html(),
   css: () => css(),
-  md: () => markdown(),
+  markdown: () => markdown(),
+};
+
+const LANGUAGE_BY_EXT = {
+  js: LANGUAGE_FACTORIES.javascript,
+  jsx: LANGUAGE_FACTORIES.javascriptJsx,
+  ts: LANGUAGE_FACTORIES.typescript,
+  tsx: LANGUAGE_FACTORIES.typescriptTsx,
+  py: LANGUAGE_FACTORIES.python,
+  rs: LANGUAGE_FACTORIES.rust,
+  json: LANGUAGE_FACTORIES.json,
+  html: LANGUAGE_FACTORIES.html,
+  css: LANGUAGE_FACTORIES.css,
+  md: LANGUAGE_FACTORIES.markdown,
+};
+
+// Aliases for fenced-code-block language tags (```js, ```python, etc.) —
+// LLM output and file extensions don't use the same vocabulary. To add a
+// new language everywhere it matters: one entry in LANGUAGE_FACTORIES,
+// referenced from this map and/or LANGUAGE_BY_EXT above as needed.
+const LANGUAGE_BY_FENCE_NAME = {
+  js: LANGUAGE_FACTORIES.javascript,
+  javascript: LANGUAGE_FACTORIES.javascript,
+  jsx: LANGUAGE_FACTORIES.javascriptJsx,
+  ts: LANGUAGE_FACTORIES.typescript,
+  typescript: LANGUAGE_FACTORIES.typescript,
+  tsx: LANGUAGE_FACTORIES.typescriptTsx,
+  py: LANGUAGE_FACTORIES.python,
+  python: LANGUAGE_FACTORIES.python,
+  rs: LANGUAGE_FACTORIES.rust,
+  rust: LANGUAGE_FACTORIES.rust,
+  json: LANGUAGE_FACTORIES.json,
+  html: LANGUAGE_FACTORIES.html,
+  css: LANGUAGE_FACTORIES.css,
+  md: LANGUAGE_FACTORIES.markdown,
+  markdown: LANGUAGE_FACTORIES.markdown,
 };
 
 export function languageForPath(path) {
   const ext = path.split(".").pop().toLowerCase();
   const factory = LANGUAGE_BY_EXT[ext];
   return factory ? factory() : [];
+}
+
+// Raw Lezer parser for a fenced-code-block language tag, or null if
+// unsupported — callers should fall back to plain unhighlighted text
+// rather than throwing. Used by codeHighlight.js for static highlighting
+// outside an editor instance.
+export function parserForFenceName(name) {
+  const factory = LANGUAGE_BY_FENCE_NAME[(name || "").toLowerCase()];
+  return factory ? factory().language.parser : null;
 }
 
 export const languageCompartment = new Compartment();

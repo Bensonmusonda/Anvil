@@ -13,6 +13,7 @@ export { json } from "@codemirror/lang-json";
 export { html } from "@codemirror/lang-html";
 export { css } from "@codemirror/lang-css";
 export { markdown } from "@codemirror/lang-markdown";
+export { highlightCode, defaultHighlightStyle } from "@codemirror/language";
 export { autocompletion } from "@codemirror/autocomplete";
 export { linter, lintGutter, setDiagnostics } from "@codemirror/lint";
 export { keymap } from "@codemirror/view";
