@@ -13,6 +13,14 @@ pub struct ProviderConfig {
     pub api_key: String,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct CustomPrompts {
+    #[serde(default)]
+    pub inline: String,
+    #[serde(default)]
+    pub chat: String,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct RouteConfig {
     pub provider: String,
@@ -87,6 +95,8 @@ pub struct Config {
     pub extensions: ExtensionsConfig,
     #[serde(default)]
     pub mcp_servers: HashMap<String, McpServerConfig>,
+    #[serde(default)]
+    pub custom_prompts: CustomPrompts,
     /// Named language server definitions. Keys are arbitrary (e.g. "rust",
     /// "typescript"). If this map is absent from the config file the default
     /// impl supplies a built-in Rust entry so existing setups keep working.
@@ -149,6 +159,7 @@ impl Default for Config {
             routing: HashMap::new(),
             extensions: ExtensionsConfig::default(),
             mcp_servers: HashMap::new(),
+            custom_prompts: CustomPrompts::default(),
             language_servers: default_language_servers(),
             auto_save: false,
             theme: "dark".to_string(),

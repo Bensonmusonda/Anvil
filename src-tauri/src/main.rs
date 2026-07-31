@@ -244,7 +244,13 @@ fn commit_file(path: String, state: State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn ai_complete(purpose: String, prompt: String, state: State<'_, AppState>) -> Result<String, String> {
+async fn ai_complete(
+    purpose: String,
+    prompt: String,
+    provider: Option<String>,
+    model: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
     {
         let mut cfg_guard = state.config.lock().unwrap();
         if cfg_guard.is_none() {
@@ -253,13 +259,32 @@ async fn ai_complete(purpose: String, prompt: String, state: State<'_, AppState>
         }
     }
     let config = state.config.lock().unwrap().clone().unwrap();
-    provider::complete(&config, &purpose, &prompt).await
+
+    let system_prompt = if purpose == "inline" {
+        Some(config.custom_prompts.inline.clone())
+    } else {
+        Some(config.custom_prompts.chat.clone())
+    };
+
+    provider::complete(
+        &config,
+        &purpose,
+        &prompt,
+        provider.as_deref(),
+        model.as_deref(),
+        system_prompt.as_deref(),
+    )
+    .await
 }
 
-// --- Phase 4 command, unchanged ---
-
 #[tauri::command]
-async fn agent_run(prompt: String, state: State<'_, AppState>) -> Result<String, String> {
+async fn agent_run(
+    prompt: String,
+    provider: Option<String>,
+    model: Option<String>,
+    history: Option<Vec<Value>>,   // <-- new
+    state: State<'_, AppState>,
+) -> Result<String, String> {
     {
         let mut cfg_guard = state.config.lock().unwrap();
         if cfg_guard.is_none() {
@@ -282,8 +307,98 @@ async fn agent_run(prompt: String, state: State<'_, AppState>) -> Result<String,
 
     let workspace_root = state.workspace_root.lock().unwrap().clone();
     let mcp_ref = mcp_command.as_ref().map(|(c, a)| (c.as_str(), a.as_slice()));
+    let system_prompt = config.custom_prompts.chat.clone();
+    let history = history.unwrap_or_default();
 
-    agent::run(&config, &prompt, &tools, workspace_root.as_deref(), mcp_ref).await
+    agent::run(
+        &config,
+        &prompt,
+        &tools,
+        workspace_root.as_deref(),
+        mcp_ref,
+        provider.as_deref(),
+        model.as_deref(),
+        Some(&system_prompt),
+        &history,
+    )
+    .await
+}
+
+// --- Option 4: model switcher + custom prompts ---
+
+#[derive(Debug, serde::Serialize, Clone)]
+struct ModelOption {
+    provider: String,
+    model: String,
+    label: String,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct AvailableModels {
+    known_pairs: Vec<ModelOption>,
+    providers: Vec<String>,
+}
+
+#[tauri::command]
+fn get_available_models(state: State<AppState>) -> Result<AvailableModels, String> {
+    {
+        let mut cfg_guard = state.config.lock().unwrap();
+        if cfg_guard.is_none() {
+            let path = Config::default_path()?;
+            *cfg_guard = Some(Config::load(&path)?);
+        }
+    }
+    let config = state.config.lock().unwrap().clone().unwrap();
+
+    let mut seen = std::collections::HashSet::new();
+    let mut known_pairs = Vec::new();
+    for route in config.routing.values() {
+        let key = (route.provider.clone(), route.model.clone());
+        if seen.insert(key) {
+            known_pairs.push(ModelOption {
+                provider: route.provider.clone(),
+                model: route.model.clone(),
+                label: format!("{} — {}", route.provider, route.model),
+            });
+        }
+    }
+    known_pairs.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let mut providers: Vec<String> = config.providers.keys().cloned().collect();
+    providers.sort();
+
+    Ok(AvailableModels { known_pairs, providers })
+}
+
+#[tauri::command]
+fn get_custom_prompts(state: State<AppState>) -> Result<config::CustomPrompts, String> {
+    let mut cfg_guard = state.config.lock().unwrap();
+    if cfg_guard.is_none() {
+        let path = Config::default_path()?;
+        *cfg_guard = Some(Config::load(&path)?);
+    }
+    Ok(cfg_guard.as_ref().unwrap().custom_prompts.clone())
+}
+
+#[tauri::command]
+fn save_custom_prompts(inline: String, chat: String, state: State<AppState>) -> Result<(), String> {
+    let path = Config::default_path()?;
+
+    // Same raw-JSON-patch approach as save_pane_widths — never reserializes
+    // the whole typed Config, so hand-edited fields elsewhere can't be clobbered.
+    let raw = fs::read_to_string(&path).map_err(|e| format!("failed to read config: {}", e))?;
+    let mut json: Value =
+        serde_json::from_str(&raw).map_err(|e| format!("failed to parse config JSON: {}", e))?;
+    json["custom_prompts"] = serde_json::json!({ "inline": inline, "chat": chat });
+    let pretty = serde_json::to_string_pretty(&json)
+        .map_err(|e| format!("failed to serialize config: {}", e))?;
+    fs::write(&path, pretty).map_err(|e| format!("failed to write config: {}", e))?;
+
+    let mut cfg_guard = state.config.lock().unwrap();
+    if let Some(cfg) = cfg_guard.as_mut() {
+        cfg.custom_prompts = config::CustomPrompts { inline, chat };
+    }
+    Ok(())
 }
 
 // --- Phase 5: LSP commands ---
@@ -494,6 +609,9 @@ fn main() {
             revert_file,
             commit_file,
             ai_complete,
+            get_available_models,
+            get_custom_prompts,
+            save_custom_prompts,
             agent_run,
             start_lsp,
             lsp_request,

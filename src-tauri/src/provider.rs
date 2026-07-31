@@ -5,23 +5,54 @@
 use crate::config::Config;
 use serde_json::json;
 
-pub async fn complete(config: &Config, purpose: &str, prompt: &str) -> Result<String, String> {
-    let route = config
-        .routing
-        .get(purpose)
-        .ok_or_else(|| format!("no routing configured for purpose \"{}\"", purpose))?;
+/// `override_provider`/`override_model` bypass the purpose→routing lookup
+/// entirely when both are present (the model-switcher UI always sends
+/// both together — see `main.rs::ai_complete`). `system_prompt`, if
+/// non-empty, is sent as the first message.
+pub async fn complete(
+    config: &Config,
+    purpose: &str,
+    prompt: &str,
+    override_provider: Option<&str>,
+    override_model: Option<&str>,
+    system_prompt: Option<&str>,
+) -> Result<String, String> {
+    let (provider_name, model): (String, String) = if let Some(p) = override_provider {
+        let model = override_model
+            .ok_or("a model override must be provided alongside a provider override")?
+            .to_string();
+        (p.to_string(), model)
+    } else {
+        // Existing purpose-based lookup, with one addition: "inline" falls
+        // back to "chat" if the user's config.json has no dedicated
+        // "inline" routing entry yet, so this doesn't break existing setups.
+        let route = config
+            .routing
+            .get(purpose)
+            .or_else(|| if purpose == "inline" { config.routing.get("chat") } else { None })
+            .ok_or_else(|| format!("no routing configured for purpose \"{}\"", purpose))?;
+        (route.provider.clone(), route.model.clone())
+    };
 
     let provider = config
         .providers
-        .get(&route.provider)
-        .ok_or_else(|| format!("routing references unknown provider \"{}\"", route.provider))?;
+        .get(&provider_name)
+        .ok_or_else(|| format!("unknown provider \"{}\"", provider_name))?;
 
-    let api_key = config.resolve_api_key(&route.provider)?;
+    let api_key = config.resolve_api_key(&provider_name)?;
     let url = format!("{}/chat/completions", provider.base_url.trim_end_matches('/'));
 
+    let mut messages = Vec::new();
+    if let Some(sys) = system_prompt {
+        if !sys.trim().is_empty() {
+            messages.push(json!({ "role": "system", "content": sys }));
+        }
+    }
+    messages.push(json!({ "role": "user", "content": prompt }));
+
     let body = json!({
-        "model": route.model,
-        "messages": [{ "role": "user", "content": prompt }],
+        "model": model,
+        "messages": messages,
         "stream": false
     });
 
@@ -32,7 +63,7 @@ pub async fn complete(config: &Config, purpose: &str, prompt: &str) -> Result<St
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("request to provider \"{}\" at {} failed: {}", route.provider, url, e))?;
+        .map_err(|e| format!("request to provider \"{}\" at {} failed: {}", provider_name, url, e))?;
 
     let status = response.status();
     let text = response
@@ -41,17 +72,11 @@ pub async fn complete(config: &Config, purpose: &str, prompt: &str) -> Result<St
         .map_err(|e| format!("failed to read response body: {}", e))?;
 
     if !status.is_success() {
-        return Err(format!(
-            "provider \"{}\" returned HTTP {}: {}",
-            route.provider, status, text
-        ));
+        return Err(format!("provider \"{}\" returned HTTP {}: {}", provider_name, status, text));
     }
 
     let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|e| {
-        format!(
-            "provider \"{}\" returned non-JSON response: {} — body: {}",
-            route.provider, e, text
-        )
+        format!("provider \"{}\" returned non-JSON response: {} — body: {}", provider_name, e, text)
     })?;
 
     parsed["choices"][0]["message"]["content"]
@@ -60,7 +85,7 @@ pub async fn complete(config: &Config, purpose: &str, prompt: &str) -> Result<St
         .ok_or_else(|| {
             format!(
                 "provider \"{}\" response missing choices[0].message.content — full response: {}",
-                route.provider, text
+                provider_name, text
             )
         })
 }

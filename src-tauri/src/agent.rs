@@ -1,10 +1,3 @@
-//! Phase 4 agent loop. Sends the prompt + registered tools to the "chat"
-//! provider using OpenAI-compatible function calling, executes any
-//! requested tool calls (dispatching to native or MCP based on origin),
-//! feeds results back as "tool" role messages, and repeats until the model
-//! returns a plain-text answer or MAX_ITERATIONS is hit (a safety net
-//! against infinite tool-call loops, not expected to trigger normally).
-
 use crate::config::Config;
 use crate::tool_registry::{ToolDefinition, ToolOrigin};
 use crate::{mcp_host, tools_native};
@@ -19,25 +12,46 @@ pub async fn run(
     tools: &[ToolDefinition],
     workspace_root: Option<&Path>,
     mcp_command: Option<(&str, &[String])>,
+    override_provider: Option<&str>,
+    override_model: Option<&str>,
+    system_prompt: Option<&str>,
+    history: &[Value],   // <-- new: prior turns as {role, content} objects, oldest first
 ) -> Result<String, String> {
-    let route = config
-        .routing
-        .get("chat")
-        .ok_or("no routing configured for purpose \"chat\"")?;
+    let (provider_name, model): (String, String) = if let Some(p) = override_provider {
+        let model = override_model
+            .ok_or("a model override must be provided alongside a provider override")?
+            .to_string();
+        (p.to_string(), model)
+    } else {
+        let route = config
+            .routing
+            .get("chat")
+            .ok_or("no routing configured for purpose \"chat\"")?;
+        (route.provider.clone(), route.model.clone())
+    };
+
     let provider = config
         .providers
-        .get(&route.provider)
-        .ok_or_else(|| format!("unknown provider \"{}\"", route.provider))?;
-    let api_key = config.resolve_api_key(&route.provider)?;
+        .get(&provider_name)
+        .ok_or_else(|| format!("unknown provider \"{}\"", provider_name))?;
+    let api_key = config.resolve_api_key(&provider_name)?;
     let url = format!("{}/chat/completions", provider.base_url.trim_end_matches('/'));
 
-    let mut messages = vec![json!({ "role": "user", "content": prompt })];
+    let mut messages = Vec::new();
+    if let Some(sys) = system_prompt {
+        if !sys.trim().is_empty() {
+            messages.push(json!({ "role": "system", "content": sys }));
+        }
+    }
+    messages.extend_from_slice(history);           // <-- new
+    messages.push(json!({ "role": "user", "content": prompt }));
+
     let tool_defs: Vec<Value> = tools.iter().map(|t| t.to_openai_tool()).collect();
     let client = reqwest::Client::new();
 
     for _ in 0..MAX_ITERATIONS {
         let body = json!({
-            "model": route.model,
+            "model": model,
             "messages": messages,
             "tools": tool_defs,
             "stream": false
@@ -63,7 +77,6 @@ pub async fn run(
         let choice = &parsed["choices"][0]["message"];
         let tool_calls = choice["tool_calls"].as_array();
 
-        // No tool calls — the model gave a final answer.
         if tool_calls.map_or(true, |calls| calls.is_empty()) {
             return choice["content"]
                 .as_str()
