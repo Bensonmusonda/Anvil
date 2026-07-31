@@ -1586,8 +1586,138 @@ mark.search-highlight {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 12px;
   line-height: 1.5;
-  white-space: pre-wrap;
   word-break: break-word;
+}
+
+.chat-bubble--plain {
+  white-space: pre-wrap;
+}
+
+.chat-bubble--markdown>*:first-child {
+  margin-top: 0;
+}
+
+.chat-bubble--markdown>*:last-child {
+  margin-bottom: 0;
+}
+
+.chat-bubble--markdown p {
+  margin: 0 0 4px;
+}
+
+.chat-bubble--markdown ul,
+.chat-bubble--markdown ol {
+  margin: 0 0 4px;
+  padding-left: 18px;
+}
+
+.chat-bubble--markdown blockquote,
+.chat-bubble--markdown table {
+  margin: 0 0 6px;
+}
+
+.chat-bubble--markdown li {
+  margin: 0;
+}
+
+.chat-bubble--markdown li>p {
+  margin: 0;
+}
+
+.chat-bubble--markdown li+li {
+  margin-top: 2px;
+}
+
+.chat-bubble--markdown h1,
+.chat-bubble--markdown h2,
+.chat-bubble--markdown h3,
+.chat-bubble--markdown h4 {
+  margin: 8px 0 3px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.chat-bubble--markdown h1:first-child,
+.chat-bubble--markdown h2:first-child,
+.chat-bubble--markdown h3:first-child,
+.chat-bubble--markdown h4:first-child {
+  margin-top: 0;
+}
+
+.chat-bubble--markdown h1 {
+  font-size: 16px;
+}
+
+.chat-bubble--markdown h2 {
+  font-size: 14.5px;
+}
+
+.chat-bubble--markdown h3,
+.chat-bubble--markdown h4 {
+  font-size: 13px;
+}
+
+.chat-bubble--markdown ul,
+.chat-bubble--markdown ol {
+  padding-left: 20px;
+}
+
+.chat-bubble--markdown li {
+  margin: 2px 0;
+}
+
+.chat-bubble--markdown li>p {
+  margin: 0;
+}
+
+.chat-bubble--markdown code {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  font-size: 11px;
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.chat-bubble--markdown pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  overflow-x: auto;
+}
+
+.chat-bubble--markdown pre code {
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.chat-bubble--markdown blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 10px;
+  color: var(--dim);
+}
+
+.chat-bubble--markdown a {
+  color: var(--accent);
+}
+
+.chat-bubble--markdown table {
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.chat-bubble--markdown th,
+.chat-bubble--markdown td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+}
+
+.chat-bubble--markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 10px 0;
 }
 
 .chat-message--user .chat-bubble {
@@ -1616,4 +1746,40 @@ mark.search-highlight {
   border: 1px solid var(--error);
   color: var(--error);
   border-bottom-left-radius: 2px;
+}
+
+.code-block-wrapper {
+  position: relative;
+  margin: 0 0 6px;
+}
+
+.chat-bubble--markdown .code-block-wrapper pre {
+  margin: 0;
+}
+
+.code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.code-block-wrapper:hover .code-copy-btn {
+  opacity: 1;
+}
+
+.code-copy-btn:hover {
+  background: var(--border);
+  color: var(--text);
 }

@@ -10,9 +10,11 @@
 
 import { mountModelSelector, getSelectedModel } from "./modelSelector.js";
 import { showSettingsDialog } from "./promptDialog.js";
+import MarkdownIt from "./vendor/markdown-it.bundle.js";
 
 let bindingsMounted = false;
 let conversationHistory = []; // [{role: "user"|"assistant", content: string}, ...]
+const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
 
 const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
 const EDIT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
@@ -34,7 +36,7 @@ function buildViewActions(row, role, turnStart) {
   const copyBtn = createIconButton("Copy", COPY_ICON);
   copyBtn.addEventListener("click", () => {
     const bubble = row.querySelector(".chat-bubble");
-    navigator.clipboard.writeText(bubble.textContent).catch((err) => {
+    navigator.clipboard.writeText(bubble.dataset.raw ?? bubble.textContent).catch((err) => {
       console.error("Copy failed:", err);
     });
     copyBtn.innerHTML = CHECK_ICON;
@@ -107,13 +109,26 @@ function truncateFrom(row) {
 
 function appendMessage(role, text, { turnStart } = {}) {
   const agentOutput = document.getElementById("agent-output");
+  if (!agentOutput.querySelector(".chat-message")) {
+    agentOutput.textContent = ""; // clear the "(no agent task run yet)" placeholder
+  }
+
   const row = document.createElement("div");
   row.className = `chat-message chat-message--${role}`;
   if (turnStart !== undefined) row.dataset.turnStart = String(turnStart);
 
   const bubble = document.createElement("div");
-  bubble.className = "chat-bubble";
-  bubble.textContent = text;
+  bubble.dataset.raw = text; // copy button always copies this, not rendered HTML
+
+  if (role === "agent") {
+    bubble.className = "chat-bubble chat-bubble--markdown";
+    bubble.innerHTML = md.render(text);
+    addCodeCopyButtons(bubble);
+  } else {
+    bubble.className = "chat-bubble chat-bubble--plain";
+    bubble.textContent = text;
+  }
+
   row.appendChild(bubble);
 
   if (role === "user" || role === "agent") {
@@ -214,4 +229,27 @@ export function initAgentPanelBindings() {
     }
   });
   headerControls.appendChild(settingsBtn);
+}
+
+function addCodeCopyButtons(bubble) {
+  bubble.querySelectorAll("pre").forEach((pre) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "code-block-wrapper";
+    pre.replaceWith(wrapper);
+    wrapper.appendChild(pre);
+
+    const btn = document.createElement("button");
+    btn.className = "code-copy-btn";
+    btn.title = "Copy code";
+    btn.innerHTML = COPY_ICON;
+    btn.addEventListener("click", () => {
+      const code = pre.querySelector("code");
+      navigator.clipboard.writeText(code ? code.textContent : pre.textContent).catch((err) => {
+        console.error("Copy failed:", err);
+      });
+      btn.innerHTML = CHECK_ICON;
+      setTimeout(() => (btn.innerHTML = COPY_ICON), 1000);
+    });
+    wrapper.appendChild(btn);
+  });
 }
