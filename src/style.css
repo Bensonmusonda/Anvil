@@ -1513,17 +1513,69 @@ mark.search-highlight {
 
 .chat-message {
   display: flex;
+  flex-direction: column;
   width: 100%;
+  gap: 2px;
 }
 
 .chat-message--user {
-  justify-content: flex-end;
+  align-items: flex-end;
 }
 
 .chat-message--agent,
 .chat-message--pending,
 .chat-message--error {
-  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  padding: 0 2px;
+}
+
+.chat-message:hover .chat-actions {
+  opacity: 1;
+}
+
+.chat-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.chat-action-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.chat-edit-textarea {
+  max-width: 92%;
+  width: 320px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 44px;
+}
+
+.chat-edit-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .chat-bubble {
