@@ -17,6 +17,7 @@ mod tools_native;
 mod terminal;
 mod git;
 mod fuzzy;
+mod search;
 
 use config::Config;
 use lsp::LspState;
@@ -437,6 +438,19 @@ fn fuzzy_files(query: String, state: State<'_, AppState>) -> Result<Vec<fuzzy::F
     fuzzy::find_files(&root, &query)
 }
 
+/// Full-text content search across all workspace files. Respects .gitignore.
+/// Results are capped at 1,000 matches to keep the frontend responsive.
+#[tauri::command]
+fn search_in_files(
+    query: String,
+    case_sensitive: bool,
+    use_regex: bool,
+    state: State<'_, AppState>,
+) -> Result<Vec<search::SearchMatch>, String> {
+    let root = get_workspace(&state)?;
+    search::search_files(&root, &query, case_sensitive, use_regex)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -475,6 +489,7 @@ fn main() {
             git_unstage,
             git_commit_action,
             fuzzy_files,
+            search_in_files,
             win_minimize,
             win_toggle_maximize,
             win_close,
