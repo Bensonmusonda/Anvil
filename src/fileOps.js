@@ -160,6 +160,14 @@ export async function saveAllFiles() {
 /// document is still open when Anvil has no tabs left at all.
 export async function closeTab(path) {
   const tab = getTabs().find((t) => t.path === path);
+
+  // Diff tabs are read-only and have no LSP document state — skip both the
+  // dirty-check prompt and the didClose/didOpen notifications.
+  if (tab?.kind === "diff") {
+    closeTabByPath(path);
+    return;
+  }
+
   if (tab && tab.dirty) {
     const ok = await showConfirmDialog({
       title: "Discard changes?",

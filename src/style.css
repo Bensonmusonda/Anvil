@@ -461,6 +461,11 @@ h1 {
   color: white;
 }
 
+.context-menu-item-danger:hover {
+  background: #e81123;
+  color: white;
+}
+
 /* Git Panel */
 .git-toolbar {
   padding: 6px 10px;
@@ -621,29 +626,57 @@ h1 {
   white-space: pre-wrap;
 }
 
-.agent-input-container {
+.agent-prompt-box {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  background: var(--bg);
+  border: none;
+  border-radius: 14px;
+  padding: 10px 10px 8px;
   flex-shrink: 0;
 }
 
-.agent-input-container textarea {
-  background: var(--bg);
-  border: 1px solid var(--border);
+.agent-prompt-box textarea {
+  background: transparent;
+  border: none;
+  outline: none;
   color: var(--text);
-  border-radius: 4px;
-  padding: 6px;
+  padding: 2px 4px;
   font-size: 12px;
   font-family: inherit;
-  resize: vertical;
-  min-height: 60px;
-  transition: border-color 0.15s ease;
+  resize: none;
+  min-height: 44px;
 }
 
-.agent-input-container textarea:focus {
-  outline: none;
-  border-color: var(--accent);
+.agent-prompt-box-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-send-btn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.agent-send-btn:hover {
+  filter: brightness(1.15);
+}
+
+.agent-send-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* Main Editor Area */
@@ -809,6 +842,16 @@ h1 {
   color: var(--text);
   background: var(--bg);
   box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.tab-bar-item.diff-tab {
+  font-style: italic;
+  color: var(--dim);
+}
+
+.tab-bar-item.diff-tab.active {
+  font-style: normal;
+  color: var(--accent);
 }
 
 .tab-bar-item.active::after {
@@ -1137,7 +1180,17 @@ h1 {
 .agent-panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
+}
+
+.agent-panel-header span {
+  flex: 1;
+}
+
+.agent-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .agent-close-btn {
@@ -1156,4 +1209,359 @@ h1 {
 .agent-close-btn:hover {
   background: var(--border);
   color: var(--text);
+}
+
+.agent-header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.agent-header-icon-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ─── Find in Files (Search Panel) ────────────────────────────────────── */
+
+#search-panel {
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Controls area: query input + toggle buttons */
+.search-controls {
+  padding: 8px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 6px;
+  transition: border-color 0.15s;
+}
+
+.search-input-row:focus-within {
+  border-color: var(--accent);
+}
+
+.search-query-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  padding: 5px 0;
+  font-family: inherit;
+}
+
+.search-query-input::placeholder {
+  color: var(--dim);
+}
+
+.search-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon-btn:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.search-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.search-toggle-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--dim);
+  font-size: 11px;
+  font-family: var(--mono, monospace);
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+  letter-spacing: 0.02em;
+}
+
+.search-toggle-btn:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.search-toggle-btn.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.search-status {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-status-error {
+  color: var(--error);
+}
+
+/* Scrollable results container */
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.search-searching,
+.search-empty,
+.search-error {
+  padding: 12px 12px;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.search-error {
+  color: var(--error);
+}
+
+/* File group header */
+.search-file-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  border-top: 1px solid transparent;
+}
+
+.search-file-header:hover {
+  background: var(--border);
+}
+
+.search-file-header::before {
+  content: "▾";
+  font-size: 10px;
+  color: var(--dim);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.search-file-header.collapsed::before {
+  transform: rotate(-90deg);
+}
+
+.search-file-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.search-file-count {
+  font-size: 10px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  border-radius: 10px;
+  padding: 0 6px;
+  line-height: 16px;
+  flex-shrink: 0;
+}
+
+/* Individual match rows */
+.search-match-list {
+  /* no extra indent — line numbers provide visual depth */
+}
+
+.search-match-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 8px 2px 20px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.5;
+  outline: none;
+}
+
+.search-match-row:hover,
+.search-match-row:focus {
+  background: var(--border);
+}
+
+.search-line-num {
+  flex-shrink: 0;
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: var(--dim);
+  min-width: 28px;
+  text-align: right;
+  user-select: none;
+}
+
+.search-snippet {
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+  color: var(--text);
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Highlighted match within the snippet */
+mark.search-highlight {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Model selector (shared: ai-popup + agent panel) */
+.agent-prompt-box-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* was: no justify-content set */
+  gap: 8px;
+}
+
+.agent-prompt-box .model-selector {
+  /* was: ..agent-prompt-box .model-selector */
+  margin-bottom: 0;
+  width: auto;
+}
+
+.agent-prompt-box .model-selector-known {
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  max-width: 180px;
+}
+
+.agent-prompt-box .model-selector-custom {
+  margin-top: 4px;
+}
+
+/* Settings dialog */
+.settings-dialog-label {
+  font-size: 12px;
+  color: var(--dim);
+  margin-bottom: -6px;
+}
+
+.settings-dialog-textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.settings-dialog-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Chat bubbles (agent panel) */
+.agent-output {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px;
+}
+
+.chat-message {
+  display: flex;
+  width: 100%;
+}
+
+.chat-message--user {
+  justify-content: flex-end;
+}
+
+.chat-message--agent,
+.chat-message--pending,
+.chat-message--error {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: 92%;
+  width: fit-content;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-message--user .chat-bubble {
+  background: var(--accent);
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+
+.chat-message--agent .chat-bubble {
+  background: var(--panel);
+  color: var(--text);
+  border-bottom-left-radius: 2px;
+  /* border: 1px solid var(--border);  <- removed */
+}
+
+.chat-message--pending .chat-bubble {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-style: italic;
+  border-bottom-left-radius: 2px;
+}
+
+.chat-message--error .chat-bubble {
+  background: var(--panel);
+  border: 1px solid var(--error);
+  color: var(--error);
+  border-bottom-left-radius: 2px;
 }

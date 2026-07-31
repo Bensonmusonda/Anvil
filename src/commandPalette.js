@@ -10,6 +10,7 @@ import { toggleTerminal } from "./terminalPanel.js";
 import { refreshGitStatus } from "./gitPanel.js";
 import { runAgent } from "./agentPanel.js";
 import { getEditor } from "./editorSetup.js";
+import { openSearchPanel } from "./searchPanel.js";
 
 let paletteItems = [];
 let paletteSelectedIndex = 0;
@@ -204,6 +205,10 @@ export function initCommandPaletteBindings() {
     if (e.key === "P" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
       e.preventDefault();
       openCommandPalette("commands");
+    }
+    if (e.key === "F" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      e.preventDefault();
+      openSearchPanel();
     }
   });
 }

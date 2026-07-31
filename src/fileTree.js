@@ -3,12 +3,12 @@
 // a right-click context menu, the File dropdown, or the empty-state panel.
 
 import { appState, showStatus } from "./state.js";
-import { maybeStartLsp } from "./lspClient.js";
+import { maybeStartLsp, notifyDidOpen, notifyDidClose } from "./lspClient.js";
 import { openFile, saveAllFiles } from "./fileOps.js";
-import { isPathDirty } from "./tabs.js";
+import { isPathDirty, remapTabPaths, closeTabsUnderPath, getActiveTab, getEffectiveContent } from "./tabs.js";
 import { updateEmptyState } from "./emptyState.js";
 import { showExplorerPanel } from "./uiChrome.js";
-import { showPromptDialog } from "./promptDialog.js";
+import { showPromptDialog, showConfirmDialog } from "./promptDialog.js";
 
 // Folder paths the user currently has expanded, preserved across
 // refreshTree() so creating a file doesn't collapse the whole tree.
@@ -434,6 +434,14 @@ function beginInlineRename(target) {
       expandedPaths.clear();
       for (const p of remappedExpanded) expandedPaths.add(p);
 
+      const tabRemap = remapTabPaths(path, resultPath, sep);
+      if (tabRemap.remappedActive && tabRemap.oldActivePath && tabRemap.newActivePath) {
+        const activeTab = getActiveTab();
+        const content = activeTab ? getEffectiveContent(activeTab) : "";
+        await notifyDidClose(tabRemap.oldActivePath);
+        await notifyDidOpen(tabRemap.newActivePath, content);
+      }
+
       activeSelection = { path: resultPath, isDir, parentPath };
       showStatus(isDir ? "Folder renamed" : "File renamed");
       await refreshTree();
@@ -491,6 +499,42 @@ async function beginInlineCreate(parentDir, isFile) {
   createInlineInputRow(container, parentDir, isFile);
 }
 
+async function handleDeletePath(target) {
+  const { path, isDir, currentName, parentPath } = target;
+  const itemType = isDir ? "folder" : "file";
+  const ok = await showConfirmDialog({
+    title: `Delete ${itemType}?`,
+    message: `Are you sure you want to delete "${currentName}"? This action cannot be undone.`,
+    confirmLabel: "Delete",
+    danger: true,
+  });
+  if (!ok) return;
+
+  const sep = parentPath && path.startsWith(parentPath) ? path.charAt(parentPath.length) : "/";
+
+  try {
+    await window.__TAURI__.core.invoke("delete_path", { path });
+    showStatus(`${isDir ? "Folder" : "File"} deleted`);
+
+    const closeResult = closeTabsUnderPath(path, sep);
+    if (closeResult.closedWasActive) {
+      if (closeResult.nextTab) {
+        await notifyDidOpen(closeResult.nextTab.path, getEffectiveContent(closeResult.nextTab));
+      } else if (closeResult.closedActivePath) {
+        await notifyDidClose(closeResult.closedActivePath);
+      }
+    }
+
+    if (activeSelection && (activeSelection.path === path || activeSelection.path.startsWith(path + sep))) {
+      activeSelection = null;
+    }
+
+    await refreshTree();
+  } catch (err) {
+    showStatus(`Delete failed: ${err}`, true);
+  }
+}
+
 let activeContextMenu = null;
 
 function closeTreeContextMenu() {
@@ -537,6 +581,15 @@ function showTreeContextMenu(x, y, targetDir, renameTarget = null) {
       beginInlineRename(renameTarget);
     });
     menu.appendChild(renameItem);
+
+    const deleteItem = document.createElement("div");
+    deleteItem.className = "context-menu-item context-menu-item-danger";
+    deleteItem.textContent = "Delete";
+    deleteItem.addEventListener("click", () => {
+      closeTreeContextMenu();
+      handleDeletePath(renameTarget);
+    });
+    menu.appendChild(deleteItem);
   }
 
   document.body.appendChild(menu);

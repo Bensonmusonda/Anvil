@@ -16,8 +16,8 @@
 // fileOps.js's openFile(), which now delegates here.
 
 import { appState } from "./state.js";
-import { getEditor, buildEditorState } from "./editorSetup.js";
-import { updateEmptyState } from "./emptyState.js";
+import { getEditor, buildEditorState, buildDiffEditorState } from "./editorSetup.js";
+import { updateEmptyState, setHasActiveTab } from "./emptyState.js";
 import { openFile, closeTab } from "./fileOps.js";
 import { EditorView } from "./vendor/codemirror.bundle.js";
 
@@ -35,7 +35,7 @@ function renderTabBar() {
     bar.innerHTML = "";
     for (const tab of tabs) {
         const item = document.createElement("div");
-        item.className = "tab-bar-item" + (tab.id === activeTabId ? " active" : "");
+        item.className = "tab-bar-item" + (tab.id === activeTabId ? " active" : "") + (tab.kind === "diff" ? " diff-tab" : "");
         item.draggable = true;
 
         const label = document.createElement("span");
@@ -61,7 +61,10 @@ function renderTabBar() {
         item.appendChild(label);
         item.appendChild(closeBtn);
         item.addEventListener("click", () => {
-            if (tab.id !== activeTabId) openFile(tab.path);
+            if (tab.id !== activeTabId) {
+                if (tab.kind === "file") openFile(tab.path);
+                else activateTab(tab);
+            }
         });
 
         item.addEventListener("dragstart", (e) => {
@@ -159,12 +162,19 @@ function activateTab(newTab) {
 
     editor.setState(newTab.editorState);
     activeTabId = newTab.id;
-    appState.currentFilePath = newTab.path;
 
-    document.getElementById("current-file").textContent = newTab.path;
+    if (newTab.kind === "file") {
+        appState.currentFilePath = newTab.path;
+        document.getElementById("current-file").textContent = newTab.path;
+    } else if (newTab.kind === "diff") {
+        appState.currentFilePath = null; // Do not treat diff tabs as editable workspace files
+        document.getElementById("current-file").textContent = "Diff: " + newTab.diffPath;
+    }
+
+    setHasActiveTab(true);  // always true when a tab is being activated
     updateEmptyState();
     restoreScroll(newTab);
-    editor.focus(); // see the focus note below
+    editor.focus();
     renderTabBar();
 }
 
@@ -194,6 +204,36 @@ export async function openOrSwitchToFile(path) {
     activateTab(tab);
     renderTabBar();
     return { tab, isNew: true, content };
+}
+
+/// Opens a read-only Git Diff tab for the specified file path. If a diff tab
+/// for this file is already open, it updates its content and activates it.
+export function openOrSwitchToDiff(path, diffContent) {
+    const diffKey = "diff:" + path;
+    const existing = tabs.find((t) => t.kind === "diff" && t.path === diffKey);
+    if (existing) {
+        existing.diffContent = diffContent;
+        existing.editorState = buildDiffEditorState(diffContent);
+        activateTab(existing);
+        return existing;
+    }
+
+    const tab = {
+        id: nextTabId++,
+        kind: "diff",
+        path: diffKey,
+        diffPath: path,
+        title: "± " + titleForPath(path),
+        diffContent,
+        editorState: buildDiffEditorState(diffContent),
+        savedDoc: diffContent,
+        dirty: false,
+        scrollTop: 0,
+    };
+    tabs.push(tab);
+    activateTab(tab);
+    renderTabBar();
+    return tab;
 }
 
 function setTabDirty(tab, isDirty) {
@@ -256,6 +296,7 @@ export function closeTabByPath(path) {
             activeTabId = null;
             appState.currentFilePath = null;
             document.getElementById("current-file").textContent = "no file open";
+            setHasActiveTab(false);
             updateEmptyState();
             renderTabBar();
         }
@@ -272,6 +313,61 @@ export function getEffectiveContent(tab) {
 export function markTabSaved(tab, content) {
     tab.savedDoc = content;
     setTabDirty(tab, false);
+}
+
+/// Remaps the path of any open tab whose path equals oldPath or is nested
+/// inside oldPath (oldPath + sep + ...). Called by fileTree.js on rename.
+export function remapTabPaths(oldPath, newPath, sep = "/") {
+    let remappedActive = false;
+    let oldActivePath = null;
+    let newActivePath = null;
+
+    for (const tab of tabs) {
+        if (tab.kind !== "file") continue;
+        if (tab.path === oldPath || tab.path.startsWith(oldPath + sep)) {
+            const updated = newPath + tab.path.slice(oldPath.length);
+            if (tab.id === activeTabId) {
+                remappedActive = true;
+                oldActivePath = tab.path;
+                newActivePath = updated;
+            }
+            tab.path = updated;
+            tab.title = titleForPath(updated);
+        }
+    }
+
+    if (remappedActive && newActivePath) {
+        appState.currentFilePath = newActivePath;
+        document.getElementById("current-file").textContent = newActivePath;
+    }
+
+    renderTabBar();
+    return { remappedActive, oldActivePath, newActivePath };
+}
+
+/// Closes all tabs matching targetPath or nested under targetPath (targetPath + sep + ...).
+/// Called by fileTree.js when a file or folder is deleted.
+export function closeTabsUnderPath(targetPath, sep = "/") {
+    const matchingTabs = tabs.filter(
+        (t) => t.kind === "file" && (t.path === targetPath || t.path.startsWith(targetPath + sep))
+    );
+    if (matchingTabs.length === 0) {
+        return { closedWasActive: false, nextTab: getActiveTab(), closedActivePath: null };
+    }
+
+    let closedWasActive = false;
+    let closedActivePath = null;
+
+    for (const tab of matchingTabs) {
+        if (tab.id === activeTabId) {
+            closedWasActive = true;
+            closedActivePath = tab.path;
+        }
+        closeTabByPath(tab.path);
+    }
+
+    const nextTab = getActiveTab();
+    return { closedWasActive, nextTab, closedActivePath };
 }
 
 export { renderTabBar };

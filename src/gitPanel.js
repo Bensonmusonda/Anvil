@@ -3,7 +3,7 @@
 // deliberate, if slightly unusual, choice rather than an accident).
 
 import { appState, showStatus } from "./state.js";
-import { getEditor, languageCompartment } from "./editorSetup.js";
+import { openOrSwitchToDiff } from "./tabs.js";
 
 export async function refreshGitStatus() {
   const gitStatusList = document.getElementById("git-status-list");
@@ -79,20 +79,7 @@ export async function refreshGitStatus() {
 
         try {
           const diff = await window.__TAURI__.core.invoke("git_diff", { path: item.path });
-          const editor = getEditor();
-          // Deliberate reuse of the main editor pane to show diffs, rather
-          // than a separate view — carried over as-is from the original
-          // implementation. Sets currentFilePath to the diffed file's path
-          // even though what's displayed isn't that file's real content;
-          // this is a known, slightly hacky shortcut, not a bug — a
-          // dedicated read-only diff view would be the cleaner fix if this
-          // starts causing confusion (e.g. accidentally Saving a diff).
-          appState.currentFilePath = item.path;
-          editor.dispatch({
-            changes: { from: 0, to: editor.state.doc.length, insert: diff || "(no diff output / new file)" },
-            effects: languageCompartment.reconfigure([]),
-          });
-          document.getElementById("current-file").textContent = "Diff: " + item.path;
+          openOrSwitchToDiff(item.path, diff || "(no diff output / new file)");
         } catch (err) {
           showStatus("Failed to get diff: " + err, true);
         }

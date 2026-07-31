@@ -93,6 +93,18 @@ export function buildEditorState(content, path) {
   });
 }
 
+export function buildDiffEditorState(diffContent) {
+  return EditorState.create({
+    doc: diffContent || "(no diff output)",
+    extensions: [
+      basicSetup,
+      dynamicTheme,
+      EditorView.lineWrapping,
+      EditorState.readOnly.of(true),
+    ],
+  });
+}
+
 /// Constructs the EditorView exactly once. `extensions` is whatever the
 /// caller (main.js) gathered from other modules (autocompletion, hover,
 /// keymaps, etc.) — stashed in sharedExtensions so buildEditorState() can

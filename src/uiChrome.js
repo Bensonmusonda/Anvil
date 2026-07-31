@@ -65,13 +65,15 @@ function initWindowControls() {
 }
 
 function switchSidebarTab(tabId) {
-  const tabFiles = document.getElementById("tab-files");
-  const tabGit = document.getElementById("tab-git");
-  const panelFiles = document.getElementById("files-panel");
-  const panelGit = document.getElementById("git-panel");
+  const tabFiles  = document.getElementById("tab-files");
+  const tabGit    = document.getElementById("tab-git");
+  const tabSearch = document.getElementById("tab-search");
+  const panelFiles  = document.getElementById("files-panel");
+  const panelGit    = document.getElementById("git-panel");
+  const panelSearch = document.getElementById("search-panel");
 
-  [tabFiles, tabGit].forEach((t) => t.classList.remove("active"));
-  [panelFiles, panelGit].forEach((p) => (p.style.display = "none"));
+  [tabFiles, tabGit, tabSearch].forEach((t) => t?.classList.remove("active"));
+  [panelFiles, panelGit, panelSearch].forEach((p) => p && (p.style.display = "none"));
 
   if (tabId === "files") {
     tabFiles.classList.add("active");
@@ -80,6 +82,11 @@ function switchSidebarTab(tabId) {
     tabGit.classList.add("active");
     panelGit.style.display = "flex";
     if (appState.currentWorkspacePath) refreshGitStatus();
+  } else if (tabId === "search") {
+    tabSearch?.classList.add("active");
+    panelSearch && (panelSearch.style.display = "flex");
+    // Focus the search input whenever the panel becomes visible
+    requestAnimationFrame(() => document.getElementById("search-query")?.focus());
   }
 }
 
@@ -106,10 +113,18 @@ function initSidebarTabs() {
     switchSidebarTab(tabId);
   }
 
-  const tabFiles = document.getElementById("tab-files");
-  const tabGit = document.getElementById("tab-git");
+  const tabFiles  = document.getElementById("tab-files");
+  const tabGit    = document.getElementById("tab-git");
+  const tabSearch = document.getElementById("tab-search");
   tabFiles.addEventListener("click", () => handleTabClick("files", tabFiles));
   tabGit.addEventListener("click", () => handleTabClick("git", tabGit));
+  tabSearch?.addEventListener("click", () => handleTabClick("search", tabSearch));
+
+  // searchPanel.js fires this to open the panel without importing uiChrome
+  document.addEventListener("anvil:show-search-panel", () => {
+    sidebar.style.display = "flex";
+    switchSidebarTab("search");
+  });
 }
 
 // Lets other modules (fileTree.js, before showing an inline create input)
@@ -118,6 +133,12 @@ function initSidebarTabs() {
 export function showExplorerPanel() {
   document.getElementById("sidebar").style.display = "flex";
   switchSidebarTab("files");
+}
+
+/** Opens the search sidebar and focuses the query input. */
+export function showSearchPanel() {
+  document.getElementById("sidebar").style.display = "flex";
+  switchSidebarTab("search");
 }
 
 function initAgentPaneToggle() {

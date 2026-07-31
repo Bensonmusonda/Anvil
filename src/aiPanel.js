@@ -1,9 +1,8 @@
-// Single-shot AI: the inline popup (Mod-k, opens near the cursor) that
-// inserts a response directly into the editor at the cursor position.
-
 import { keymap } from "./vendor/codemirror.bundle.js";
 import { showStatus } from "./state.js";
 import { getEditor } from "./editorSetup.js";
+import { mountModelSelector, getSelectedModel } from "./modelSelector.js";
+import { showSettingsDialog } from "./promptDialog.js";
 
 export function toggleAiPopup(view) {
   const aiPopup = document.getElementById("ai-popup");
@@ -42,9 +41,12 @@ async function askAI() {
   showStatus("Asking AI...");
 
   try {
+    const modelOverride = getSelectedModel();
     const response = await window.__TAURI__.core.invoke("ai_complete", {
-      purpose: "chat",
+      purpose: "inline",
       prompt,
+      provider: modelOverride?.provider ?? null,
+      model: modelOverride?.model ?? null,
     });
     const cursorPos = editor.state.selection.main.head;
     editor.dispatch({ changes: { from: cursorPos, insert: response } });
@@ -79,4 +81,35 @@ export function initAiPanelBindings() {
       }
     }
   });
+
+  // Model selector + settings gear, inserted above the existing input row.
+  // Assumes #ai-popup's only child is .ai-popup-inner — adjust the query
+  // below if your markup nests differently.
+  const aiPopup = document.getElementById("ai-popup");
+  const inner = aiPopup.querySelector(".ai-popup-inner");
+  const toolbar = document.createElement("div");
+  toolbar.className = "ai-popup-toolbar";
+  mountModelSelector(toolbar);
+
+  const settingsBtn = document.createElement("button");
+  settingsBtn.className = "text-action-btn";
+  settingsBtn.textContent = "⚙";
+  settingsBtn.title = "Custom system prompts";
+  settingsBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const current = await window.__TAURI__.core.invoke("get_custom_prompts");
+    const result = await showSettingsDialog({
+      inlinePrompt: current.inline,
+      chatPrompt: current.chat,
+    });
+    if (result) {
+      await window.__TAURI__.core.invoke("save_custom_prompts", {
+        inline: result.inlinePrompt,
+        chat: result.chatPrompt,
+      });
+    }
+  });
+  toolbar.appendChild(settingsBtn);
+
+  aiPopup.insertBefore(toolbar, inner);
 }

@@ -160,6 +160,13 @@
           <path d="M18 9a9 9 0 0 1-9 9"></path>
         </svg>
       </button>
+      <button id="tab-search" class="activity-tab" title="Find in Files (Ctrl+Shift+F)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
     </nav>
 
     <aside id="sidebar">
@@ -208,6 +215,30 @@
             Commit
           </button>
         </div>
+      </div>
+
+      <!-- Find in Files panel -->
+      <div id="search-panel" class="sidebar-panel" style="display: none;">
+        <div class="sidebar-header">FIND IN FILES</div>
+        <div class="search-controls">
+          <div class="search-input-row">
+            <input id="search-query" type="text" class="search-query-input" placeholder="Search…" autocomplete="off"
+              spellcheck="false" />
+            <button id="search-clear-btn" class="search-icon-btn" title="Clear search">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="search-toggle-row">
+            <button id="search-case-btn" class="search-toggle-btn" title="Match case">Aa</button>
+            <button id="search-regex-btn" class="search-toggle-btn" title="Use regular expression">.*</button>
+            <span id="search-status" class="search-status"></span>
+          </div>
+        </div>
+        <div id="search-results" class="search-results"></div>
       </div>
     </aside>
 
@@ -279,6 +310,7 @@
       <div id="agent-panel" class="sidebar-panel">
         <div class="sidebar-header agent-panel-header">
           <span>AGENT TASK</span>
+          <div class="agent-header-controls" id="agent-header-controls"></div>
           <button id="agent-close-btn" class="agent-close-btn" title="Close Agent Pane">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -288,16 +320,18 @@
           </button>
         </div>
         <div class="agent-panel-content">
-          <pre id="agent-output" class="agent-output">(no agent task run yet)</pre>
-          <div class="agent-input-container">
+          <div id="agent-output" class="agent-output">(no agent task run yet)</div>
+          <div class="agent-prompt-box" id="agent-prompt-box">
             <textarea id="agent-prompt" placeholder="e.g. 'Read /path/to/file...'"></textarea>
-            <button class="action-btn text-action-btn" id="agent-btn" title="Run Agent">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              Run Agent
-            </button>
+            <div class="agent-prompt-box-footer" id="agent-prompt-box-footer">
+              <button class="agent-send-btn" id="agent-btn" title="Run Agent">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="19" x2="12" y2="5"></line>
+                  <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>

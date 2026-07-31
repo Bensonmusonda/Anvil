@@ -17,6 +17,7 @@ import { initGitPanelBindings } from "./gitPanel.js";
 import { initAgentPanelBindings } from "./agentPanel.js";
 import { initCommandPaletteBindings } from "./commandPalette.js";
 import { initUiChrome } from "./uiChrome.js";
+import { initSearchPanel } from "./searchPanel.js";
 
 import { docChangeListener } from "./tabs.js";
 
@@ -38,3 +39,4 @@ initAgentPanelBindings();
 initAiPanelBindings();
 initCommandPaletteBindings();
 initUiChrome();
+initSearchPanel();

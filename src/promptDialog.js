@@ -137,3 +137,85 @@ export function showConfirmDialog({ title, message, confirmLabel = "Confirm", da
     });
   });
 }
+
+// Settings modal for custom system prompts (Inline AI / Chat). Same visual
+// family as showPromptDialog/showConfirmDialog, extended with two textareas
+// instead of one input.
+export function showSettingsDialog({ inlinePrompt = "", chatPrompt = "" }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+
+    const box = document.createElement("div");
+    box.className = "prompt-dialog settings-dialog";
+
+    const heading = document.createElement("div");
+    heading.className = "prompt-dialog-title";
+    heading.textContent = "Custom System Prompts";
+
+    const inlineLabel = document.createElement("label");
+    inlineLabel.className = "settings-dialog-label";
+    inlineLabel.textContent = "Inline AI (Ctrl+K)";
+    const inlineArea = document.createElement("textarea");
+    inlineArea.className = "settings-dialog-textarea";
+    inlineArea.value = inlinePrompt;
+    inlineArea.placeholder = "Optional system prompt for inline completions...";
+
+    const chatLabel = document.createElement("label");
+    chatLabel.className = "settings-dialog-label";
+    chatLabel.textContent = "Chat / Agent (Ctrl+I)";
+    const chatArea = document.createElement("textarea");
+    chatArea.className = "settings-dialog-textarea";
+    chatArea.value = chatPrompt;
+    chatArea.placeholder = "Optional system prompt for agent chat...";
+
+    const actions = document.createElement("div");
+    actions.className = "prompt-dialog-actions";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "text-action-btn";
+    cancelBtn.textContent = "Cancel";
+
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "text-action-btn prompt-dialog-confirm";
+    saveBtn.textContent = "Save";
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+
+    box.appendChild(heading);
+    box.appendChild(inlineLabel);
+    box.appendChild(inlineArea);
+    box.appendChild(chatLabel);
+    box.appendChild(chatArea);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    inlineArea.focus();
+
+    let settled = false;
+    function close(value) {
+      if (settled) return;
+      settled = true;
+      overlay.remove();
+      resolve(value);
+    }
+
+    saveBtn.addEventListener("click", () =>
+      close({ inlinePrompt: inlineArea.value, chatPrompt: chatArea.value })
+    );
+    cancelBtn.addEventListener("click", () => close(null));
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close(null);
+    });
+    document.addEventListener("keydown", function handler(e) {
+      if (settled) return document.removeEventListener("keydown", handler);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close(null);
+        document.removeEventListener("keydown", handler);
+      }
+    });
+  });
+}
