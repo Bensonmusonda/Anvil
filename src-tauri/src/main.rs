@@ -20,7 +20,7 @@ mod fuzzy;
 mod search;
 
 use config::Config;
-use lsp::LspState;
+use lsp::LspPool;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
 use serde_json::Value;
@@ -34,7 +34,7 @@ struct AppState {
     config: Mutex<Option<Config>>,
     workspace_root: Mutex<Option<PathBuf>>,
     watcher: Mutex<Option<RecommendedWatcher>>,
-    lsp: Arc<LspState>,
+    lsp: Arc<LspPool>,
     terminal: TerminalState,
 }
 
@@ -316,26 +316,40 @@ async fn start_lsp(
         .get(&key)
         .ok_or_else(|| format!("no language server configured for \"{}\"", key))?;
 
-    lsp::start(
-        &server.command,
-        &server.args,
-        workspace_root,
-        Arc::clone(&state.lsp),
-        app,
-    )
-    .await
+    state
+        .lsp
+        .start(
+            key,
+            &server.command,
+            &server.args,
+            workspace_root,
+            app,
+        )
+        .await
 }
 
 /// Generic LSP request passthrough — used for completion, hover, and
 /// definition, all of which need a response back.
 #[tauri::command]
-async fn lsp_request(method: String, params: Value, state: State<'_, AppState>) -> Result<Value, String> {
-    lsp::request(Arc::clone(&state.lsp), method, params).await
+async fn lsp_request(
+    server_name: Option<String>,
+    method: String,
+    params: Value,
+    state: State<'_, AppState>,
+) -> Result<Value, String> {
+    let key = server_name.unwrap_or_else(|| "rust".to_string());
+    state.lsp.request(&key, method, params).await
 }
 
 #[tauri::command]
-fn lsp_notify(method: String, params: Value, state: State<AppState>) -> Result<(), String> {
-    lsp::notify(&state.lsp, &method, params)
+fn lsp_notify(
+    server_name: Option<String>,
+    method: String,
+    params: Value,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let key = server_name.unwrap_or_else(|| "rust".to_string());
+    state.lsp.notify(&key, &method, params)
 }
 
 /// Returns the full `language_servers` map from the loaded config so the
@@ -350,6 +364,11 @@ fn get_language_servers(state: State<AppState>) -> Result<Value, String> {
     }
     let servers = &cfg_guard.as_ref().unwrap().language_servers;
     serde_json::to_value(servers).map_err(|e| format!("failed to serialize language servers: {}", e))
+}
+
+#[tauri::command]
+fn get_running_servers(state: State<AppState>) -> Vec<String> {
+    state.lsp.running_servers()
 }
 
 // --- Phase 6: Terminal commands ---
@@ -458,7 +477,7 @@ fn main() {
             config: Mutex::new(None),
             workspace_root: Mutex::new(None),
             watcher: Mutex::new(None),
-            lsp: Arc::new(LspState::new()),
+            lsp: Arc::new(LspPool::new()),
             terminal: TerminalState::new(),
         })
         .invoke_handler(tauri::generate_handler![
@@ -480,6 +499,7 @@ fn main() {
             lsp_request,
             lsp_notify,
             get_language_servers,
+            get_running_servers,
             spawn_terminal,
             write_terminal,
             resize_terminal,

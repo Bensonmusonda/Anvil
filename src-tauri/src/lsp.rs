@@ -39,6 +39,71 @@ impl LspState {
     }
 }
 
+pub struct LspPool {
+    servers: Mutex<HashMap<String, Arc<LspState>>>,
+}
+
+impl LspPool {
+    pub fn new() -> Self {
+        LspPool {
+            servers: Mutex::new(HashMap::new()),
+        }
+    }
+
+    pub fn get_server(&self, name: &str) -> Option<Arc<LspState>> {
+        self.servers.lock().unwrap().get(name).cloned()
+    }
+
+    pub fn running_servers(&self) -> Vec<String> {
+        self.servers.lock().unwrap().keys().cloned().collect()
+    }
+
+    pub async fn start(
+        &self,
+        name: String,
+        command: &str,
+        args: &[String],
+        workspace_root: String,
+        app: AppHandle,
+    ) -> Result<(), String> {
+        // If a server with this name is running, shut down its stdin / process first
+        {
+            let mut guard = self.servers.lock().unwrap();
+            if let Some(old_state) = guard.remove(&name) {
+                if let Some(mut child) = old_state.child.lock().unwrap().take() {
+                    let _ = child.kill();
+                }
+            }
+        }
+
+        let state = Arc::new(LspState::new());
+        {
+            self.servers.lock().unwrap().insert(name.clone(), Arc::clone(&state));
+        }
+
+        start_server_instance(name, command, args, workspace_root, state, app).await
+    }
+
+    pub async fn request(
+        &self,
+        name: &str,
+        method: String,
+        params: Value,
+    ) -> Result<Value, String> {
+        let state = self
+            .get_server(name)
+            .ok_or_else(|| format!("language server \"{}\" is not running", name))?;
+        request(state, method, params).await
+    }
+
+    pub fn notify(&self, name: &str, method: &str, params: Value) -> Result<(), String> {
+        let state = self
+            .get_server(name)
+            .ok_or_else(|| format!("language server \"{}\" is not running", name))?;
+        notify(&state, method, params)
+    }
+}
+
 fn write_message(stdin: &mut ChildStdin, value: &Value) -> Result<(), String> {
     let body = serde_json::to_string(value).map_err(|e| e.to_string())?;
     let header = format!("Content-Length: {}\r\n\r\n", body.len());
@@ -73,12 +138,9 @@ fn read_message<R: BufRead>(reader: &mut R) -> Result<Option<Value>, String> {
     Ok(Some(value))
 }
 
-/// Spawns the given language server binary (`command`) with `args` for the
-/// given workspace root, starts background threads relaying stderr (for
-/// diagnosis) and stdout (responses resolve pending requests by id;
-/// notifications like publishDiagnostics are emitted to the frontend), then
-/// performs the initialize handshake.
-pub async fn start(
+/// Spawns a language server instance for a given server name.
+async fn start_server_instance(
+    name: String,
     command: &str,
     args: &[String],
     workspace_root: String,
@@ -100,7 +162,7 @@ pub async fn start(
     *state.stdin.lock().unwrap() = Some(stdin);
     *state.child.lock().unwrap() = Some(child);
 
-    let server_label = command.to_string();
+    let server_label = format!("{}/{}", name, command);
     std::thread::spawn(move || {
         let reader = BufReader::new(stderr);
         for line in reader.lines().flatten() {
@@ -110,21 +172,17 @@ pub async fn start(
 
     let state_clone = Arc::clone(&state);
     let app_clone = app.clone();
+    let server_name = name.clone();
     std::thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
         loop {
             match read_message(&mut reader) {
-                Ok(Some(msg)) => {
+                Ok(Some(mut msg)) => {
                     if let Some(id) = msg.get("id").and_then(|v| v.as_i64()) {
                         if let Some(sender) = state_clone.pending.lock().unwrap().remove(&id) {
                             let _ = sender.send(msg);
                             continue;
                         }
-                        // Has an id but doesn't match anything we sent —
-                        // a server-to-client REQUEST (e.g.
-                        // workspace/diagnostic/refresh), not a response.
-                        // LSP requires acknowledging these or a strict
-                        // server may stall waiting for a reply.
                         if msg.get("method").is_some() {
                             let ack = json!({ "jsonrpc": "2.0", "id": id, "result": Value::Null });
                             if let Some(stdin) = state_clone.stdin.lock().unwrap().as_mut() {
@@ -132,11 +190,16 @@ pub async fn start(
                             }
                         }
                     }
+
+                    // Attach the server name to notifications emitted to frontend
+                    if let Value::Object(ref mut map) = msg {
+                        map.insert("server".to_string(), json!(server_name));
+                    }
                     let _ = app_clone.emit("lsp-notification", msg);
                 }
                 Ok(None) => break,
                 Err(e) => {
-                    eprintln!("[rust-analyzer relay] error reading message: {}", e);
+                    eprintln!("[{} relay] error reading message: {}", server_name, e);
                     break;
                 }
             }
@@ -180,7 +243,7 @@ pub async fn request(state: Arc<LspState>, method: String, params: Value) -> Res
     let msg = json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params });
     {
         let mut stdin_guard = state.stdin.lock().unwrap();
-        let stdin = stdin_guard.as_mut().ok_or("LSP not started — open a Rust workspace first")?;
+        let stdin = stdin_guard.as_mut().ok_or("LSP not started")?;
         write_message(stdin, &msg)?;
     }
 
@@ -196,6 +259,7 @@ pub async fn request(state: Arc<LspState>, method: String, params: Value) -> Res
 pub fn notify(state: &Arc<LspState>, method: &str, params: Value) -> Result<(), String> {
     let msg = json!({ "jsonrpc": "2.0", "method": method, "params": params });
     let mut stdin_guard = state.stdin.lock().unwrap();
-    let stdin = stdin_guard.as_mut().ok_or("LSP not started — open a Rust workspace first")?;
+    let stdin = stdin_guard.as_mut().ok_or("LSP not started")?;
     write_message(stdin, &msg)
 }
+
