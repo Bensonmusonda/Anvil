@@ -58,6 +58,8 @@ pub async fn run(
     let mut full_text = String::new();
 
     for _ in 0..MAX_ITERATIONS {
+        let _ = app.emit("agent-round-start", json!({ "requestId": request_id }));   // <-- new
+
         let body = json!({
             "model": model,
             "messages": messages,
@@ -134,6 +136,32 @@ pub async fn run(
     ))
 }
 
+/// Extracts reasoning/thinking text from a delta object, handling all three
+/// shapes your configured providers actually use: DeepSeek's
+/// `reasoning_content`, Ollama's OpenAI-compat `reasoning`, and OpenRouter's
+/// structured `reasoning_details` array. Checked in this priority order
+/// (not accumulated) because OpenRouter sends both a flat `reasoning` string
+/// and the structured array for the same underlying text — summing them
+/// would duplicate it.
+fn extract_reasoning_text(delta: &Value) -> String {
+    if let Some(details) = delta["reasoning_details"].as_array() {
+        let mut out = String::new();
+        for d in details {
+            if let Some(s) = d["text"].as_str() {
+                out.push_str(s);
+            }
+        }
+        return out;
+    }
+    if let Some(s) = delta["reasoning_content"].as_str() {
+        return s.to_string();
+    }
+    if let Some(s) = delta["reasoning"].as_str() {
+        return s.to_string();
+    }
+    String::new()
+}
+
 /// Consumes an SSE chat-completion stream, racing each chunk against
 /// `cancel`. Returns (content, tool_calls, was_cancelled) — `was_cancelled`
 /// tells the caller to stop the whole agent loop rather than proceed into
@@ -190,6 +218,11 @@ async fn stream_chat_completion(
                             let _ = app.emit("agent-token", json!({ "requestId": request_id, "token": text }));
                         }
                     }
+
+                    let reasoning_text = extract_reasoning_text(delta);   // <-- new
+                    if !reasoning_text.is_empty() {                       // <-- new
+                        let _ = app.emit("agent-reasoning-token", json!({ "requestId": request_id, "token": reasoning_text })); // <-- new
+                    }                                                     // <-- new
 
                     if let Some(calls) = delta["tool_calls"].as_array() {
                         for call in calls {

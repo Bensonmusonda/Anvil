@@ -167,7 +167,7 @@ async function sendPrompt(promptText) {
   bubble.innerHTML = TYPING_INDICATOR_HTML;
   row.appendChild(bubble);
   agentOutput.appendChild(row);
-  agentOutput.scrollTop = agentOutput.scrollHeight; // always jump to bottom right after the user's own send
+  agentOutput.scrollTop = agentOutput.scrollHeight;
 
   const requestId = crypto.randomUUID();
   activeRequestId = requestId;
@@ -175,9 +175,29 @@ async function sendPrompt(promptText) {
 
   let streamedText = "";
   let renderScheduled = false;
-  let finished = false; // set true the instant the response resolves; guards against a
-  // stale queued rAF callback re-rendering (and re-adding the
-  // cursor) after the final content is already written
+  let reasoningRenderScheduled = false;
+  let finished = false;
+
+  // Built lazily on the first round-start or first content token, whichever
+  // arrives first — until then the bubble is still showing the typing dots.
+  let thinkingStackEl = null;
+  let answerContentEl = null;
+  let currentThinkingDetails = null;
+  let currentReasoningText = "";
+
+  function ensureBubbleStructure() {
+    if (thinkingStackEl) return;
+    bubble.innerHTML = '<div class="thinking-stack"></div><div class="answer-content"></div>';
+    thinkingStackEl = bubble.querySelector(".thinking-stack");
+    answerContentEl = bubble.querySelector(".answer-content");
+  }
+
+  function collapseCurrentThinking() {
+    if (!currentThinkingDetails || !currentThinkingDetails.open) return;
+    currentThinkingDetails.open = false;
+    const summary = currentThinkingDetails.querySelector("summary");
+    if (summary) summary.textContent = "Thoughts";
+  }
 
   function scheduleRender() {
     if (renderScheduled || finished) return;
@@ -186,13 +206,56 @@ async function sendPrompt(promptText) {
       renderScheduled = false;
       if (finished) return;
       const stick = isNearBottom(agentOutput);
-      bubble.innerHTML = md.render(streamedText) + '<span class="chat-stream-cursor"></span>';
+      answerContentEl.innerHTML = md.render(streamedText) + '<span class="chat-stream-cursor"></span>';
       if (stick) agentOutput.scrollTop = agentOutput.scrollHeight;
     });
   }
 
-  const unlisten = await window.__TAURI__.event.listen("agent-token", (event) => {
+  function scheduleReasoningRender() {
+    if (reasoningRenderScheduled || finished) return;
+    reasoningRenderScheduled = true;
+    requestAnimationFrame(() => {
+      reasoningRenderScheduled = false;
+      if (finished || !currentThinkingDetails) return;
+      const content = currentThinkingDetails.querySelector(".thinking-content");
+      if (content) content.textContent = currentReasoningText;
+      if (currentThinkingDetails.open) agentOutput.scrollTop = agentOutput.scrollHeight;
+    });
+  }
+
+  const unlistenRoundStart = await window.__TAURI__.event.listen("agent-round-start", (event) => {
     if (event.payload.requestId !== requestId) return;
+    ensureBubbleStructure();
+    collapseCurrentThinking();
+
+    const details = document.createElement("details");
+    details.className = "thinking-block";
+    details.open = true;
+    const summary = document.createElement("summary");
+    summary.textContent = "Thinking...";
+    const content = document.createElement("div");
+    content.className = "thinking-content";
+    details.appendChild(summary);
+    details.appendChild(content);
+    thinkingStackEl.appendChild(details);
+
+    currentThinkingDetails = details;
+    currentReasoningText = "";
+    agentOutput.scrollTop = agentOutput.scrollHeight;
+  });
+
+  const unlistenReasoning = await window.__TAURI__.event.listen("agent-reasoning-token", (event) => {
+    if (event.payload.requestId !== requestId) return;
+    ensureBubbleStructure();
+    if (!currentThinkingDetails) return;
+    currentReasoningText += event.payload.token;
+    scheduleReasoningRender();
+  });
+
+  const unlistenToken = await window.__TAURI__.event.listen("agent-token", (event) => {
+    if (event.payload.requestId !== requestId) return;
+    ensureBubbleStructure();
+    collapseCurrentThinking(); // the real answer starting is exactly the collapse trigger
     streamedText += event.payload.token;
     scheduleRender();
   });
@@ -210,8 +273,10 @@ async function sendPrompt(promptText) {
     });
     finished = true;
 
+    ensureBubbleStructure();
+    collapseCurrentThinking();
     bubble.dataset.raw = result;
-    bubble.innerHTML = md.render(result);
+    answerContentEl.innerHTML = md.render(result);
     highlightRenderedCode(bubble);
     addCodeCopyButtons(bubble);
     row.appendChild(buildViewActions(row, "agent", turnStart));
@@ -224,7 +289,9 @@ async function sendPrompt(promptText) {
     bubble.className = "chat-bubble chat-bubble--plain";
     bubble.textContent = "Agent failed: " + err;
   } finally {
-    unlisten();
+    unlistenRoundStart();
+    unlistenReasoning();
+    unlistenToken();
     activeRequestId = null;
     setSendButtonMode("send");
     if (isNearBottom(agentOutput)) {
