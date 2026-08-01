@@ -151,6 +151,10 @@ function clearConversation() {
   document.getElementById("agent-output").replaceChildren();
 }
 
+function isNearBottom(el, threshold = 60) {
+  return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+}
+
 async function sendPrompt(promptText) {
   const turnStart = conversationHistory.length;
   appendMessage("user", promptText, { turnStart });
@@ -163,7 +167,7 @@ async function sendPrompt(promptText) {
   bubble.innerHTML = TYPING_INDICATOR_HTML;
   row.appendChild(bubble);
   agentOutput.appendChild(row);
-  agentOutput.scrollTop = agentOutput.scrollHeight;
+  agentOutput.scrollTop = agentOutput.scrollHeight; // always jump to bottom right after the user's own send
 
   const requestId = crypto.randomUUID();
   activeRequestId = requestId;
@@ -171,14 +175,19 @@ async function sendPrompt(promptText) {
 
   let streamedText = "";
   let renderScheduled = false;
+  let finished = false; // set true the instant the response resolves; guards against a
+  // stale queued rAF callback re-rendering (and re-adding the
+  // cursor) after the final content is already written
 
   function scheduleRender() {
-    if (renderScheduled) return;
+    if (renderScheduled || finished) return;
     renderScheduled = true;
     requestAnimationFrame(() => {
       renderScheduled = false;
+      if (finished) return;
+      const stick = isNearBottom(agentOutput);
       bubble.innerHTML = md.render(streamedText) + '<span class="chat-stream-cursor"></span>';
-      agentOutput.scrollTop = agentOutput.scrollHeight;
+      if (stick) agentOutput.scrollTop = agentOutput.scrollHeight;
     });
   }
 
@@ -199,6 +208,7 @@ async function sendPrompt(promptText) {
       history: historyForThisTurn,
       requestId,
     });
+    finished = true;
 
     bubble.dataset.raw = result;
     bubble.innerHTML = md.render(result);
@@ -209,6 +219,7 @@ async function sendPrompt(promptText) {
     conversationHistory.push({ role: "user", content: promptText });
     conversationHistory.push({ role: "assistant", content: result });
   } catch (err) {
+    finished = true;
     row.className = "chat-message chat-message--error";
     bubble.className = "chat-bubble chat-bubble--plain";
     bubble.textContent = "Agent failed: " + err;
@@ -216,7 +227,9 @@ async function sendPrompt(promptText) {
     unlisten();
     activeRequestId = null;
     setSendButtonMode("send");
-    agentOutput.scrollTop = agentOutput.scrollHeight;
+    if (isNearBottom(agentOutput)) {
+      agentOutput.scrollTop = agentOutput.scrollHeight;
+    }
   }
 }
 
