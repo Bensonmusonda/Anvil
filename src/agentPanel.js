@@ -21,6 +21,7 @@ const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12
 const EDIT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
 const CHECK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 const CLOSE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+const TYPING_INDICATOR_HTML = `<div class="chat-typing-indicator"><span></span><span></span><span></span></div>`;
 
 function createIconButton(title, svgInner) {
   const btn = document.createElement("button");
@@ -153,7 +154,40 @@ async function sendPrompt(promptText) {
 
   const turnStart = conversationHistory.length;
   appendMessage("user", promptText, { turnStart });
-  const pending = appendMessage("pending", "Running agent — this can take a few seconds if it calls tools...");
+
+  // Built by hand rather than via appendMessage — this bubble grows
+  // token-by-token, then gets one final pass (highlighting, copy button,
+  // action row) once the full text is in.
+  const agentOutput = document.getElementById("agent-output");
+  const row = document.createElement("div");
+  row.className = "chat-message chat-message--agent";
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble chat-bubble--markdown";
+  bubble.innerHTML = TYPING_INDICATOR_HTML;   // <-- new: shows before the first token arrives
+  row.appendChild(bubble);
+  agentOutput.appendChild(row);
+  agentOutput.scrollTop = agentOutput.scrollHeight;
+
+  const requestId = crypto.randomUUID();
+  let streamedText = "";
+  let renderScheduled = false;
+
+  function scheduleRender() {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+      renderScheduled = false;
+      bubble.innerHTML = md.render(streamedText);
+      agentOutput.scrollTop = agentOutput.scrollHeight;
+    });
+  }
+
+  const unlisten = await window.__TAURI__.event.listen("agent-token", (event) => {
+    if (event.payload.requestId !== requestId) return; // stale event from a prior request
+    streamedText += event.payload.token;
+    scheduleRender();
+  });
+
   const historyForThisTurn = [...conversationHistory];
 
   try {
@@ -163,17 +197,24 @@ async function sendPrompt(promptText) {
       provider: modelOverride?.provider ?? null,
       model: modelOverride?.model ?? null,
       history: historyForThisTurn,
+      requestId,
     });
-    pending.row.remove();
-    appendMessage("agent", result);
+
+    bubble.dataset.raw = result;
+    bubble.innerHTML = md.render(result);
+    highlightRenderedCode(bubble);
+    addCodeCopyButtons(bubble);
+    row.appendChild(buildViewActions(row, "agent", turnStart));
+
     conversationHistory.push({ role: "user", content: promptText });
     conversationHistory.push({ role: "assistant", content: result });
   } catch (err) {
-    pending.row.className = "chat-message chat-message--error";
-    pending.bubble.textContent = "Agent failed: " + err;
+    row.className = "chat-message chat-message--error";
+    bubble.className = "chat-bubble chat-bubble--plain";
+    bubble.textContent = "Agent failed: " + err;
   } finally {
+    unlisten();
     agentBtn.disabled = false;
-    const agentOutput = document.getElementById("agent-output");
     agentOutput.scrollTop = agentOutput.scrollHeight;
   }
 }
@@ -264,5 +305,15 @@ function highlightRenderedCode(bubble) {
     if (highlighted !== null) {
       codeEl.innerHTML = highlighted;
     }
+  });
+}
+
+function scheduleRender() {
+  if (renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    bubble.innerHTML = md.render(streamedText) + '<span class="chat-stream-cursor"></span>';
+    agentOutput.scrollTop = agentOutput.scrollHeight;
   });
 }

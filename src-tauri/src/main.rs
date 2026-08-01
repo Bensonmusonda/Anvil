@@ -282,7 +282,9 @@ async fn agent_run(
     prompt: String,
     provider: Option<String>,
     model: Option<String>,
-    history: Option<Vec<Value>>,   // <-- new
+    history: Option<Vec<Value>>,
+    request_id: String,          // <-- new
+    app: tauri::AppHandle,       // <-- new, Tauri injects this automatically
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     {
@@ -320,6 +322,8 @@ async fn agent_run(
         model.as_deref(),
         Some(&system_prompt),
         &history,
+        &app,
+        &request_id,
     )
     .await
 }
