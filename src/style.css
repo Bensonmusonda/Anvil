@@ -1837,3 +1837,7 @@ mark.search-highlight {
     opacity: 0;
   }
 }
+
+.agent-send-btn[data-mode="stop"] {
+  background: var(--error);
+}

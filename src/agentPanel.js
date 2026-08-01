@@ -15,12 +15,15 @@ import { highlightCodeBlock } from "./codeHighlight.js";
 
 let bindingsMounted = false;
 let conversationHistory = []; // [{role: "user"|"assistant", content: string}, ...]
+let activeRequestId = null;
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
 
 const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
 const EDIT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
 const CHECK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 const CLOSE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+const SEND_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
+const STOP_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>`;
 const TYPING_INDICATOR_HTML = `<div class="chat-typing-indicator"><span></span><span></span><span></span></div>`;
 
 function createIconButton(title, svgInner) {
@@ -149,26 +152,23 @@ function clearConversation() {
 }
 
 async function sendPrompt(promptText) {
-  const agentBtn = document.getElementById("agent-btn");
-  agentBtn.disabled = true;
-
   const turnStart = conversationHistory.length;
   appendMessage("user", promptText, { turnStart });
 
-  // Built by hand rather than via appendMessage — this bubble grows
-  // token-by-token, then gets one final pass (highlighting, copy button,
-  // action row) once the full text is in.
   const agentOutput = document.getElementById("agent-output");
   const row = document.createElement("div");
   row.className = "chat-message chat-message--agent";
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble chat-bubble--markdown";
-  bubble.innerHTML = TYPING_INDICATOR_HTML;   // <-- new: shows before the first token arrives
+  bubble.innerHTML = TYPING_INDICATOR_HTML;
   row.appendChild(bubble);
   agentOutput.appendChild(row);
   agentOutput.scrollTop = agentOutput.scrollHeight;
 
   const requestId = crypto.randomUUID();
+  activeRequestId = requestId;
+  setSendButtonMode("stop");
+
   let streamedText = "";
   let renderScheduled = false;
 
@@ -177,13 +177,13 @@ async function sendPrompt(promptText) {
     renderScheduled = true;
     requestAnimationFrame(() => {
       renderScheduled = false;
-      bubble.innerHTML = md.render(streamedText);
+      bubble.innerHTML = md.render(streamedText) + '<span class="chat-stream-cursor"></span>';
       agentOutput.scrollTop = agentOutput.scrollHeight;
     });
   }
 
   const unlisten = await window.__TAURI__.event.listen("agent-token", (event) => {
-    if (event.payload.requestId !== requestId) return; // stale event from a prior request
+    if (event.payload.requestId !== requestId) return;
     streamedText += event.payload.token;
     scheduleRender();
   });
@@ -214,12 +214,30 @@ async function sendPrompt(promptText) {
     bubble.textContent = "Agent failed: " + err;
   } finally {
     unlisten();
-    agentBtn.disabled = false;
+    activeRequestId = null;
+    setSendButtonMode("send");
     agentOutput.scrollTop = agentOutput.scrollHeight;
   }
 }
 
+async function stopAgent() {
+  if (!activeRequestId) return;
+  try {
+    await window.__TAURI__.core.invoke("stop_agent", { requestId: activeRequestId });
+  } catch (err) {
+    console.error("Failed to stop agent:", err);
+  }
+}
+
+function setSendButtonMode(mode) {
+  const agentBtn = document.getElementById("agent-btn");
+  agentBtn.dataset.mode = mode;
+  agentBtn.innerHTML = mode === "stop" ? STOP_ICON : SEND_ICON;
+  agentBtn.title = mode === "stop" ? "Stop generating" : "Run Agent";
+}
+
 export async function runAgent() {
+  if (activeRequestId) return;
   const agentPrompt = document.getElementById("agent-prompt");
   const prompt = agentPrompt.value.trim();
   if (!prompt) return;
@@ -228,7 +246,14 @@ export async function runAgent() {
 }
 
 export function initAgentPanelBindings() {
-  document.getElementById("agent-btn").addEventListener("click", runAgent);
+  document.getElementById("agent-btn").addEventListener("click", () => {
+    const agentBtn = document.getElementById("agent-btn");
+    if (agentBtn.dataset.mode === "stop") {
+      stopAgent();
+    } else {
+      runAgent();
+    }
+  });
   document.getElementById("agent-prompt").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();

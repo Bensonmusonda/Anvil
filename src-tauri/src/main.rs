@@ -29,6 +29,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State, Manager};
 use terminal::TerminalState;
+use std::collections::HashMap;
+use tokio_util::sync::CancellationToken;
 
 struct AppState {
     config: Mutex<Option<Config>>,
@@ -36,6 +38,7 @@ struct AppState {
     watcher: Mutex<Option<RecommendedWatcher>>,
     lsp: Arc<LspPool>,
     terminal: TerminalState,
+    active_requests: Mutex<HashMap<String, CancellationToken>>,  
 }
 
 #[derive(Serialize)]
@@ -43,6 +46,20 @@ struct DirEntryInfo {
     name: String,
     path: String,
     is_dir: bool,
+}
+
+/// Removes `request_id` from `active_requests` when dropped, regardless of
+/// how the enclosing scope exits (return, `?`, panic-unwind). Keeps
+/// agent_run from needing manual cleanup at every one of its exit paths.
+struct RequestGuard<'a> {
+    state: &'a AppState,
+    request_id: String,
+}
+
+impl<'a> Drop for RequestGuard<'a> {
+    fn drop(&mut self) {
+        self.state.active_requests.lock().unwrap().remove(&self.request_id);
+    }
 }
 
 // --- Phase 2 commands, unchanged ---
@@ -283,8 +300,8 @@ async fn agent_run(
     provider: Option<String>,
     model: Option<String>,
     history: Option<Vec<Value>>,
-    request_id: String,          // <-- new
-    app: tauri::AppHandle,       // <-- new, Tauri injects this automatically
+    request_id: String,
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     {
@@ -312,6 +329,10 @@ async fn agent_run(
     let system_prompt = config.custom_prompts.chat.clone();
     let history = history.unwrap_or_default();
 
+    let cancel = CancellationToken::new();
+    state.active_requests.lock().unwrap().insert(request_id.clone(), cancel.clone());
+    let _guard = RequestGuard { state: state.inner(), request_id: request_id.clone() };
+
     agent::run(
         &config,
         &prompt,
@@ -324,8 +345,21 @@ async fn agent_run(
         &history,
         &app,
         &request_id,
+        cancel,
     )
     .await
+}
+
+#[tauri::command]
+fn stop_agent(request_id: String, state: State<AppState>) -> Result<(), String> {
+    let map = state.active_requests.lock().unwrap();
+    match map.get(&request_id) {
+        Some(cancel) => {
+            cancel.cancel();
+            Ok(())
+        }
+        None => Err("no active request with that id (it may have already finished)".to_string()),
+    }
 }
 
 // --- Option 4: model switcher + custom prompts ---
@@ -598,6 +632,7 @@ fn main() {
             watcher: Mutex::new(None),
             lsp: Arc::new(LspPool::new()),
             terminal: TerminalState::new(),
+            active_requests: Mutex::new(HashMap::new()),
         })
         .invoke_handler(tauri::generate_handler![
             list_dir,
@@ -617,6 +652,7 @@ fn main() {
             get_custom_prompts,
             save_custom_prompts,
             agent_run,
+            stop_agent,   
             start_lsp,
             lsp_request,
             lsp_notify,

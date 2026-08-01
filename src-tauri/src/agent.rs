@@ -5,6 +5,7 @@ use futures_util::StreamExt;
 use serde_json::{json, Value};
 use std::path::Path;
 use tauri::Emitter;
+use tokio_util::sync::CancellationToken;
 
 const MAX_ITERATIONS: usize = 5;
 
@@ -20,6 +21,7 @@ pub async fn run(
     history: &[Value],
     app: &tauri::AppHandle,
     request_id: &str,
+    cancel: CancellationToken,   // <-- new
 ) -> Result<String, String> {
     let (provider_name, model): (String, String) = if let Some(p) = override_provider {
         let model = override_model
@@ -53,12 +55,6 @@ pub async fn run(
     let tool_defs: Vec<Value> = tools.iter().map(|t| t.to_openai_tool()).collect();
     let client = reqwest::Client::new();
 
-    // Concatenation of every round's streamed content, in order — including
-    // any commentary a model emits alongside tool_calls before its final
-    // answer. That interim text gets streamed live too, which reads as the
-    // agent narrating what it's doing rather than going silent during tool
-    // calls. This full string, not just the last round's text, is what
-    // gets returned and stored in conversation history.
     let mut full_text = String::new();
 
     for _ in 0..MAX_ITERATIONS {
@@ -83,9 +79,15 @@ pub async fn run(
             return Err(format!("provider returned HTTP {}: {}", status, text));
         }
 
-        let (round_content, round_tool_calls) =
-            stream_chat_completion(response, app, request_id).await?;
+        let (round_content, round_tool_calls, was_cancelled) =
+            stream_chat_completion(response, app, request_id, &cancel).await?;
         full_text.push_str(&round_content);
+
+        // Stopped mid-stream — return whatever was generated as the final
+        // answer rather than continuing into another tool-call round.
+        if was_cancelled {
+            return Ok(full_text);
+        }
 
         if round_tool_calls.is_empty() {
             return Ok(full_text);
@@ -132,67 +134,79 @@ pub async fn run(
     ))
 }
 
-/// Consumes an SSE chat-completion stream, emitting each content token as
-/// an "agent-token" event tagged with `request_id` (so the frontend can
-/// ignore stale events from a superseded request). Returns the round's
-/// full content string plus any tool_calls, reassembled from fragmented
-/// deltas keyed by their `index` field — OpenAI's streaming format sends
-/// a tool call's id/name once and its arguments in pieces across many
-/// chunks.
+/// Consumes an SSE chat-completion stream, racing each chunk against
+/// `cancel`. Returns (content, tool_calls, was_cancelled) — `was_cancelled`
+/// tells the caller to stop the whole agent loop rather than proceed into
+/// another round, since a user-initiated stop shouldn't trigger tool calls
+/// off a truncated response.
 async fn stream_chat_completion(
     response: reqwest::Response,
     app: &tauri::AppHandle,
     request_id: &str,
-) -> Result<(String, Vec<Value>), String> {
+    cancel: &CancellationToken,
+) -> Result<(String, Vec<Value>, bool), String> {
     let mut byte_stream = response.bytes_stream();
     let mut buf = String::new();
     let mut content = String::new();
     let mut tool_calls: std::collections::BTreeMap<u64, (String, String, String)> =
         std::collections::BTreeMap::new();
+    let mut was_cancelled = false;
 
-    while let Some(chunk) = byte_stream.next().await {
-        let chunk = chunk.map_err(|e| format!("stream read error: {}", e))?;
-        buf.push_str(&String::from_utf8_lossy(&chunk));
-
-        while let Some(pos) = buf.find('\n') {
-            let line = buf[..pos].trim_end_matches('\r').to_string();
-            buf.drain(..=pos);
-            let line = line.trim();
-            if line.is_empty() || !line.starts_with("data:") {
-                continue;
+    loop {
+        tokio::select! {
+            biased;
+            _ = cancel.cancelled() => {
+                was_cancelled = true;
+                break;
             }
-            let payload = line["data:".len()..].trim();
-            if payload == "[DONE]" {
-                continue;
-            }
+            chunk = byte_stream.next() => {
+                let chunk = match chunk {
+                    Some(c) => c.map_err(|e| format!("stream read error: {}", e))?,
+                    None => break, // stream ended naturally
+                };
+                buf.push_str(&String::from_utf8_lossy(&chunk));
 
-            let parsed: Value = match serde_json::from_str(payload) {
-                Ok(v) => v,
-                Err(_) => continue, // partial/malformed line — skip rather than fail the whole stream
-            };
-            let delta = &parsed["choices"][0]["delta"];
-
-            if let Some(text) = delta["content"].as_str() {
-                if !text.is_empty() {
-                    content.push_str(text);
-                    let _ = app.emit("agent-token", json!({ "requestId": request_id, "token": text }));
-                }
-            }
-
-            if let Some(calls) = delta["tool_calls"].as_array() {
-                for call in calls {
-                    let idx = call["index"].as_u64().unwrap_or(0);
-                    let entry = tool_calls.entry(idx).or_insert_with(|| {
-                        (String::new(), String::new(), String::new())
-                    });
-                    if let Some(id) = call["id"].as_str() {
-                        entry.0 = id.to_string();
+                while let Some(pos) = buf.find('\n') {
+                    let line = buf[..pos].trim_end_matches('\r').to_string();
+                    buf.drain(..=pos);
+                    let line = line.trim();
+                    if line.is_empty() || !line.starts_with("data:") {
+                        continue;
                     }
-                    if let Some(name) = call["function"]["name"].as_str() {
-                        entry.1.push_str(name);
+                    let payload = line["data:".len()..].trim();
+                    if payload == "[DONE]" {
+                        continue;
                     }
-                    if let Some(args) = call["function"]["arguments"].as_str() {
-                        entry.2.push_str(args);
+
+                    let parsed: Value = match serde_json::from_str(payload) {
+                        Ok(v) => v,
+                        Err(_) => continue,
+                    };
+                    let delta = &parsed["choices"][0]["delta"];
+
+                    if let Some(text) = delta["content"].as_str() {
+                        if !text.is_empty() {
+                            content.push_str(text);
+                            let _ = app.emit("agent-token", json!({ "requestId": request_id, "token": text }));
+                        }
+                    }
+
+                    if let Some(calls) = delta["tool_calls"].as_array() {
+                        for call in calls {
+                            let idx = call["index"].as_u64().unwrap_or(0);
+                            let entry = tool_calls.entry(idx).or_insert_with(|| {
+                                (String::new(), String::new(), String::new())
+                            });
+                            if let Some(id) = call["id"].as_str() {
+                                entry.0 = id.to_string();
+                            }
+                            if let Some(name) = call["function"]["name"].as_str() {
+                                entry.1.push_str(name);
+                            }
+                            if let Some(args) = call["function"]["arguments"].as_str() {
+                                entry.2.push_str(args);
+                            }
+                        }
                     }
                 }
             }
@@ -211,5 +225,5 @@ async fn stream_chat_completion(
         })
         .collect();
 
-    Ok((content, tool_calls_value))
+    Ok((content, tool_calls_value, was_cancelled))
 }
