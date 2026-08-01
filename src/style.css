@@ -1112,6 +1112,49 @@ h1 {
   color: var(--text);
 }
 
+/* Previous Chats picker — reuses .overlay/.palette-container/.palette-item
+   from the command palette above; these rules only cover what's unique to
+   it (the per-row rename/delete actions). */
+.chat-picker-item {
+  justify-content: space-between;
+}
+
+.chat-picker-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.chat-picker-item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.chat-picker-item:hover .chat-picker-item-actions {
+  opacity: 1;
+}
+
+.chat-picker-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.chat-picker-action-btn:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
 /* Prompt dialog (themed window.prompt replacement) */
 .prompt-dialog {
   background: var(--panel);

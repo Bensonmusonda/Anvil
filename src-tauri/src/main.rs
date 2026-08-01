@@ -7,6 +7,7 @@
 // borrow checker over AppState's lifetime.
 
 mod agent;
+mod chat_store;
 mod config;
 mod history;
 mod lsp;
@@ -439,6 +440,73 @@ fn save_custom_prompts(inline: String, chat: String, state: State<AppState>) -> 
     Ok(())
 }
 
+// --- Phase 9: Chat session persistence ---
+
+#[tauri::command]
+fn list_chat_sessions() -> Result<Vec<chat_store::ChatIndexEntry>, String> {
+    chat_store::list_sessions()
+}
+
+#[tauri::command]
+fn load_chat_session(id: String) -> Result<chat_store::ChatSession, String> {
+    chat_store::load_session(&id)
+}
+
+#[tauri::command]
+fn save_chat_session(
+    id: String,
+    title: String,
+    messages: Vec<chat_store::ChatMessage>,
+) -> Result<(), String> {
+    chat_store::save_session(&id, &title, messages)
+}
+
+#[tauri::command]
+fn delete_chat_session(id: String) -> Result<(), String> {
+    chat_store::delete_session(&id)
+}
+
+#[tauri::command]
+fn rename_chat_session(id: String, title: String) -> Result<(), String> {
+    chat_store::rename_session(&id, &title)
+}
+
+/// Generates a short title for a chat session from its first exchange, via
+/// a small LLM call through the existing purpose-based routing path (see
+/// provider.rs's "title" -> "chat" fallback). Same lazy-config-load pattern
+/// as ai_complete/agent_run. Never bubbles a provider error up to the
+/// frontend as a failure — falling back to a truncated first message keeps
+/// title generation from ever being the reason a chat fails to save.
+#[tauri::command]
+async fn generate_chat_title(
+    user_message: String,
+    assistant_message: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    {
+        let mut cfg_guard = state.config.lock().unwrap();
+        if cfg_guard.is_none() {
+            let path = Config::default_path()?;
+            *cfg_guard = Some(Config::load(&path)?);
+        }
+    }
+    let config = state.config.lock().unwrap().clone().unwrap();
+
+    let system_prompt = "Summarize the exchange below as a short chat title. \
+        Respond with only the title itself \u{2014} 3 to 6 words, no quotes, \
+        no trailing punctuation, no preamble.";
+    let prompt = format!(
+        "User: {}\n\nAssistant: {}",
+        chat_store::truncate_chars(&user_message, 500),
+        chat_store::truncate_chars(&assistant_message, 500)
+    );
+
+    match provider::complete(&config, "title", &prompt, None, None, Some(system_prompt)).await {
+        Ok(title) => Ok(chat_store::clean_title(&title)),
+        Err(_) => Ok(chat_store::fallback_title(&user_message)),
+    }
+}
+
 // --- Phase 5: LSP commands ---
 
 /// Starts a language server for the given workspace root. `server_name` is
@@ -672,7 +740,13 @@ fn main() {
             win_toggle_maximize,
             win_close,
             save_pane_widths,
-            get_pane_widths
+            get_pane_widths,
+            list_chat_sessions,
+            load_chat_session,
+            save_chat_session,
+            delete_chat_session,
+            rename_chat_session,
+            generate_chat_title
         ])
         .run(tauri::generate_context!())
         .expect("error while running Anvil host");

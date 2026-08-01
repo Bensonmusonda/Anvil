@@ -23,13 +23,22 @@ pub async fn complete(
             .to_string();
         (p.to_string(), model)
     } else {
-        // Existing purpose-based lookup, with one addition: "inline" falls
-        // back to "chat" if the user's config.json has no dedicated
-        // "inline" routing entry yet, so this doesn't break existing setups.
+        // Existing purpose-based lookup, with a fallback to "chat" for any
+        // purpose that doesn't warrant its own dedicated routing entry:
+        // "inline" (pre-existing) and now "title" (chat-session naming,
+        // added alongside chat persistence) both fall back to "chat" if the
+        // user's config.json has no dedicated entry for them, so neither
+        // breaks existing setups that only configure "chat".
         let route = config
             .routing
             .get(purpose)
-            .or_else(|| if purpose == "inline" { config.routing.get("chat") } else { None })
+            .or_else(|| {
+                if purpose == "inline" || purpose == "title" {
+                    config.routing.get("chat")
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| format!("no routing configured for purpose \"{}\"", purpose))?;
         (route.provider.clone(), route.model.clone())
     };

@@ -10,11 +10,23 @@
 
 import { mountModelSelector, getSelectedModel } from "./modelSelector.js";
 import { showSettingsDialog } from "./promptDialog.js";
+import { openChatPicker, initChatPickerBindings } from "./chatPicker.js";
 import MarkdownIt from "./vendor/markdown-it.bundle.js";
 import { highlightCodeBlock } from "./codeHighlight.js";
 
 let bindingsMounted = false;
 let conversationHistory = []; // [{role: "user"|"assistant", content: string}, ...]
+// Parallel to conversationHistory (same index = same turn). Holds each
+// assistant turn's joined reasoning text across all tool-call rounds, or
+// undefined for user turns / turns with no reasoning. Never sent back to
+// agent_run's `history` array — only used to rebuild collapsed thinking
+// blocks when a persisted session is reloaded.
+let reasoningHistory = [];
+// null until the first turn of a session is persisted (see
+// persistCurrentSession), which mints the id/title. Set instead by
+// loadSessionIntoPanel when a saved session is picked from Previous Chats.
+let currentSessionId = null;
+let currentSessionTitle = null;
 let activeRequestId = null;
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
 
@@ -88,6 +100,7 @@ function enterEditMode(row, turnStart) {
     if (!editedText) return;
     truncateFrom(row);
     conversationHistory.length = turnStart;
+    reasoningHistory.length = turnStart;
     sendPrompt(editedText);
   });
 
@@ -146,9 +159,118 @@ function appendMessage(role, text, { turnStart } = {}) {
   return { row, bubble };
 }
 
-function clearConversation() {
+// Upserts the current in-memory conversation to disk. Mints a session id +
+// an LLM-generated title on the first call for a given session (i.e. the
+// first successful turn); every call after that just resaves under the
+// existing id/title. Safe to call redundantly — e.g. "New Chat" calls this
+// defensively even though the common case already has nothing new to save,
+// since every successful turn already triggers it.
+async function persistCurrentSession() {
+  if (conversationHistory.length === 0) return;
+  try {
+    if (!currentSessionId) {
+      currentSessionId = crypto.randomUUID();
+      const firstUser = conversationHistory.find((m) => m.role === "user")?.content ?? "";
+      const firstAssistant = conversationHistory.find((m) => m.role === "assistant")?.content ?? "";
+      currentSessionTitle = await window.__TAURI__.core.invoke("generate_chat_title", {
+        userMessage: firstUser,
+        assistantMessage: firstAssistant,
+      });
+    }
+
+    const messages = conversationHistory.map((m, i) => ({
+      role: m.role,
+      content: m.content,
+      reasoning: reasoningHistory[i] || undefined,
+    }));
+
+    await window.__TAURI__.core.invoke("save_chat_session", {
+      id: currentSessionId,
+      title: currentSessionTitle,
+      messages,
+    });
+  } catch (err) {
+    // A failed autosave shouldn't surface as an "agent failed" error to the
+    // user mid-conversation — worst case they lose this one turn's
+    // persistence and it gets retried on the next successful turn.
+    console.error("Failed to persist chat session:", err);
+  }
+}
+
+async function clearConversation() {
+  // Requirement: starting a new chat must not silently drop whatever was
+  // active. In practice every successful turn already autosaves, so this is
+  // usually a no-op resave — but it's the one place that still needs to
+  // catch a session that was never given an id (e.g. its very first
+  // autosave failed) before we wipe conversationHistory out from under it.
+  await persistCurrentSession();
+
   conversationHistory = [];
+  reasoningHistory = [];
+  currentSessionId = null;
+  currentSessionTitle = null;
   document.getElementById("agent-output").replaceChildren();
+}
+
+// Rebuilds the panel from a saved session: fetches its full messages,
+// replaces conversationHistory/reasoningHistory, and re-renders DOM bubbles
+// from scratch. Assistant turns with stored reasoning get a collapsed
+// thinking block rebuilt ahead of the answer, matching the shape a live
+// turn ends up in — just born collapsed instead of collapsing.
+async function loadSessionIntoPanel(entry) {
+  await persistCurrentSession(); // don't lose the session being switched away from
+
+  let session;
+  try {
+    session = await window.__TAURI__.core.invoke("load_chat_session", { id: entry.id });
+  } catch (err) {
+    console.error("Failed to load chat session:", err);
+    return;
+  }
+
+  currentSessionId = session.id;
+  currentSessionTitle = session.title;
+  conversationHistory = session.messages.map((m) => ({ role: m.role, content: m.content }));
+  reasoningHistory = session.messages.map((m) => m.reasoning);
+
+  const agentOutput = document.getElementById("agent-output");
+  agentOutput.replaceChildren();
+
+  session.messages.forEach((m, i) => {
+    if (m.role === "user") {
+      appendMessage("user", m.content, { turnStart: i });
+      return;
+    }
+
+    const { row, bubble } = appendMessage("agent", m.content, { turnStart: i });
+    if (m.reasoning) {
+      bubble.innerHTML = '<div class="thinking-stack"></div><div class="answer-content"></div>';
+      const thinkingStackEl = bubble.querySelector(".thinking-stack");
+      const answerContentEl = bubble.querySelector(".answer-content");
+
+      const details = document.createElement("details");
+      details.className = "thinking-block";
+      details.open = false;
+      const summary = document.createElement("summary");
+      summary.textContent = "Thoughts";
+      const content = document.createElement("div");
+      content.className = "thinking-content";
+      content.textContent = m.reasoning;
+      details.appendChild(summary);
+      details.appendChild(content);
+      thinkingStackEl.appendChild(details);
+
+      answerContentEl.innerHTML = md.render(m.content);
+      highlightRenderedCode(bubble);
+      addCodeCopyButtons(bubble);
+      // No need to touch the .chat-actions row buildViewActions already
+      // appended — its copy button looks up ".chat-bubble" at click time,
+      // not at creation time, so it's unaffected by bubble.innerHTML being
+      // replaced just now.
+    }
+  });
+
+  agentOutput.scrollTop = agentOutput.scrollHeight;
 }
 
 function isNearBottom(el, threshold = 60) {
@@ -184,6 +306,7 @@ async function sendPrompt(promptText) {
   let answerContentEl = null;
   let currentThinkingDetails = null;
   let currentReasoningText = "";
+  let capturedReasoningForTurn = "";
 
   function ensureBubbleStructure() {
     if (thinkingStackEl) return;
@@ -197,6 +320,14 @@ async function sendPrompt(promptText) {
     currentThinkingDetails.open = false;
     const summary = currentThinkingDetails.querySelector("summary");
     if (summary) summary.textContent = "Thoughts";
+    // Fires exactly once per round's thinking block (guarded by the early
+    // return above), so this naturally joins every round's reasoning for
+    // the turn in order, without double-counting a round whose collapse
+    // was triggered by both a new round starting and the content-token
+    // handler racing it.
+    if (currentReasoningText) {
+      capturedReasoningForTurn += (capturedReasoningForTurn ? "\n\n" : "") + currentReasoningText;
+    }
   }
 
   function scheduleRender() {
@@ -283,6 +414,10 @@ async function sendPrompt(promptText) {
 
     conversationHistory.push({ role: "user", content: promptText });
     conversationHistory.push({ role: "assistant", content: result });
+    reasoningHistory.push(undefined);
+    reasoningHistory.push(capturedReasoningForTurn || undefined);
+
+    await persistCurrentSession();
   } catch (err) {
     finished = true;
     row.className = "chat-message chat-message--error";
@@ -358,6 +493,14 @@ export function initAgentPanelBindings() {
   newChatBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
   newChatBtn.addEventListener("click", clearConversation);
   headerControls.appendChild(newChatBtn);
+
+  const previousChatsBtn = document.createElement("button");
+  previousChatsBtn.className = "agent-header-icon-btn";
+  previousChatsBtn.title = "Previous Chats";
+  previousChatsBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"></path><path d="M3.05 13a9 9 0 1 0 .5-4.5"></path><polyline points="12 7 12 12 15 14"></polyline></svg>`;
+  previousChatsBtn.addEventListener("click", () => openChatPicker(loadSessionIntoPanel));
+  headerControls.appendChild(previousChatsBtn);
+  initChatPickerBindings();
 
   const settingsBtn = document.createElement("button");
   settingsBtn.className = "agent-header-icon-btn";
